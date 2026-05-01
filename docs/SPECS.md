@@ -753,53 +753,72 @@ for (const revisor of revisores) {
 
 ### Provider (Client Component)
 
-```tsx
-// components/shared/PosthogProvider.tsx
-'use client'
-
-import posthog from 'posthog-js'
-import { PostHogProvider } from 'posthog-js/react'
-import { useEffect } from 'react'
-
-export function PHProvider({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
-      api_host:          process.env.NEXT_PUBLIC_POSTHOG_HOST,
-      capture_pageview:  false,  // captura manual via usePathname
-      persistence:       'localStorage',
-    })
-  }, [])
-
-  return <PostHogProvider client={posthog}>{children}</PostHogProvider>
-}
-```
-
-### Pageview Automático (App Router)
+### Provider (Client Component com Suspense)
 
 ```tsx
-// components/shared/PosthogPageview.tsx
+// lib/posthog/provider.tsx
 'use client'
 
+import React, { useEffect, Suspense } from 'react'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect } from 'react'
-import { usePostHog } from 'posthog-js/react'
+import { getPosthogClient } from './client'
+import { trackPageView } from './events'
 
-export function PosthogPageview() {
-  const pathname     = usePathname()
+// Rastreador isolado para não suspender a aplicação inteira
+function PosthogPageTracker() {
+  const pathname = usePathname()
   const searchParams = useSearchParams()
-  const posthog      = usePostHog()
 
   useEffect(() => {
     if (pathname) {
-      const url = searchParams.toString()
+      const url = searchParams?.toString()
         ? `${pathname}?${searchParams.toString()}`
         : pathname
-      posthog.capture('$pageview', { $current_url: url })
+      trackPageView(window.location.origin + url, document.referrer)
     }
-  }, [pathname, searchParams, posthog])
+  }, [pathname, searchParams])
 
   return null
 }
+
+export function PosthogProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    getPosthogClient()
+  }, [])
+
+  return (
+    <>
+      <Suspense fallback={null}>
+        <PosthogPageTracker />
+      </Suspense>
+      {children}
+    </>
+  )
+}
+```
+
+### Configuração Reverse Proxy
+
+Para contornar adblockers e DNS filters, o Next.js deve rotear `ingest/*` para `us.i.posthog.com`:
+
+```javascript
+// next.config.mjs
+const nextConfig = {
+  skipTrailingSlashRedirect: true,
+  async rewrites() {
+    return [
+      {
+        source: '/ingest/static/:path*',
+        destination: 'https://us-assets.i.posthog.com/static/:path*',
+      },
+      {
+        source: '/ingest/:path*',
+        destination: 'https://us.i.posthog.com/:path*',
+      },
+    ]
+  },
+}
+export default nextConfig
 ```
 
 ### Identify e Reset
@@ -831,7 +850,7 @@ export function resetPosthog() {
 | `user_signed_up` | `POST /api/usuarios` (sucesso) | `method: 'email'` |
 | `user_signed_up` | Callback OAuth Google | `method: 'google'` |
 | `user_logged_in` | Callback `jwt` NextAuth | `method: 'email' \| 'google'` |
-| `article_viewed` | `GET /estudos/[slug]` ou `/analises/[slug]` | `slug, type, category` |
+| `article_viewed` | `GET /artigos/[slug]` | `slug, type, category` |
 | `article_favorited` | `POST /api/favoritos` | `slug, type` |
 | `cms_article_created` | `POST /api/artigos` (sucesso) | `type` |
 | `cms_status_changed` | `PATCH /api/artigos/[id]/status` | `from, to, articleId` |
@@ -885,8 +904,7 @@ export function gerarMetadataArtigo(artigo: {
   thumbnail: string | null
   type:      'ESTUDO' | 'ANALISE'
 }): Metadata {
-  const secao = artigo.type === 'ESTUDO' ? 'estudos' : 'analises'
-  const url   = `${BASE_URL}/${secao}/${artigo.slug}`
+  const url   = `${BASE_URL}/artigos/${artigo.slug}`
 
   return {
     title:       artigo.title,
@@ -928,7 +946,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   })
 
   const artigosMap = artigos.map((a) => ({
-    url:          `${BASE}/${a.type === 'ESTUDO' ? 'estudos' : 'analises'}/${a.slug}`,
+    url:          `${BASE}/artigos/${a.slug}`,
     lastModified: a.updatedAt,
     changeFrequency: 'weekly' as const,
     priority:     0.7,
@@ -984,7 +1002,7 @@ Seções (ordem):
 5. Últimos Artigos
    - Query: 3 artigos mais recentes (status: PUBLICADO)
    - Componente ArtigoCardPublico
-   - Link "Ver todos os estudos"
+   - Link "Ver todos os artigos"
 
 6. CTA Final
    - Fundo verde primary
@@ -1003,7 +1021,7 @@ Seções (ordem):
 - CTA pagos: texto "Em breve"
 ```
 
-### `/estudos` e `/analises`
+### `/artigos`
 
 ```
 Query params aceitos:
@@ -1025,7 +1043,7 @@ WHERE status = 'PUBLICADO'
 ORDER BY publishedAt DESC
 ```
 
-### `/estudos/[slug]` e `/analises/[slug]`
+### `/artigos/[slug]`
 
 ```
 Dados carregados (Server Component):
@@ -1124,8 +1142,7 @@ Seções:
 2. Últimas leituras: últimos 5 artigos do ReadHistory
 3. Favoritos recentes: últimos 4 artigos favoritados
 4. Atalhos rápidos:
-   - "Ver todos os estudos" → /estudos
-   - "Ver todas as análises" → /analises
+   - "Ver todos os artigos" → /artigos
    - Se role AUTOR+: "Criar artigo" → /cms/novo
 ```
 
@@ -1167,14 +1184,14 @@ Feedback de remoção com atualização otimista da UI
 ### Checklist de Validação
 
 ```
-[ ] /dashboard redireciona para /login se não autenticado
-[ ] Badge de role visível no header
-[ ] Layout responsivo (sidebar desktop, bottom nav mobile)
-[ ] Perfil atualiza name e image sem recarregar página
-[ ] Troca de senha valida senha atual antes de salvar
-[ ] Histórico exibe últimas 30 leituras
-[ ] Favoritar/desfavoritar atualiza UI de forma otimista
-[ ] Atalho "Criar artigo" visível apenas para AUTOR+
+[x] /dashboard redireciona para /login se não autenticado
+[x] Badge de role visível no header
+[x] Layout responsivo (sidebar desktop, bottom nav mobile)
+[x] Perfil atualiza name e image sem recarregar página
+[x] Troca de senha valida senha atual antes de salvar
+[x] Histórico exibe últimas 30 leituras
+[x] Favoritar/desfavoritar atualiza UI de forma otimista
+[x] Atalho "Criar artigo" visível apenas para AUTOR+
 ```
 
 ---

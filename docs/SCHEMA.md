@@ -46,8 +46,8 @@ enum ArticleStatus {
 }
 
 enum ArticleType {
-  ESTUDO   // seção /estudos
-  ANALISE  // seção /analises
+  ESTUDO   // Exibido em /artigos (com filtro)
+  ANALISE  // Exibido em /artigos (com filtro)
 }
 ```
 

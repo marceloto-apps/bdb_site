@@ -41,7 +41,7 @@ Site institucional + base da plataforma Big Data Bet. Esta fase entrega o site p
 | 1G | Email Brevo | 🔲 Pendente |
 | 1H | Analytics Posthog | 🔲 Pendente |
 | 1I | Páginas públicas | 🔲 Pendente |
-| 1J | Dashboard (área do membro) | 🔲 Pendente |
+| 1J | Dashboard (área do membro) | ✅ Concluído |
 | 1K | Deploy + domínio | 🔲 Pendente |
 
 ---
@@ -105,15 +105,11 @@ bigdatabet/
 │   ├── (public)/
 │   │   ├── page.tsx              → Home
 │   │   ├── sobre/page.tsx
-│   │   ├── comunidade/page.tsx
-│   │   └── planos/page.tsx       → Estático, sem checkout
-│   ├── (content)/
-│   │   ├── estudos/
-│   │   │   ├── page.tsx          → Listagem
-│   │   │   └── [slug]/page.tsx   → Artigo
-│   │   └── analises/
-│   │       ├── page.tsx
-│   │       └── [slug]/page.tsx
+│   │   ├── planos/page.tsx       → Estático, sem checkout
+│   │   ├── planilhas/page.tsx    → Planilhas gratuitas e VIP
+│   │   └── artigos/
+│   │       ├── page.tsx          → Listagem unificada (Estudos e Análises)
+│   │       └── [slug]/page.tsx   → Leitura do artigo
 │   ├── (auth)/
 │   │   ├── login/page.tsx
 │   │   └── cadastro/page.tsx
@@ -536,12 +532,7 @@ NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 
 - Quem somos + metodologia
 - Pilares do projeto (dados, estatística, transparência)
-
-### `/comunidade`
-
-- Cards com links para Telegram, YouTube, Instagram
-- Números atualizados (estático por enquanto)
-- CTA para cada canal
+- Links para as comunidades (Telegram, YouTube, Instagram)
 
 ### `/planos`
 
@@ -549,14 +540,15 @@ NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 - Conteúdo estático com badge "Em breve" nos planos pagos
 - CTA de cadastro gratuito
 
-### `/estudos` e `/analises`
+### `/artigos`
 
-- Listagem com filtro por categoria e tag
+- Listagem unificada de Estudos e Análises
+- Filtro integrado (categoria, tag, tipo) via barra superior
 - Busca por título
 - Paginação (20 artigos por página)
 - Exibe apenas artigos com `status: PUBLICADO`
 
-### `/estudos/[slug]` e `/analises/[slug]`
+### `/artigos/[slug]`
 
 - Conteúdo completo do artigo renderizado (Markdown → HTML)
 - Metadados: autor, data, categoria, tags
@@ -581,8 +573,8 @@ NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 
 ### Critérios de Aceite
 
-- [ ]  Layout com sidebar (desktop) e menu inferior (mobile)
-- [ ]  Badge de role visível no header
+- [x]  Layout com sidebar (desktop) e menu inferior (mobile)
+- [x]  Badge de role visível no header
 
 ### Páginas
 

@@ -1,0 +1,293 @@
+// ===========================================
+// BigDataBet — Schema Prisma (Fase 1)
+// ===========================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ===========================================
+// ENUMS
+// ===========================================
+
+// Papéis de usuário no sistema
+enum Role {
+  ADMIN
+  EDITOR
+  AUTOR
+  MEMBRO
+}
+
+// Planos de assinatura disponíveis
+enum Plan {
+  FREE
+  BASICO
+  PRO
+  PREMIUM
+}
+
+// Status do workflow de artigos no CMS
+enum ArticleStatus {
+  RASCUNHO
+  REVISAO
+  PUBLICADO
+}
+
+// Tipos de artigos disponíveis
+enum ArticleType {
+  ESTUDO
+  ANALISE
+  ARTIGO
+}
+
+// Status da assinatura Stripe
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  TRIALING
+  UNPAID
+}
+
+// ===========================================
+// NEXTAUTH.JS v5 — TABELAS OBRIGATÓRIAS
+// ===========================================
+
+// Usuário principal do sistema
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(MEMBRO)
+  plan          Plan      @default(FREE)
+  password      String?
+  newsletterOptIn Boolean @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relacionamentos NextAuth
+  accounts Account[]
+  sessions Session[]
+
+  // Relacionamentos do sistema
+  subscription Subscription?
+  articles     Article[]         @relation("ArticleAuthor")
+  revisions    ArticleRevision[]
+  favorites    Favorite[]
+  readHistory  ReadHistory[]
+
+  @@map("users")
+}
+
+// Conta OAuth vinculada (Google, GitHub etc.)
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// Sessão ativa do usuário
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// Token de verificação de email / magic link
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ===========================================
+// STRIPE — ASSINATURA
+// ===========================================
+
+// Assinatura Stripe vinculada ao usuário
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  stripeCustomerId     String             @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  status               SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// ===========================================
+// CMS — ARTIGOS, CATEGORIAS E TAGS
+// ===========================================
+
+// Artigo do CMS com workflow de publicação
+model Article {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  excerpt     String?       @db.Text
+  content     String        @db.LongText
+  thumbnail   String?
+  type        ArticleType
+  status      ArticleStatus @default(RASCUNHO)
+  authorId    String
+  categoryId  String?
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Plano mínimo para acessar o artigo (controle de acesso)
+  minPlan Plan @default(FREE)
+
+  author      User              @relation("ArticleAuthor", fields: [authorId], references: [id])
+  category    Category?         @relation(fields: [categoryId], references: [id])
+  tags        ArticleTag[]
+  revisions   ArticleRevision[]
+  favorites   Favorite[]
+  readHistory ReadHistory[]
+
+  @@index([status, type])
+  @@index([authorId])
+  @@index([categoryId])
+  @@index([publishedAt])
+  @@map("articles")
+}
+
+// Categoria de artigos (ex: Futebol, Basquete, Estratégias)
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  articles Article[]
+
+  @@map("categories")
+}
+
+// Tag para artigos (relação many-to-many implícita)
+model Tag {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  articles ArticleTag[]
+
+  @@map("tags")
+}
+
+// Tabela de junção N:N entre Article e Tag
+model ArticleTag {
+  articleId String
+  tagId     String
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@map("article_tags")
+}
+
+// Histórico de revisões de artigos
+model ArticleRevision {
+  id         String        @id @default(cuid())
+  articleId  String
+  editorId   String
+  fromStatus ArticleStatus
+  toStatus   ArticleStatus
+  note       String?       @db.Text
+  createdAt  DateTime      @default(now())
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  editor  User    @relation(fields: [editorId], references: [id])
+
+  @@index([articleId])
+  @@index([editorId])
+  @@map("article_revisions")
+}
+
+// Artigos favoritos do usuário
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@map("favorites")
+}
+
+// Histórico de leitura do usuário
+model ReadHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  articleId String
+  readAt    DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleId])
+  @@index([userId, readAt])
+  @@map("read_history")
+}
+
+// Planilhas para download/compra
+model Spreadsheet {
+  id          String   @id @default(cuid())
+  name        String          // Ex: "Premier League 2025/26"
+  description String?  @db.Text
+  league      String          // Nome do campeonato
+  country     String?         // País/região
+  fileUrl     String          // Caminho do arquivo em public/ ou URL externa
+  fileName    String          // Nome do arquivo para download
+  fileSize    String?         // Ex: "2.4 MB"
+  isPremium   Boolean  @default(false) // false = grátis, true = paga
+  downloads   Int      @default(0)
+  order       Int      @default(0)     // Ordenação manual
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("spreadsheets")
+}

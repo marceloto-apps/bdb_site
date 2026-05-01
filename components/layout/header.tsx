@@ -3,6 +3,8 @@ import Image from "next/image"
 import { auth } from "@/auth"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/auth/user-menu"
+import { Menu } from "lucide-react"
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 
 /** Links públicos de navegação */
 const navLinks = [
@@ -46,8 +48,8 @@ export async function Header() {
         </nav>
       </div>
 
-      {/* Lado Direito: Ações (Entrar ou Menu do Usuário) */}
-      <div className="absolute right-4 md:right-8 flex items-center gap-4 h-full top-0">
+      {/* Lado Direito: Ações (Entrar ou Menu do Usuário) e Menu Mobile */}
+      <div className="absolute right-4 md:right-8 flex items-center gap-2 md:gap-4 h-full top-0">
         {session ? (
           <UserMenu />
         ) : (
@@ -57,6 +59,30 @@ export async function Header() {
             </Button>
           </Link>
         )}
+
+        {/* Menu Mobile */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="md:hidden">
+              <Menu className="h-6 w-6" />
+              <span className="sr-only">Abrir menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[300px] sm:w-[400px]">
+            <nav className="flex flex-col gap-4 mt-8">
+              {navLinks.map((link) => (
+                <SheetClose asChild key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="block px-2 py-2 text-lg font-medium transition-colors hover:text-primary"
+                  >
+                    {link.label}
+                  </Link>
+                </SheetClose>
+              ))}
+            </nav>
+          </SheetContent>
+        </Sheet>
       </div>
     </header>
   )

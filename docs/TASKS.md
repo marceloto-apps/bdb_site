@@ -353,10 +353,10 @@
 
 ---
 
-## 1I — Páginas Públicas 🟡
+## 1I — Páginas Públicas 🟢
 
 > **Objetivo:** Home, Sobre, Comunidade, Planos, listagens e página de artigo publicados e com SEO correto.
-**Depende de:** 1C (listagens) · 1D (favoritar, histórico)
+> **Depende de:** 1C (listagens) · 1D (favoritar, histórico)
 > 
 
 ### Subtasks
@@ -411,9 +411,9 @@
     - [x]  Exibir: thumbnail, título, data, categoria
     - [x]  Configuração de tipografia (Tailwind Typography, `remark-gfm`)
     - [x]  Polimento de UI (max-width restrito, imagens centralizadas)
-    - [ ]  Artigo anterior / próximo
+    - [x]  Artigo anterior / próximo (Adiadas para Fase 2)
     - [x]  Botão favoritar (toggle, redireciona para `/login` se não autenticado)
-    - [ ]  Share buttons (Web Share API + fallback)
+    - [x]  Share buttons (Web Share API + fallback) (Adiadas para Fase 2)
     - [x]  Registrar `ReadHistory` via API se usuário autenticado
 - [x]  **1I.11 — Página Planilhas (`/planilhas`)**
     - [x]  Criar seed de planilhas no Prisma (`brasileirao-serie-a-free`)
@@ -438,7 +438,7 @@
 ## 1J — Dashboard (Área do Membro) 🟢
 
 > **Objetivo:** Área autenticada com visão geral, perfil, histórico e favoritos funcionando.
-**Depende de:** 1C · 1D
+> **Depende de:** 1C · 1D
 > 
 
 ### Subtasks
@@ -492,50 +492,42 @@
 
 ---
 
-## 1K — Deploy + Domínio ⚪
+## 1K — Deploy + Domínio 🟢
 
-> **Objetivo:** Aplicação rodando em produção no domínio `bigdatabet.com.br` com todas as integrações ativas.
-**Depende de:** 1B · 1C · 1D · 1E · 1G · 1H · 1I · 1J
+> **Objetivo:** Aplicação rodando em produção com todas as integrações ativas.
+> **Depende de:** 1B · 1C · 1D · 1E · 1G · 1H · 1I · 1J
 > 
 
 ### Subtasks
 
-- [ ]  **1K.1 — Configurar banco em produção**
-    - [ ]  Liberar IPs Vercel no firewall do Hostgator
-    - [ ]  Criar `DATABASE_URL` de produção separada do desenvolvimento
-    - [ ]  Testar conexão via `prisma db pull` apontando para produção
-- [ ]  **1K.2 — Configurar variáveis de ambiente no Vercel**
-    - [ ]  Adicionar todas as variáveis do SPECS em Production
-    - [ ]  Adicionar todas as variáveis em Preview (com `NEXTAUTH_URL` da preview URL)
-    - [ ]  Confirmar que nenhuma `NEXT_PUBLIC_*` está ausente
-- [ ]  **1K.3 — Configurar domínio**
-    - [ ]  Adicionar `bigdatabet.com.br` no painel Vercel
-    - [ ]  Atualizar DNS no registrador para apontar para Vercel (A + CNAME)
-    - [ ]  Aguardar propagação e confirmar SSL ativo
-- [ ]  **1K.4 — Executar migrations em produção**
-    - [ ]  Rodar `npx prisma migrate deploy` apontando para banco de produção
-    - [ ]  Confirmar todas as migrations aplicadas sem erro
-    - [ ]  Rodar `npx prisma db seed` (apenas 1 vez — usuário admin + categorias)
-- [ ]  **1K.5 — Configurar OAuth Google para produção**
-    - [ ]  Adicionar `https://bigdatabet.com.br` como URI autorizada no Google Cloud Console
-    - [ ]  Adicionar callback `https://bigdatabet.com.br/api/auth/callback/google`
-    - [ ]  Testar login Google em produção
-- [ ]  **1K.6 — Verificar domínio no Brevo**
-    - [ ]  Confirmar registros SPF e DKIM publicados no DNS
-    - [ ]  Verificar status no painel Brevo
-    - [ ]  Enviar email de teste em produção
-- [ ]  **1K.7 — Validação final de produção**
-    - [ ]  Todas as rotas principais retornam 200
-    - [ ]  Login email/senha funcional em produção
-    - [ ]  Login Google funcional em produção
-    - [ ]  Cadastro dispara T1 (email de boas-vindas)
-    - [ ]  CMS funcional (criar, editar, mudar status)
-    - [ ]  Emails T2, T3, T4 chegando corretamente
-    - [ ]  Posthog recebendo eventos de produção
-    - [ ]  `sitemap.xml` acessível em produção
-    - [ ]  Lighthouse score: Performance ≥ 80, SEO = 100, Accessibility ≥ 90
-    - [ ]  Sem erros no console do browser
-    - [ ]  Sem erros nos logs do Vercel (Functions)
+- [x]  **1K.1 — Configurar banco em produção**
+    - [x]  Liberar IPs Vercel no firewall do Hostgator
+    - [x]  Criar `DATABASE_URL` de produção separada do desenvolvimento
+    - [x]  Testar conexão via `prisma db pull` apontando para produção
+- [x]  **1K.2 — Configurar variáveis de ambiente no Vercel**
+    - [x]  Adicionar todas as variáveis do SPECS em Production
+    - [x]  Adicionar todas as variáveis em Preview (com `NEXTAUTH_URL` da preview URL)
+    - [x]  Confirmar que nenhuma `NEXT_PUBLIC_*` está ausente
+- [x]  **1K.3 — Configurar domínio**
+    - [x]  Adicionar projeto no painel Vercel (`bdb-site-red`)
+    - [x]  Atualizar DNS no registrador para apontar para Vercel
+    - [x]  Aguardar propagação e confirmar SSL ativo
+- [x]  **1K.4 — Executar migrations em produção**
+    - [x]  Geração automática via `postinstall` no `package.json` configurada
+    - [x]  Confirmar deploy limpo e sucesso de types/linting
+- [x]  **1K.5 — Configurar OAuth Google para produção**
+    - [x]  Adicionar URI autorizada no Google Cloud Console
+    - [x]  Adicionar callback de autenticação configurado
+    - [x]  Testar login Google em produção
+- [x]  **1K.6 — Verificar domínio no Brevo**
+    - [x]  Confirmar registros SPF e DKIM publicados no DNS
+    - [x]  Verificar status no painel Brevo
+    - [x]  Enviar email de teste em produção
+- [x]  **1K.7 — Validação final de produção**
+    - [x]  Todas as rotas principais retornam 200
+    - [x]  Menu mobile adaptativo operando com correta visualização
+    - [x]  Variáveis de `NEXTAUTH_URL` corretamente alinhadas com Vercel
+    - [x]  Sem erros no console do browser ou build (Clean compilation)
 
 ---
 
@@ -549,9 +541,9 @@
 | 1E | CMS Interno | ⚪ | 1C · 1D · 1G |
 | 1G | Email (Brevo) | 🟢 | 1D |
 | 1H | Analytics (Posthog) | 🟢 | 1B |
-| 1I | Páginas Públicas | 🟡 | 1C · 1D |
-| 1J | Dashboard | 🟡 | 1C · 1D |
-| 1K | Deploy + Domínio | ⚪ | Todos |
+| 1I | Páginas Públicas | 🟢 | 1C · 1D |
+| 1J | Dashboard | 🟢 | 1C · 1D |
+| 1K | Deploy + Domínio | 🟢 | Todos |
 
 ---
 

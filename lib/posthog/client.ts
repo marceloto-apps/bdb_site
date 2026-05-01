@@ -9,8 +9,6 @@ let initialized = false
  *
  * Notas:
  * - posthog.init() não retorna o singleton público de forma confiável.
- * - O posthog-js moderno não popula window.posthog automaticamente,
- *   por isso expomos manualmente em dev para facilitar o debug.
  */
 export function getPosthogClient(): PostHog | null {
   // Não executa no servidor
@@ -36,9 +34,8 @@ export function getPosthogClient(): PostHog | null {
         // Confirma init bem-sucedido
         console.log('[PostHog] ✅ Inicializado via reverse proxy e pronto para capturar eventos')
 
-        // Em desenvolvimento, expõe no window e ativa logs verbosos
+        // Em desenvolvimento, ativa logs verbosos
         if (process.env.NODE_ENV === 'development') {
-          ;(window as unknown as { posthog: PostHog }).posthog = ph
           ph.debug()
         }
       },

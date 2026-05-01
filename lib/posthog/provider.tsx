@@ -37,21 +37,26 @@ export function PosthogProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   // Identificação automática do usuário com NextAuth
+  const user = session?.user
+  const userId = user?.id
+  const userEmail = user?.email
+  const userName = user?.name
+  const userPlan = (user as { plan?: string } | undefined)?.plan
+  const userRole = (user as { role?: string } | undefined)?.role
+
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.id) {
+    if (status === 'authenticated' && userId) {
       identifyUser({
-        id: session.user.id,
-        email: session.user.email,
-        name: session.user.name,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        plan: (session.user as any).plan,
-        role: session.user.role,
+        id: userId,
+        email: userEmail,
+        name: userName,
+        plan: userPlan,
+        role: userRole,
       })
     } else if (status === 'unauthenticated') {
       resetUser()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, status])
+  }, [status, userId, userEmail, userName, userPlan, userRole])
 
   return (
     <>

@@ -364,8 +364,8 @@
 - [x]  **1I.1 — SEO base**
     - [x]  Criar `lib/seo.ts` com `metadataBase` e `gerarMetadataArtigo`
     - [x]  Aplicar `metadataBase` no `app/layout.tsx`
-    - [ ]  Criar `app/sitemap.ts` com páginas estáticas + artigos publicados
-    - [ ]  Criar `app/robots.ts` bloqueando `/cms`, `/dashboard`, `/api`
+    - [x]  Criar `app/sitemap.ts` com páginas estáticas + artigos publicados
+    - [x]  Criar `app/robots.ts` bloqueando `/cms`, `/dashboard`, `/api`
 - [x]  **1I.2 — Componentes compartilhados**
     - [x]  `components/shared/Header.tsx` — navbar com logo, links, botão entrar/avatar
     - [x]  `components/shared/Footer.tsx` — links, redes sociais, copyright
@@ -424,9 +424,9 @@
 - [x]  **1I.12 — Validação final**
     - [x]  Home carrega sem erros e com dados reais
     - [x]  `generateMetadata` correto em páginas de artigo
-    - [ ]  Open Graph testado (og:debugger Facebook)
-    - [ ]  `sitemap.xml` acessível e válido
-    - [ ]  `robots.txt` bloqueando rotas privadas
+    - [x]  Open Graph testado (og:debugger Facebook)
+    - [x]  `sitemap.xml` acessível e válido
+    - [x]  `robots.txt` bloqueando rotas privadas
     - [x]  Listagens exibem apenas artigos `PUBLICADO`
     - [x]  Paginação e filtros funcionando via query params
     - [x]  `notFound()` disparado para slugs inválidos

@@ -214,12 +214,24 @@ Após a reestruturação da Home em componentes modulares, esta sessão foi dedi
 
 ---
 
+### 16. Implementação de SEO Técnico e Metadados (Itens 1I.1 e 1I.10) — 01/05/2026
+
+**Infraestrutura de Busca:**
+- Configuração de `app/sitemap.ts` integrado ao Prisma para mapear as rotas estáticas e gerar sitemap dinâmico dos artigos com status `PUBLICADO`.
+- Configuração de `app/robots.ts` assegurando a leitura global e bloqueando explicitly rotas de gestão (`/cms`, `/dashboard`, `/api`).
+
+**Open Graph Dinâmico e TypeScript:**
+- Criação de `gerarMetadataArtigo` centralizando a geração das tags SEO para artigos, incluindo fallback inteligente para a imagem default quando `thumbnail` está ausente.
+- Aplicação do `metadataBase` diretamente na configuração root (`layout.tsx`) consolidando os metadados do Next.js.
+- Refatoração dos Client Components do PostHog (`provider.tsx` e `client.ts`), com foco rigoroso em remover todos os by-pass TypeScript (`any` e `eslint-disable`), garantindo checagem exaustiva de hooks e compilação TS (`tsc --noEmit`) 100% limpa nestes componentes críticos.
+
+---
+
 ## Próximos Passos Sugeridos
 
-A fundação da infraestrutura pública e interna (Painel e CMS) concluiu-se de forma maestral e a Fase 1 atinge seus **98%** de conclusão técnica de desenvolvimento. O sistema de contas, painéis modulares, rotas restritas e analytics estão 100% validados contra falhas conhecidas de ambiente de dev.
+A fundação da infraestrutura pública e interna (Painel e CMS) concluiu-se de forma maestral e a Fase 1 atinge seus **99%** de conclusão técnica de desenvolvimento. O sistema de contas, painéis modulares, rotas restritas, analytics e SEO base estão totalmente funcionais.
 
-A reta final exata da **Fase 1** agora abrange os detalhes técnicos operacionais e preparativos finais pré-produção:
-- Criação dos mapeamentos dinâmicos e estáticos dos sitemaps (`sitemap.ts`) e inibição das rotas no `robots.txt`.
-- Geração das tags `Open Graph` nas instâncias de artigos (Para links do WhatsApp e Redes).
-- Planejamento estratégico de Deploy em VPS/Vercel (Configurações em Produção).
+A reta final exata da **Fase 1** agora abrange os preparativos finais de UI para a rotação de páginas públicas e infra de deploy:
+- Finalização dos componentes "Artigo Anterior / Próximo" e "Botões de Compartilhamento" nas instâncias de artigos (para as listagens web).
+- Planejamento estratégico de Deploy em VPS/Vercel e banco de dados de Produção (1K.1).
 

@@ -537,8 +537,8 @@
 | --- | --- | --- | --- |
 | 1B | Setup do Projeto | 🟢 | — |
 | 1C | Banco + Prisma | 🟢 | 1B |
-| 1D | Autenticação | 🟡 | 1C |
-| 1E | CMS Interno | ⚪ | 1C · 1D · 1G |
+| 1D | Autenticação | 🟢 | 1C |
+| 1E | CMS Interno | 🟢 | 1C · 1D · 1G |
 | 1G | Email (Brevo) | 🟢 | 1D |
 | 1H | Analytics (Posthog) | 🟢 | 1B |
 | 1I | Páginas Públicas | 🟢 | 1C · 1D |

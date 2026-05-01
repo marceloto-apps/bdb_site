@@ -14,17 +14,30 @@ interface ImageUploadProps {
   buttonText?: string
 }
 
+interface CloudinaryUploadResponse {
+  secure_url: string
+  public_id: string
+  width: number
+  height: number
+  format: string
+}
+
+interface CloudinaryUploadResult {
+  event?: string
+  info?: CloudinaryUploadResponse | string
+}
+
 export function ImageUpload({ value, onChange, onRemove, buttonText = "Fazer upload de imagem" }: ImageUploadProps) {
   const [isUploading, setIsUploading] = useState(false)
 
-  const onUpload = (result: any) => {
+  const onUpload = (result: CloudinaryUploadResult) => {
     setIsUploading(false)
-    if (result.event === 'success') {
+    if (result.event === 'success' && result.info && typeof result.info !== 'string') {
       onChange(result.info.secure_url)
     }
   }
 
-  const onError = (error: any) => {
+  const onError = (error: unknown) => {
     setIsUploading(false)
     console.error('Upload error:', error)
     toast({

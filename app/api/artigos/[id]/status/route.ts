@@ -73,7 +73,7 @@ export async function PATCH(
     }
 
     // Usando transaction para garantir a consistência
-    const [atualizado, revisao] = await prisma.$transaction([
+    const [atualizado] = await prisma.$transaction([
       prisma.article.update({
         where: { id },
         data: { status: novoStatus, publishedAt }
@@ -136,8 +136,9 @@ export async function PATCH(
     }
 
     return NextResponse.json({ data: atualizado })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[PATCH /api/artigos/[id]/status]', error)
-    return NextResponse.json({ error: error.message || 'Erro interno' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : 'Erro interno'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

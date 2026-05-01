@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { cadastroSchema, type CadastroInput } from '@/lib/validations/auth'
 
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ export function CadastroForm() {
   const [carregando, setCarregando] = useState(false)
 
   const form = useForm<CadastroInput>({
-    resolver: zodResolver(cadastroSchema) as any,
+    resolver: zodResolver(cadastroSchema) as Resolver<CadastroInput>,
     defaultValues: {
       name: '',
       email: '',
@@ -85,8 +85,9 @@ export function CadastroForm() {
       // 3. Login OK — redirecionar ao dashboard
       router.push('/dashboard')
       router.refresh()
-    } catch {
-      setErro('Erro ao criar conta. Tente novamente.')
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erro ao criar conta. Tente novamente."
+      setErro(msg)
     } finally {
       setCarregando(false)
     }

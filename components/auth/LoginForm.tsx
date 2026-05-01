@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useForm, type Resolver } from 'react-hook-form'
 import { loginSchema, type LoginInput } from '@/lib/validations/auth'
 
 import { Button } from '@/components/ui/button'
@@ -24,7 +24,7 @@ export function LoginForm() {
   const [carregando, setCarregando] = useState(false)
 
   const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema) as any,
+    resolver: zodResolver(loginSchema) as Resolver<LoginInput>,
     defaultValues: {
       email: '',
       password: '',
@@ -50,8 +50,9 @@ export function LoginForm() {
       // Login bem-sucedido — redirecionar ao dashboard
       router.push('/dashboard')
       router.refresh()
-    } catch {
-      setErro('Erro ao fazer login. Tente novamente.')
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Erro ao fazer login. Tente novamente."
+      setErro(msg)
     } finally {
       setCarregando(false)
     }

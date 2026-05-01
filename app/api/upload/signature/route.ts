@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { cloudinary } from '@/lib/cloudinary'
 
-export async function POST(req: Request) {
+export async function POST() {
   try {
     const session = await auth()
     if (!session?.user?.id) {

@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+
 import { ArtigoListagem } from '@/components/artigos/ArtigoListagem'
 import { headers } from 'next/headers'
 
@@ -9,8 +9,6 @@ export default async function CmsPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  const session = await auth()
-  const userRole = session?.user?.role as string
 
   // Construir a query para a API
   const params = new URLSearchParams()
@@ -46,7 +44,7 @@ export default async function CmsPage({
         </div>
       </div>
       
-      <ArtigoListagem artigos={artigos} userRole={userRole} />
+      <ArtigoListagem artigos={artigos} />
     </div>
   )
 }

@@ -11,7 +11,15 @@ interface ArticleData {
   date: string;
 }
 
-export function FeaturedContentSection({ articles }: { articles?: any[] }) {
+interface ArtigoDestaque {
+  id: string
+  slug: string
+  title: string
+  category?: { name: string } | null
+  publishedAt?: Date | null
+}
+
+export function FeaturedContentSection({ articles }: { articles?: ArtigoDestaque[] }) {
   // Dados estáticos de fallback
   const staticArticles: ArticleData[] = [
     {

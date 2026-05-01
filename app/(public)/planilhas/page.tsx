@@ -1,4 +1,4 @@
-import { Metadata } from 'next'
+
 import { prisma } from '@/lib/prisma'
 import { HeroSection } from '@/components/planilhas/hero-section'
 import { FreeSpreadsheetsSection } from '@/components/planilhas/free-spreadsheets-section'

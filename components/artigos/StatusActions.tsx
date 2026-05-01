@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 
 interface StatusActionsProps {
-  artigo: any
+  artigo: {
+    id: string
+    status: string
+  }
   userRole: string
 }
 
@@ -50,7 +53,8 @@ export function StatusActions({ artigo, userRole }: StatusActionsProps) {
       toast({ title: 'Sucesso', description: 'Status atualizado com sucesso.' })
       setDialogOpen(false)
       router.refresh()
-    } catch (err) {
+    } catch (err: unknown) {
+      console.error("Erro ao atualizar status:", err)
       toast({ variant: 'destructive', title: 'Erro', description: 'Erro inesperado' })
     } finally {
       setLoading(false)

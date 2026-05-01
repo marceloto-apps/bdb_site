@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, type Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import dynamic from 'next/dynamic'
@@ -31,11 +31,21 @@ const MDEditor = dynamic(
 type FormData = z.infer<typeof criarArtigoSchema>
 
 interface ArtigoEditorProps {
-  artigo?: any // Se passado, é modo edição
-  userRole: string
+  artigo?: {
+    id: string
+    title: string
+    slug: string
+    type: 'ESTUDO' | 'ANALISE' | 'ARTIGO'
+    excerpt: string | null
+    content: string | null
+    thumbnail: string | null
+    categoryId: string | null
+    tags: { tag: { name: string } }[]
+    status: 'RASCUNHO' | 'REVISAO' | 'PUBLICADO'
+  }
 }
 
-export function ArtigoEditor({ artigo, userRole }: ArtigoEditorProps) {
+export function ArtigoEditor({ artigo }: ArtigoEditorProps) {
   const router = useRouter()
   const { toast } = useToast()
   const [categorias, setCategorias] = useState<{id: string, name: string}[]>([])
@@ -44,7 +54,7 @@ export function ArtigoEditor({ artigo, userRole }: ArtigoEditorProps) {
   const isEditMode = !!artigo
 
   const form = useForm<FormData>({
-    resolver: zodResolver(isEditMode ? atualizarArtigoSchema : criarArtigoSchema) as any,
+    resolver: zodResolver(isEditMode ? atualizarArtigoSchema : criarArtigoSchema) as Resolver<FormData>,
     defaultValues: {
       title: artigo?.title || '',
       slug: artigo?.slug || '',
@@ -53,7 +63,7 @@ export function ArtigoEditor({ artigo, userRole }: ArtigoEditorProps) {
       content: artigo?.content || '',
       thumbnail: artigo?.thumbnail || '',
       categoryId: artigo?.categoryId || undefined,
-      tags: artigo?.tags?.map((t: any) => t.tag.name) || [],
+      tags: artigo?.tags?.map((t: { tag: { name: string } }) => t.tag.name) || [],
     }
   })
 
@@ -68,7 +78,7 @@ export function ArtigoEditor({ artigo, userRole }: ArtigoEditorProps) {
       .catch(console.error)
   }, [])
 
-  async function onSubmit(data: any) {
+  async function onSubmit(data: FormData) {
     setLoading(true)
     try {
       const url = isEditMode ? `/api/artigos/${artigo.id}` : '/api/artigos'

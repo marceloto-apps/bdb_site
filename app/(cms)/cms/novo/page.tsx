@@ -1,9 +1,7 @@
-import { auth } from '@/auth'
+
 import { ArtigoEditor } from '@/components/artigos/ArtigoEditor'
 
 export default async function CmsNovoPage() {
-  const session = await auth()
-  const userRole = session?.user?.role as string
 
   return (
     <div className="space-y-8">
@@ -13,7 +11,7 @@ export default async function CmsNovoPage() {
       </div>
       
       <div className="bg-surface border rounded-lg p-6">
-        <ArtigoEditor userRole={userRole} />
+        <ArtigoEditor />
       </div>
     </div>
   )

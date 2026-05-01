@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { seo, gerarMetadataArtigo } from '@/lib/seo'
 import { notFound } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+
 import { ArrowLeft, Calendar } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'

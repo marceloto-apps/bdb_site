@@ -17,8 +17,11 @@ export const metadata = seo({
   path: '',
 })
 
+import type { Prisma } from "@prisma/client"
+type ArticleWithCategory = Prisma.ArticleGetPayload<{ include: { category: true } }>
+
 export default async function HomePage() {
-  let latestArticles: any[] = []
+  let latestArticles: ArticleWithCategory[] = []
   try {
     latestArticles = await prisma.article.findMany({
       where: { status: "PUBLICADO" },

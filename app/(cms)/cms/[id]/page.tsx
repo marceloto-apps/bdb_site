@@ -5,6 +5,15 @@ import { ArtigoEditor } from '@/components/artigos/ArtigoEditor'
 import { StatusActions } from '@/components/artigos/StatusActions'
 import { StatusBadge } from '@/components/artigos/StatusBadge'
 
+interface ArtigoRevision {
+  id: string
+  editor: { name: string }
+  createdAt: string | Date
+  fromStatus: string
+  toStatus: string
+  note?: string
+}
+
 export const dynamic = 'force-dynamic'
 
 export default async function CmsEditarPage({ params }: { params: { id: string } }) {
@@ -51,7 +60,7 @@ export default async function CmsEditarPage({ params }: { params: { id: string }
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-surface border rounded-lg p-6">
-          <ArtigoEditor artigo={artigo} userRole={userRole} />
+          <ArtigoEditor artigo={artigo} />
         </div>
 
         <div className="space-y-6">
@@ -81,7 +90,7 @@ export default async function CmsEditarPage({ params }: { params: { id: string }
               <p className="text-sm text-muted-foreground">Nenhuma revisão registrada.</p>
             ) : (
               <div className="space-y-4">
-                {artigo.revisions.map((rev: any) => (
+                {artigo.revisions.map((rev: ArtigoRevision) => (
                   <div key={rev.id} className="text-sm border-l-2 border-primary/30 pl-3">
                     <div className="flex justify-between mb-1">
                       <span className="font-medium">{rev.editor.name}</span>
@@ -92,7 +101,7 @@ export default async function CmsEditarPage({ params }: { params: { id: string }
                     </div>
                     {rev.note && (
                       <div className="bg-muted p-2 rounded mt-1 text-xs italic">
-                        "{rev.note}"
+                        &quot;{rev.note}&quot;
                       </div>
                     )}
                   </div>

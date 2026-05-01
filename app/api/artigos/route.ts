@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { Prisma, ArticleStatus, ArticleType } from '@prisma/client'
 import { criarArtigoSchema } from '@/lib/validations/artigos'
 import { gerarSlug, slugEstaDisponivel } from '@/lib/utils/slug'
 
@@ -22,7 +23,7 @@ export async function GET(req: Request) {
     const skip = (page - 1) * limit
 
     const role = session.user.role as string
-    let where: any = {}
+    const where: Prisma.ArticleWhereInput = {}
 
     if (role === 'AUTOR') {
       where.authorId = session.user.id
@@ -37,10 +38,10 @@ export async function GET(req: Request) {
     }
 
     if (status && (role !== 'REVISOR' || status === 'REVISAO')) {
-      where.status = status
+      where.status = status as ArticleStatus
     }
     if (type) {
-      where.type = type
+      where.type = type as ArticleType
     }
 
     const [artigos, total] = await Promise.all([

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
-import { Suspense } from 'react'
+
 import { cn } from '@/lib/utils'
 import { SessionProvider } from "@/components/providers/session-provider"
 import { PosthogProvider } from "@/lib/posthog/provider"

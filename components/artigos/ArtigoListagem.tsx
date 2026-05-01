@@ -5,11 +5,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArtigoCard } from './ArtigoCard'
 
 interface ArtigoListagemProps {
-  artigos: any[]
-  userRole: string
+  artigos: {
+    id: string
+    title: string
+    type: string
+    status: 'RASCUNHO' | 'REVISAO' | 'PUBLICADO'
+    author: { name: string | null }
+    updatedAt: Date
+  }[]
 }
 
-export function ArtigoListagem({ artigos, userRole }: ArtigoListagemProps) {
+export function ArtigoListagem({ artigos }: ArtigoListagemProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 

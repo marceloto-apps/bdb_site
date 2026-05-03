@@ -13,16 +13,19 @@ interface GraficoCurvaProps {
 }
 
 /** Tooltip customizado em PT-BR */
-function TooltipCustom({ active, payload, label }: any) {
+function TooltipCustom({ active, payload, label }: { active?: boolean; payload?: unknown[]; label?: string | number }) {
   if (!active || !payload?.length) return null
   return (
     <div className="bg-card border border-border rounded-lg p-3 shadow-xl text-xs space-y-1">
       <p className="font-bold text-foreground">Valor: {typeof label === 'number' ? label.toFixed(1) : label}</p>
-      {payload.map((entry: any) => (
-        <p key={entry.dataKey} style={{ color: entry.color }}>
-          {entry.dataKey === 'modified' ? 'Gram-Charlier' : 'Normal'}: {entry.value.toFixed(4)}
-        </p>
-      ))}
+      {payload.map((entry: unknown) => {
+        const e = entry as { dataKey: string; color: string; value: number }
+        return (
+          <p key={e.dataKey} style={{ color: e.color }}>
+            {e.dataKey === 'modified' ? 'Gram-Charlier' : 'Normal'}: {e.value.toFixed(4)}
+          </p>
+        )
+      })}
     </div>
   )
 }

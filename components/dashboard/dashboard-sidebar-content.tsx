@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   ArrowUpDown,
   TrendingUp,
+  Target,
   GraduationCap, 
   Trophy, 
   FileText, 
@@ -117,26 +118,34 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/validacao-de-risco'} tooltip="Validação de Risco">
-              <Link href="/dashboard/validacao-de-risco">
+            <SidebarMenuButton asChild isActive={pathname === '/dashboard/ferramentas/validacao-risco'} tooltip="Validação e Risco">
+              <Link href="/dashboard/ferramentas/validacao-risco">
                 <ShieldAlert />
-                <span>Validação de Risco</span>
+                <span>Validação e Risco</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/over-under'} tooltip="Cálculo Over/Under">
-              <Link href="/dashboard/over-under">
+            <SidebarMenuButton asChild isActive={pathname === '/dashboard/ferramentas/over-under-25'} tooltip="Over/Under 2.5">
+              <Link href="/dashboard/ferramentas/over-under-25">
+                <Target />
+                <span>Over/Under 2.5</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === '/dashboard/ferramentas/over-under-linhas'} tooltip="Over/Under Linhas">
+              <Link href="/dashboard/ferramentas/over-under-linhas">
                 <ArrowUpDown />
-                <span>Cálculo Over/Under</span>
+                <span>Over/Under Linhas</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/distribuicao-ah'} tooltip="Distribuição AH">
-              <Link href="/dashboard/distribuicao-ah">
+            <SidebarMenuButton asChild isActive={pathname === '/dashboard/ferramentas/distribuicao'} tooltip="Simulador de Distribuição">
+              <Link href="/dashboard/ferramentas/distribuicao">
                 <TrendingUp />
-                <span>Distribuição AH</span>
+                <span>Simulador de Distribuição</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

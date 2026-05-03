@@ -1,11 +1,21 @@
 # TASKS
 
-# [TASKS.md](http://tasks.md/) — Big Data Bet | Fase 1
+# [TASKS.md](http://tasks.md/) — Big Data Bet
 
-> **Versão:** 1.1 | **Atualizado:** 26/04/2026
-**Referências:** PRD v1.1 · [SCHEMA.md](http://schema.md/) v1.0 · [SPECS.md](http://specs.md/) v1.0
+> **Versão:** 2.3 | **Atualizado:** 02/05/2026
+> **Mudanças desde v2.1:**
+> - Adicionada subseção "Ground Truth" em 2B com 4 tasks de validação contra planilha legada
+> - Subtasks de validação adicionadas em 2B.1, 2B.5 e 2B.6
+> - Tasks de UI adicionadas para tooltips educativos sobre modelos avançados
+**Referências:** PRD v1.3 · [SCHEMA.md](http://schema.md/) v2.1 · [SPECS.md](http://specs.md/) v2.1
 **Regra:** Nenhuma task marcada como concluída sem checklist interno 100% validado.
 > 
+
+---
+
+## ✅ Fase 1 — Concluída em 01/05/2026
+
+Toda a fundação está em produção. Próximas fases reorganizadas conforme PRD v1.2.
 
 ---
 
@@ -549,3 +559,344 @@
 
 > **Regra para o agente:** Marcar subtask como concluída somente após todos os itens do checklist interno validados manualmente ou por teste automatizado. Nunca pular a validação final de cada item.
 >
+
+---
+
+# TASKS.md — Fase 2: Dashboards de Liga
+
+> **Versão:** 2.1 | **Status:** ⚪ Pendente | **MVP:** Brasileirão Série A
+> **Depende de:** Fase 1 (concluída)
+
+## 2A — Schema e Modelagem ⚪
+- [ ] 2A.1 — Adicionar enums LeagueTier e MatchResult
+- [ ] 2A.2 — Criar modelo League no Prisma
+- [ ] 2A.3 — Criar modelo Team no Prisma
+- [ ] 2A.4 — Criar modelo Match no Prisma com índices
+- [ ] 2A.5 — Criar modelo MatchImport para auditoria
+- [ ] 2A.6 — Adicionar relações no User (matchImports)
+- [ ] 2A.7 — Rodar migration `add_leagues_phase_2`
+- [ ] 2A.8 — Validar schema com Prisma Studio
+- [ ] 2A.9 — Adicionar campos `sourceFile` e `importedAt` ao modelo `Match`
+- [ ] 2A.10 — Adicionar índice `@@index([sourceFile])` ao modelo `Match`
+
+## 2B — Engine de Cálculo Estatístico ⚪
+
+### Ground Truth — Validação contra Planilha Legada
+
+> **Referência:** docs/MODELOS_ESTATISTICOS.md seção 10 e planilha BRA1DASHv261.xlsx
+
+#### - [ ] Task 2B.0.1 — Criar arquivo de ground truth
+- **Arquivo:** `__tests__/analytics/ground-truth/bra1-2026.ts`
+- **Descrição:** Criar arquivo TypeScript exportando as constantes do ground truth do Brasileirão 2026
+- **Conteúdo obrigatório:**
+  - Constante `GROUND_TRUTH_BRA1_2026` com μ_h=1.57, μ_a=1.05, totalJogos=117
+  - Array `CASOS_GROUND_TRUTH` com os 5 confrontos extraídos da planilha
+  - Caso especial `ATHLETICO_VS_ATHLETICO` (auto-confronto da aba CS)
+- **Validação:** arquivo importado nos testes 2B.0.2 e 2B.0.3 sem erros
+
+#### - [ ] Task 2B.0.2 — Teste de validação Poisson contra ground truth
+- **Arquivo:** `__tests__/analytics/ground-truth/poisson.test.ts`
+- **Descrição:** Implementar suíte de testes que valida o modelo Poisson contra o ground truth
+- **Casos obrigatórios:**
+  - Athletico-PR vs Athletico-PR: validar lambdas, matriz 11x11 (5 células-chave) e mercados (1X2, BTTS, O/U)
+  - Os 5 confrontos do array CASOS_GROUND_TRUTH: validar lambdas e mercados principais
+- **Tolerância:** conforme tabela 10.3 do MODELOS_ESTATISTICOS.md
+- **Validação:** 100% dos testes passando
+
+#### - [ ] Task 2B.0.3 — Teste de regressão das forças por time
+- **Arquivo:** `__tests__/analytics/ground-truth/forcas.test.ts`
+- **Descrição:** Validar que o cálculo de FCAtC, FCDfC, FCAtV, FCDfV bate com os valores da planilha BDBRA1
+- **Times mínimos:** Athletico-PR, Flamengo RJ, Cruzeiro, Palmeiras, Vasco
+- **Tolerância:** < 0.02 absoluto
+- **Validação:** 100% dos testes passando
+
+#### - [ ] Task 2B.0.4 — Documentar processo de atualização do ground truth
+- **Arquivo:** `__tests__/analytics/ground-truth/README.md`
+- **Descrição:** Documentar como atualizar o ground truth quando uma nova temporada for importada
+- **Conteúdo:**
+  - Passo a passo para extrair médias da liga via SQL
+  - Como rodar os testes de regressão localmente
+  - Quando atualizar (anualmente ao final de cada temporada)
+- **Validação:** README acessível pelo time
+
+- [ ] 2B.1 — Implementar `lib/analytics/poisson.ts` (modelo padrão)
+  - [ ] 2B.1.1 — Validar matriz 11x11 do confronto Athletico-PR vs Athletico-PR contra a aba CS da planilha (5 células-chave, tolerância < 0.5%)
+  - [ ] 2B.1.2 — Validar mercados derivados (1X2, BTTS, O/U) dos 5 confrontos do CASOS_GROUND_TRUTH (tolerância < 1%)
+- [ ] 2B.2 — Implementar `lib/analytics/zero-inflated.ts` (ZIP)
+- [ ] 2B.3 — Implementar `lib/analytics/negative-binomial.ts`
+- [ ] 2B.4 — Implementar `lib/analytics/dixon-coles.ts` com tau + decay
+- [ ] 2B.5 — Implementar `lib/analytics/medias.ts` (médias, DP, CV)
+  - [ ] 2B.5.1 — Validar μ_h e μ_a calculados contra GROUND_TRUTH_BRA1_2026 (tolerância < 0.01)
+  - [ ] 2B.5.2 — Bloquear cálculo se liga tem < 20 jogos (lançar erro `INSUFFICIENT_LEAGUE_DATA`)
+- [ ] 2B.6 — Implementar `lib/analytics/forca-time.ts`
+  - [ ] 2B.6.1 — Implementar cálculo de MGC, MGSC, MGV, MGSV separados rigorosamente por mando
+  - [ ] 2B.6.2 — Implementar cálculo de FCAtC, FCDfC, FCAtV, FCDfV conforme seção 2.3 do MODELOS_ESTATISTICOS.md
+  - [ ] 2B.6.3 — Bloquear cálculo se time tem < 5 jogos casa OU < 5 jogos fora (lançar erro `INSUFFICIENT_TEAM_DATA`)
+  - [ ] 2B.6.4 — Validar forças do Athletico-PR contra ground truth (FCAtC=1.24, FCDfC=0.64, FCAtV=0.80, FCDfV=1.05)
+- [ ] 2B.7 — Implementar `lib/analytics/mapa-valor.ts`
+- [ ] 2B.8 — Implementar `lib/analytics/ev-calculator.ts`
+- [ ] 2B.9 — Criar API unificada em `lib/analytics/index.ts`
+- [ ] 2B.10 — Escrever testes unitários validados contra BRA1DASHv261.xlsx
+
+## 2C — Importação de CSV (Admin) ⚪
+- [ ] 2C.1 — Instalar `papaparse` (com justificativa documentada)
+- [ ] 2C.2 — Criar parser de CSV football-data em `lib/import/football-data.ts`
+  - [ ] 2C.2.1 — Documentar mapeamento de colunas por tier (Tier 1 vs Tier 2) conforme SPECS 2B
+  - [ ] 2C.2.2 — Implementar detecção dinâmica de colunas no header
+  - [ ] 2C.2.3 — Validar colunas obrigatórias (erro 400 se faltar)
+  - [ ] 2C.2.4 — Mapear colunas desejáveis ausentes para `null`
+  - [ ] 2C.2.5 — Ignorar silenciosamente colunas extras do Tier 1
+  - [ ] 2C.2.6 — Registrar colunas ignoradas/ausentes em `MatchImport.notes`
+- [ ] 2C.3 — Criar rota `POST /api/admin/ligas/[slug]/importar`
+- [ ] 2C.4 — Implementar upsert de Teams e Matches
+- [ ] 2C.5 — Criar registro de auditoria em MatchImport
+- [ ] 2C.6 — Criar tela `/cms/ligas/importar` com upload e feedback
+- [ ] 2C.7 — Validar parser com CSVs reais
+  - [ ] 2C.7.1 — Importar CSV de teste do Brasileirão A 2024 (Tier 2)
+  - [ ] 2C.7.2 — Importar CSV de teste da Premier League 2024 (Tier 1) — apenas para teste do parser
+  - [ ] 2C.7.3 — Confirmar que ambos populam corretamente os campos comuns
+  - [ ] 2C.7.4 — Confirmar que `MatchImport.notes` registra diferenças
+  - [ ] 2C.7.5 — Reverter dados da Premier League após teste (DELETE) — manter apenas Brasileirão no MVP
+- [ ] 2C.8 — Restringir rota a role ADMIN
+
+## 2D — Telas do Dashboard de Liga ⚪
+- [ ] 2D.1 — Criar rota `/dashboard/ligas` com grid de ligas
+- [ ] 2D.2 — Criar rota `/dashboard/ligas/[slug]` (Server Component base)
+- [ ] 2D.3 — Componente `SeletorConfronto` com filtros
+- [ ] 2D.4 — Componente `SeletorModelo` (toggle 4 modelos)
+- [ ] 2D.5 — Componente `PainelMedias`
+- [ ] 2D.6 — Componente `PainelMatrizPlacares` (grid 11x11)
+- [ ] 2D.7 — Componente `PainelMercados` (1X2, BTTS, O/U, AH)
+- [ ] 2D.8 — Componente `PainelMapaValor`
+- [ ] 2D.9 — Componente `PainelEvolucao` com Recharts
+- [ ] 2D.10 — Integração Cliente: troca de modelo recalcula painéis
+- [ ] 2D.11 — Adicionar tooltip educativo nos seletores de modelo (ZIP/NB/Dixon-Coles) explicando as evoluções em relação ao Poisson padrão (referência: seção 11 do MODELOS_ESTATISTICOS.md)
+- [ ] 2D.12 — Definir Poisson como modelo default no seletor (compatibilidade com planilha legada)
+- [ ] 2D.13 — Quando usuário selecionar NB e variância ≤ λ, exibir banner amarelo conforme seção 5.2 do MODELOS_ESTATISTICOS.md
+
+## 2E — Seed e Dados Iniciais ⚪
+- [ ] 2E.1 — Criar seed da liga Brasileirão A (`prisma/seed-leagues.ts`)
+- [ ] 2E.2 — Importar CSV inicial via tela admin
+- [ ] 2E.3 — Validar dados com Prisma Studio
+
+## 2F — Validação Final Fase 2 ⚪
+- [ ] 2F.1 — Cálculos Poisson batem com a planilha (< 0.5% diferença)
+- [ ] 2F.2 — ZIP, NB e Dixon-Coles produzem resultados coerentes
+- [ ] 2F.3 — Tela carrega em < 2s com dados completos do Brasileirão
+- [ ] 2F.4 — Layout responsivo (mobile + desktop)
+- [ ] 2F.5 — Acesso liberado para qualquer autenticado (MEMBRO+)
+- [ ] 2F.6 — Importação de CSV restrita a ADMIN
+- [ ] 2F.7 — Build sem erros TypeScript ou ESLint
+- [ ] 2F.8 — Deploy em produção validado
+- [ ] 2F.9 — Parser tolera diferenças de tier sem quebrar
+- [ ] 2F.10 — `MatchImport` registra histórico completo de cada importação
+
+---
+
+# TASKS — Fase 3: Ferramentas Gratuitas (Migração Gemini)
+
+> **Status:** 🟢 Concluída — migração, layout e paridade estatística finalizados
+> **Ordem de implementação:** Validação e Risco → Over/Under Linhas → Over/Under 2.5 → Simulador de Distribuição
+
+## Dependências entre Tasks
+
+```
+2B (Engine Fase 2 — poissonPmf, fatorial)
+  └── 3A.3 (reutilizar funções)
+
+3A (Setup + Estrutura)
+  ├── 3B (Validação e Risco)
+  ├── 3C (Over/Under Linhas)
+  ├── 3D (Over/Under 2.5)
+  └── 3E (Simulador de Distribuição)
+
+3F (Grid + Sidebar) ← depende de 3B, 3C, 3D, 3E
+3G (Validação Final) ← depende de todos
+```
+
+## 3A — Estrutura e Setup 🟢
+
+- [x] **3A.1** — Criar estrutura de pastas `lib/ferramentas/` e `components/ferramentas/` conforme SPECS
+- [x] **3A.2** — Criar schemas de validação Zod em `lib/validations/ferramentas.ts`
+  - [x] Schema `validacaoRiscoSchema` com todos os campos e ranges
+  - [x] Schema `overUnderLinhasSchema` com validação de odds (≥ 1.01) e linha âncora
+  - [x] Schema `overUnder25Schema` com validação de odds (≥ 1.01)
+  - [x] Schema `distribuicaoSchema` com ranges dos sliders
+- [x] **3A.3** — Configurar módulo compartilhado de Poisson
+  - [x] Se Fase 2 concluída: importar `poissonPmf` e `fatorial` de `lib/analytics/poisson.ts`
+  - [x] Se não: criar `lib/ferramentas/shared/poisson.ts` com implementação + cache de fatorial + TODO migração
+- [x] **3A.4** — Criar rotas de página:
+  - [x] `app/(dashboard)/dashboard/ferramentas/page.tsx`
+  - [x] `app/(dashboard)/dashboard/ferramentas/validacao-risco/page.tsx`
+  - [x] `app/(dashboard)/dashboard/ferramentas/over-under-linhas/page.tsx` 🆕
+  - [x] `app/(dashboard)/dashboard/ferramentas/over-under-25/page.tsx`
+  - [x] `app/(dashboard)/dashboard/ferramentas/distribuicao/page.tsx`
+- [x] **3A.5** — Atualizar sidebar do dashboard
+  - [x] Renomear "Validação de Risco" → **"Validação e Risco"**
+  - [x] Renomear "Cálculo Over/Under" → **"Over/Under 2.5"**
+  - [x] Renomear "Distribuição AH" → **"Simulador de Distribuição"**
+  - [x] Adicionar item **"Over/Under Linhas"** apontando para `/dashboard/ferramentas/over-under-linhas`
+  - [x] Manter agrupamento visual sob header "FERRAMENTAS"
+  - [x] Ordem na sidebar: Validação e Risco, Over/Under 2.5, Over/Under Linhas, Simulador de Distribuição
+
+## 3B — Ferramenta: Validação e Risco (Monte Carlo) 🟢
+
+- [x] **3B.1** — Implementar `lib/ferramentas/validacao-risco/types.ts`
+  - [x] Interfaces: `MonteCarloInputs`, `MonteCarloResults`, `DrawdownBucket`, `PatrimonioPoint`
+- [x] **3B.2** — Implementar `lib/ferramentas/validacao-risco/estatisticas.ts`
+  - [x] Função `cumulativeNormal(z)` com coeficientes de Abramowitz & Stegun documentados
+  - [x] Função `calcularPValue(prob, numBets, odds)`
+  - [x] Função `calcularVolumeValidador(prob, odds, roi)`
+  - [x] Função `calcularIntervaloConfianca(prob, odds, roi, numBets)`
+- [x] **3B.3** — Implementar `lib/ferramentas/validacao-risco/monte-carlo.ts`
+  - [x] Função `executarMonteCarlo(inputs)` — simulação completa
+  - [x] Gerar histograma de drawdown (10 buckets)
+  - [x] Gerar 12 curvas de patrimônio para visualização (amostrar a cada N bets)
+  - [x] Calcular probLucro, survivalRate, avgMDD, worstDD
+  - [x] Remover `setTimeout` artificial — execução direta
+- [x] **3B.4** — Implementar componente `PainelEntradas.tsx`
+  - [x] Converter inputs para `<Input>` shadcn/ui
+  - [x] Slider de drawdown com `<Slider>` shadcn/ui (se disponível) ou input range estilizado
+  - [x] Campo derivado `entradasPorMes` como `useMemo` (não `useEffect`)
+  - [x] Validação visual (borda vermelha em inputs inválidos)
+- [x] **3B.5** — Implementar componente `PainelResultados.tsx`
+  - [x] 4 cards: Volume Validador, Prob. Lucro, Sobrevivência, P-Value
+  - [x] Cores condicionais: verde se bom (>90%, <0.05), vermelho/laranja se ruim
+  - [x] Painel ROI IC (pior/melhor caso)
+  - [x] Card de lucro total estimado
+- [x] **3B.6** — Implementar componente `CurvasPatrimonio.tsx`
+  - [x] `<LineChart>` Recharts com 12 linhas
+  - [x] Primeira curva: azul, strokeWidth 3
+  - [x] Demais: cinza translúcido (opacity 0.3)
+  - [x] `isAnimationActive={false}`
+  - [x] Tooltip com estilo dark
+- [x] **3B.7** — Implementar componente orquestrador `ValidacaoRiscoTool.tsx`
+  - [x] Layout: `lg:grid-cols-12` (4+8)
+  - [x] Estado vazio com CTA
+  - [x] Botão "Simular X Cenários" usando `<Button>` shadcn
+  - [x] Loading state com `isCalculating`
+- [x] **3B.8** — Escrever testes unitários
+  - [x] `__tests__/ferramentas/validacao-risco/estatisticas.test.ts`
+  - [x] `__tests__/ferramentas/validacao-risco/monte-carlo.test.ts`
+  - [x] Edge cases: banca 0, odds 1.01, ROI negativo, stake 100%
+
+## 3C — Ferramenta: Over/Under Linhas (OmniProjector) 🟢
+
+- [x] **3C.1** — Implementar `lib/ferramentas/over-under-linhas/types.ts`
+  - [x] Interfaces: `AncoraInput`, `LinhaProjetada`, `ProjecaoStats`
+- [x] **3C.2** — Implementar `lib/ferramentas/over-under-linhas/poisson-linhas.ts`
+  - [x] Função `calcularProbUnderLinha(lambda, line)` com tratamento de inteiras, meias, quartos e três quartos
+  - [x] Função `encontrarLambdaBisection(fairProbUnder, anchorLine, iterations=20)` — busca binária [0.1, 15]
+  - [x] Usar `poissonPmf` do módulo compartilhado
+- [x] **3C.3** — Implementar `lib/ferramentas/over-under-linhas/juice.ts`
+  - [x] Função `extrairJuiceAncora(input)` — juice e fair probs
+  - [x] Função `calcularTabelaProjecao(lambda, juiceBase, anchorLine)` — tabela completa
+  - [x] Margem dinâmica: `juice + (distância_da_âncora * 0.5)`
+  - [x] Odds piso: 1.01
+- [x] **3C.4** — Implementar componente `InputsAncora.tsx`
+  - [x] `<Select>` shadcn/ui para linha âncora (17 opções: 1.5 a 5.5)
+  - [x] 2 `<Input>` para odds Under/Over
+  - [x] Exibição de Juice e Lambda no header
+- [x] **3C.5** — Implementar componente `TabelaProjecao.tsx`
+  - [x] `<Table>` shadcn/ui
+  - [x] Destaque visual na linha âncora (borda esquerda + fundo)
+  - [x] Cores: Under em verde, Over em vermelho
+  - [x] Status: "Âncora" vs "Projetada"
+- [x] **3C.6** — Implementar componente orquestrador `OverUnderLinhasTool.tsx`
+  - [x] Recálculo automático via `useMemo`
+  - [x] Layout responsivo
+- [x] **3C.7** — Escrever testes unitários
+  - [x] `__tests__/ferramentas/over-under-linhas/poisson-linhas.test.ts`
+  - [x] `__tests__/ferramentas/over-under-linhas/juice.test.ts`
+  - [x] Testar: lambda com odds extremas, linhas inteiras vs quartos, âncora fora do range de projeção
+
+## 3D — Ferramenta: Over/Under 2.5 🟢
+
+- [x] **3D.1** — Implementar `lib/ferramentas/over-under-25/types.ts`
+  - [x] Interfaces: `OddsReferencia25`, `LinhaCalculada25`, `MarketStats25`
+- [x] **3D.2** — Implementar `lib/ferramentas/over-under-25/poisson-25.ts`
+  - [x] Função `probUnder25(lambda)` — P(X≤2)
+  - [x] Função `encontrarLambdaIterativo(fairProbUnder25)` — 10 iterações multiplicativas
+  - [x] Usar `poissonPmf` do módulo compartilhado
+- [x] **3D.3** — Implementar `lib/ferramentas/over-under-25/juice.ts`
+  - [x] Função `extrairJuice25(refs)` — juice, fair probs, lambda
+  - [x] Função `calcularLinhas25(lambda, juiceBase)` — tabela 10 linhas
+  - [x] **Corrigir bug:** afastamento relativo à 2.5 (não 3.5)
+  - [x] **Corrigir bug:** juice dinâmica baseada na distância da 2.5 (não 3.5)
+  - [x] Documentar limitação de linhas de quartos como nota no código
+- [x] **3D.4** — Implementar componente `InputsReferencia.tsx`
+  - [x] 2 `<Input>` de odds (Under/Over 2.5)
+  - [x] Exibição de Juice e Lambda
+- [x] **3D.5** — Implementar componente `TabelaLinhas.tsx`
+  - [x] `<Table>` shadcn/ui com destaque na linha 2.5
+  - [x] Coluna de afastamento corrigida
+- [x] **3D.6** — Implementar componente orquestrador `OverUnder25Tool.tsx`
+  - [x] Recálculo automático via `useMemo`
+  - [x] Layout responsivo
+- [x] **3D.7** — Escrever testes unitários
+  - [x] `__tests__/ferramentas/over-under-25/poisson-25.test.ts`
+  - [x] `__tests__/ferramentas/over-under-25/juice.test.ts`
+  - [x] Testar: odds padrão (3.30/1.33), odds extremas, lambda resultante
+
+## 3E — Ferramenta: Simulador de Distribuição 🟢
+
+- [x] **3E.1** — Implementar `lib/ferramentas/distribuicao/types.ts`
+  - [x] Interfaces: `DistribuicaoParams`, `CurvePoint`, `MedidasCentrais`
+- [x] **3E.2** — Implementar `lib/ferramentas/distribuicao/gram-charlier.ts`
+  - [x] Função `calcularMediaReal(baseMean, skewness, stdDev)` — ajuste pela assimetria
+  - [x] Função `gramCharlierPdf(x, mean, sd, skew, kurt)` — com clamp ≥ 0
+  - [x] Função `gerarPontosCurva(mean, sd, skew, kurt)` — array com zonas σ
+  - [x] Documentar fórmulas da série A de Gram-Charlier nos comentários
+- [x] **3E.3** — Implementar `lib/ferramentas/distribuicao/medidas-centrais.ts`
+  - [x] Função `calcularMedidasCentrais(mean, skew, sd)` — retorna moda e mediana
+- [x] **3E.4** — Implementar componente `PainelParametros.tsx`
+  - [x] 4 sliders com label e valor atual
+  - [x] Legenda de cores (média/mediana/moda)
+  - [x] **Converter para dark mode** — remover todos os estilos light do Gemini
+- [x] **3E.5** — Implementar componente `GraficoCurva.tsx`
+  - [x] `<ComposedChart>` Recharts com áreas (zonas σ) + linha principal
+  - [x] 3 `<ReferenceLine>` para média, mediana e moda com labels
+  - [x] Marcadores ±1σ no eixo X
+  - [x] **Fundo dark** — converter `fill` das áreas para variações de `surface` com opacidade
+  - [x] **Linha principal branca** — converter `stroke="#0f172a"` para `#ffffff` ou token
+  - [x] **Grid lines dark** — converter `stroke="#f1f5f9"` para token `border`
+- [x] **3E.6** — Implementar componente orquestrador `DistribuicaoTool.tsx`
+  - [x] Layout: flex-row desktop (painel w-80 + gráfico flex-1), flex-col mobile
+  - [x] Cards pedagógicos em grid 2 colunas abaixo do gráfico (dark mode)
+  - [x] Badge "Amplitude Pico" no header
+  - [x] Recálculo em tempo real via `useMemo`
+- [x] **3E.7** — Escrever testes unitários
+  - [x] `__tests__/ferramentas/distribuicao/gram-charlier.test.ts`
+  - [x] `__tests__/ferramentas/distribuicao/medidas-centrais.test.ts`
+  - [x] Testar: normal padrão (skew=0, kurt=3), extremos dos sliders, PDF nunca negativa
+
+## 3F — Grid de Ferramentas e Navegação 🟢
+
+- [x] **3F.1** — Implementar componente `FerramentasGrid.tsx`
+  - [x] Grid responsivo com 4 cards `<Card>` shadcn/ui
+  - [x] Ícones `lucide-react` por ferramenta (ShieldCheck, TrendingUp, Target, BarChart3)
+  - [x] Hover effect e link para cada rota
+- [x] **3F.2** — Atualizar bottom nav mobile (se aplicável)
+  - [x] Garantir acesso ao grid de ferramentas via menu mobile
+
+## 3G — Validação Final Fase 3 🟢
+
+- [x] **3G.1** — 4 ferramentas funcionais e acessíveis via grid e sidebar
+- [x] **3G.2** — Sidebar com labels corretos e item novo (Over/Under Linhas)
+- [x] **3G.3** — Estilos 100% aderentes ao design system BDB (zero resquícios Gemini)
+- [x] **3G.4** — Lógica de cálculo isolada em `lib/ferramentas/` com funções puras
+- [x] **3G.5** — Testes unitários passando para todas as funções de cálculo
+- [x] **3G.6** — Responsivo: mobile (375px) e desktop (1440px) validado
+- [x] **3G.7** — Acesso liberado para qualquer autenticado (MEMBRO+)
+- [x] **3G.8** — Sem persistência (100% client-side)
+- [x] **3G.9** — Build sem erros TypeScript strict ou ESLint
+- [x] **3G.10** — Deploy em produção validado
+
+# TASKS — Fase 4: Multi-Liga + Pagamentos
+> **Status:** ⚪ Pendente — depende da Fase 2
+
+# TASKS — Fase 5: Curso + Backtest
+> **Status:** ⚪ Pendente — depende da Fase 4
+
+# TASKS — Fase 6: Automações
+> **Status:** ⚪ Pendente — depende da Fase 5

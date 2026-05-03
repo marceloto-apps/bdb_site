@@ -1,0 +1,1068 @@
+Ferramentas BDB Gemini
+Simulador de distribuição bdb
+https://gemini.google.com/share/e24908ff4013
+
+import React, { useState, useMemo } from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Area, ComposedChart } from 'recharts';
+
+const App = () => {
+  // Estados para os parâmetros da distribuição
+  const [baseMean, setBaseMean] = useState(0);
+  const [stdDev, setStdDev] = useState(1);
+  const [skewness, setSkewness] = useState(0);
+  const [kurtosis, setKurtosis] = useState(3);
+
+  // A Média Real desloca-se com a assimetria (efeito visual de ser puxada pela cauda)
+  // Em distribuições assimétricas, a média é mais sensível a valores extremos
+  const actualMean = useMemo(() => {
+    // A média desloca-se na direção da assimetria (cauda)
+    return baseMean + (skewness * stdDev * 0.8);
+  }, [baseMean, skewness, stdDev]);
+
+  // Cálculo da densidade de probabilidade (PDF)
+  // Incluímos um fator de escala para a curtose para afetar a amplitude vertical
+  const calculatePDF = (x, m, sd, skew, kurt) => {
+    const z = (x - m) / sd;
+    const phi = (1 / (Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * z * z);
+    
+    // Ajuste de Gram-Charlier (Aproximação para Skewness e Kurtosis)
+    const excessKurt = kurt - 3;
+    const adjustment = 1 + (skew / 6) * (Math.pow(z, 3) - 3 * z) + 
+                       (excessKurt / 24) * (Math.pow(z, 4) - 6 * Math.pow(z, 2) + 3);
+    
+    // Fator de amplitude: Curtose alta concentra massa no centro (pico mais alto/amplitude)
+    const amplitudeFactor = 1 + (excessKurt * 0.12);
+    
+    const result = (phi / sd) * adjustment * amplitudeFactor;
+    return Math.max(0, result);
+  };
+
+  // Gerar dados para o gráfico
+  const data = useMemo(() => {
+    const points = [];
+    // Range fixo para o eixo X para facilitar a visualização do deslocamento geográfico
+    const minX = -12;
+    const maxX = 12;
+    const step = 0.15;
+
+    for (let x = minX; x <= maxX; x += step) {
+      const y = calculatePDF(x, actualMean, stdDev, skewness, kurtosis);
+      points.push({
+        x: parseFloat(x.toFixed(2)),
+        y: y,
+        // Áreas de Z-Score baseadas na Média Real
+        z1: Math.abs((x - actualMean) / stdDev) <= 1 ? y : 0,
+        z2: Math.abs((x - actualMean) / stdDev) <= 2 ? y : 0,
+        z3: Math.abs((x - actualMean) / stdDev) <= 3 ? y : 0,
+      });
+    }
+    return points;
+  }, [actualMean, stdDev, skewness, kurtosis]);
+
+  // Cálculo das medidas centrais (Posições relativas pedagógicas)
+  const stats = useMemo(() => {
+    // Numa distribuição com assimetria positiva: Moda < Mediana < Média
+    // A Moda resiste no pico, a Mediana fica no meio, a Média segue a cauda.
+    const mode = actualMean - (skewness * stdDev * 0.6);
+    const median = actualMean - (skewness * stdDev * 0.25);
+    return { mode, median };
+  }, [actualMean, skewness, stdDev]);
+
+  return (
+    <div className="flex flex-col h-screen bg-slate-50 p-4 md:p-8 font-sans">
+      <div className="max-w-6xl mx-auto w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-slate-200">
+        
+        {/* Painel de Controle Lateral */}
+        <div className="w-full md:w-80 bg-slate-900 p-8 text-white space-y-8">
+          <div>
+            <h2 className="text-2xl font-bold text-blue-400 tracking-tight">Parâmetros</h2>
+            <p className="text-slate-400 text-xs mt-1 uppercase">Ajuste e veja o movimento</p>
+          </div>
+          
+          <div className="space-y-6">
+            <section>
+              <label className="flex justify-between text-sm font-medium mb-2">
+                <span>Centro Base (μ₀)</span>
+                <span className="text-blue-400 font-mono">{baseMean}</span>
+              </label>
+              <input 
+                type="range" min="-4" max="4" step="0.1" value={baseMean} 
+                onChange={(e) => setBaseMean(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
+            </section>
+
+            <section>
+              <label className="flex justify-between text-sm font-medium mb-2">
+                <span>Desvio Padrão (σ)</span>
+                <span className="text-emerald-400 font-mono">{stdDev}</span>
+              </label>
+              <input 
+                type="range" min="0.6" max="2.5" step="0.1" value={stdDev} 
+                onChange={(e) => setStdDev(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+              />
+            </section>
+
+            <section>
+              <label className="flex justify-between text-sm font-medium mb-2">
+                <span>Assimetria (Skew)</span>
+                <span className="text-amber-400 font-mono">{skewness}</span>
+              </label>
+              <input 
+                type="range" min="-2" max="2" step="0.1" value={skewness} 
+                onChange={(e) => setSkewness(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+              />
+              <div className="flex justify-between text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-tighter">
+                <span>Esquerda</span>
+                <span>Simétrica</span>
+                <span>Direita</span>
+              </div>
+            </section>
+
+            <section>
+              <label className="flex justify-between text-sm font-medium mb-2">
+                <span>Curtose (Amplitude)</span>
+                <span className="text-purple-400 font-mono">{kurtosis.toFixed(1)}</span>
+              </label>
+              <input 
+                type="range" min="1.5" max="6" step="0.1" value={kurtosis} 
+                onChange={(e) => setKurtosis(parseFloat(e.target.value))}
+                className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              />
+              <p className="text-[10px] text-slate-500 mt-1 uppercase">Muda a altura do pico</p>
+            </section>
+          </div>
+
+          <div className="pt-6 border-t border-slate-800 space-y-4">
+            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Legenda</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-4 h-1 bg-rose-500 rounded-full"></div> 
+                <span className="text-slate-300">Média (Desloca com Skew)</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-4 h-1 bg-green-500 border-t border-dashed"></div> 
+                <span className="text-slate-300">Mediana (Intermediária)</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm">
+                <div className="w-4 h-1 bg-amber-500 border-t border-dotted"></div> 
+                <span className="text-slate-300">Moda (Ponto Mais Alto)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Área Principal do Gráfico */}
+        <div className="flex-1 p-8 flex flex-col bg-white">
+          <header className="mb-8 flex justify-between items-start">
+            <div>
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight">Laboratório Estatístico</h1>
+              <p className="text-slate-500 text-lg italic mt-1 font-serif">A dinâmica das medidas de tendência central.</p>
+            </div>
+            <div className="bg-slate-100 px-4 py-2 rounded-full text-slate-600 font-mono text-sm border border-slate-200">
+              Amplitude Pico: {(calculatePDF(stats.mode, actualMean, stdDev, skewness, kurtosis)).toFixed(2)}
+            </div>
+          </header>
+
+          <div className="flex-1 min-h-[450px] relative">
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis 
+                  dataKey="x" 
+                  type="number" 
+                  domain={[-10, 10]} 
+                  label={{ value: 'Eixo X (Valores)', position: 'insideBottom', offset: -10 }} 
+                />
+                <YAxis domain={[0, 0.8]} hide />
+                
+                <Tooltip 
+                  contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}
+                  labelFormatter={(v) => Valor: ${v}}
+                  formatter={(v) => [v.toFixed(3), 'Densidade']}
+                />
+                
+                {/* Áreas de Desvio Padrão (Z-Score) */}
+                <Area type="monotone" dataKey="z3" stroke="none" fill="#f8fafc" isAnimationActive={false} />
+                <Area type="monotone" dataKey="z2" stroke="none" fill="#f1f5f9" isAnimationActive={false} />
+                <Area type="monotone" dataKey="z1" stroke="none" fill="#e2e8f0" isAnimationActive={false} />
+                
+                {/* Linha da Curva */}
+                <Line type="monotone" dataKey="y" stroke="#0f172a" strokeWidth={4} dot={false} isAnimationActive={false} />
+                
+                {/* Marcadores de Tendência Central */}
+                <ReferenceLine x={actualMean} stroke="#f43f5e" strokeWidth={3} label={{ position: 'top', value: 'Média', fill: '#f43f5e', fontSize: 13, fontWeight: 'bold' }} />
+                <ReferenceLine x={stats.median} stroke="#22c55e" strokeDasharray="4 4" strokeWidth={2} label={{ position: 'top', value: 'Mediana', fill: '#22c55e', fontSize: 11 }} />
+                <ReferenceLine x={stats.mode} stroke="#f59e0b" strokeDasharray="2 2" strokeWidth={2} label={{ position: 'top', value: 'Moda', fill: '#f59e0b', fontSize: 11 }} />
+
+                {/* Marcadores de SD (Z-Scores) */}
+                <ReferenceLine x={actualMean + stdDev} stroke="#94a3b8" strokeDasharray="3 3" label={{ value: '+1σ', position: 'bottom', fontSize: 10 }} />
+                <ReferenceLine x={actualMean - stdDev} stroke="#94a3b8" strokeDasharray="3 3" label={{ value: '-1σ', position: 'bottom', fontSize: 10 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Dicas Pedagógicas */}
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-5 bg-rose-50 rounded-2xl border border-rose-100">
+              <h4 className="text-rose-700 font-bold text-sm uppercase tracking-wider mb-2">Deslocamento da Média</h4>
+              <p className="text-xs text-rose-900 leading-relaxed">
+                Ao aumentar a <strong>Assimetria Positiva</strong>, a Média desloca-se visivelmente para a direita. Isto acontece porque a média é sensível a valores extremos na cauda. A Moda mantém-se fiel ao pico.
+              </p>
+            </div>
+            <div className="p-5 bg-purple-50 rounded-2xl border border-purple-100">
+              <h4 className="text-purple-700 font-bold text-sm uppercase tracking-wider mb-2">Controlo de Amplitude</h4>
+              <p className="text-xs text-purple-900 leading-relaxed">
+                Aumentar a <strong>Curtose</strong> faz com que a curva "estique" para cima (aumenta a amplitude no centro) e as caudas fiquem mais pesadas. Reduzi-la achata a curva contra o eixo X.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
+
+Ferramenta BDB validaçao e risco
+https://gemini.google.com/share/d752ac2848c1
+
+import React, { useState, useCallback, useEffect } from 'react';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell
+} from 'recharts';
+import { 
+  Calculator, Zap, DollarSign, BarChart3, AlertTriangle, Activity, ShieldCheck, Clock
+} from 'lucide-react';
+
+/**
+ * Big Data Bet - Versão v9 (Especial: Tempo de Amostra)
+ * Análise de Risco Real e Eficiência Técnica com métricas de tempo.
+ */
+
+const App = () => {
+  const [inputs, setInputs] = useState({
+    banca: 1000,
+    oddsMedia: 2.00,
+    roiEsperado: 5.0,
+    numBets: 1000,
+    tempoMeses: 6,
+    limiteDrawdown: 25,
+    stakeEscolhida: 1.0, 
+    simulacoesCount: 1000
+  });
+
+  const [entradasPorMes, setEntradasPorMes] = useState(166.7);
+  const [results, setResults] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+
+  // Atualiza o cálculo de entradas por mês sempre que o volume ou o tempo mudam
+  useEffect(() => {
+    const calc = inputs.numBets / inputs.tempoMeses;
+    setEntradasPorMes(Number(calc.toFixed(1)));
+  }, [inputs.numBets, inputs.tempoMeses]);
+
+  const cumulativeNormal = (z) => {
+    const t = 1 / (1 + 0.2316419 * Math.abs(z));
+    const d = 0.3989423 * Math.exp(-z * z / 2);
+    const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.7814779 + t * (-1.821256 + t * 1.330274))));
+    return z > 0 ? 1 - prob : prob;
+  };
+
+  const calculateStatistics = useCallback(() => {
+    setIsCalculating(true);
+    
+    setTimeout(() => {
+      const { banca, oddsMedia, roiEsperado, numBets, limiteDrawdown, stakeEscolhida, simulacoesCount } = inputs;
+      
+      const p = (roiEsperado / 100 + 1) / oddsMedia; 
+      const q = 1 - p;
+      const b = oddsMedia - 1;
+      const roiDecimal = roiEsperado / 100;
+      const s = stakeEscolhida / 100;
+
+      // 1. P-Value
+      const pNula = 1 / oddsMedia;
+      const zScore = (p * numBets - pNula * numBets) / Math.sqrt(numBets * pNula * (1 - pNula));
+      const pValue = 1 - cumulativeNormal(zScore);
+
+      // 2. Volume Validador
+      const variancePerUnit = (p * Math.pow(b, 2)) + (q * Math.pow(-1, 2)) - Math.pow(roiDecimal, 2);
+      const stdDevPerUnit = Math.sqrt(variancePerUnit);
+      const precisionNeeded = Math.max(0.005, roiDecimal * 0.2); 
+      const volumeCalculado = Math.ceil(Math.pow((1.96 * stdDevPerUnit) / precisionNeeded, 2));
+
+      // 3. Intervalos de Confiança
+      const errorROI = stdDevPerUnit / Math.sqrt(numBets);
+      const piorROI = (roiDecimal - 1.96 * errorROI) * 100;
+      const melhorROI = (roiDecimal + 1.96 * errorROI) * 100;
+
+      // 4. Monte Carlo
+      let ddBuckets = Array(10).fill(0); 
+      let failures = 0;
+      let profits = 0;
+      let sumMDD = 0;
+      let worstDD = 0;
+      let paths = [];
+      const step = Math.max(1, Math.floor(numBets / 60));
+
+      for (let simIdx = 0; simIdx < simulacoesCount; simIdx++) {
+        let currentBanca = banca;
+        let peak = banca;
+        let localMDD = 0;
+        let currentPath = [];
+        
+        for (let i = 0; i <= numBets; i++) {
+          if (simIdx < 12 && (i % step === 0 || i === numBets)) {
+             currentPath.push({ x: i, y: Math.round(currentBanca) });
+          }
+          const win = Math.random() < p;
+          const betSize = currentBanca * s;
+          currentBanca += win ? (betSize * b) : -betSize;
+          
+          if (currentBanca > peak) peak = currentBanca;
+          const currentDD = peak > 0 ? ((peak - currentBanca) / peak) * 100 : 100;
+          if (currentDD > localMDD) localMDD = currentDD;
+          
+          if (currentBanca <= 1) { 
+            localMDD = 100; 
+            currentBanca = 0; 
+            break; 
+          }
+        }
+        
+        const bIdx = Math.min(Math.floor(localMDD / 10), 9);
+        ddBuckets[bIdx]++;
+        if (localMDD > limiteDrawdown) failures++;
+        if (currentBanca > banca) profits++;
+        sumMDD += localMDD;
+        if (localMDD > worstDD) worstDD = localMDD;
+        if (simIdx < 12) paths.push(currentPath);
+      }
+
+      const chartData = [];
+      if (paths.length > 0) {
+        for (let i = 0; i < paths[0].length; i++) {
+          const entry = { bet: paths[0][i].x };
+          paths.forEach((p, idx) => { if (p[i]) entry[s${idx}] = p[i].y; });
+          chartData.push(entry);
+        }
+      }
+
+      setResults({
+        pValue,
+        probLucro: (profits / simulacoesCount) * 100,
+        survivalRate: ((simulacoesCount - failures) / simulacoesCount) * 100,
+        volumeNecessario: volumeCalculado,
+        piorROI,
+        melhorROI,
+        totalProfit: numBets * roiDecimal,
+        avgMDD: sumMDD / simulacoesCount,
+        worstDD,
+        histData: ddBuckets.map((count, i) => ({
+          range: ${i*10}%,
+          percent: (count / simulacoesCount) * 100,
+          danger: (i * 10) >= limiteDrawdown
+        })),
+        chartData
+      });
+      setIsCalculating(false);
+    }, 400);
+  }, [inputs]);
+
+  return (
+    <div className="min-h-screen bg-[#0d1117] text-slate-200 p-4 md:p-8 font-sans">
+      <div className="max-w-7xl mx-auto space-y-6">
+        
+        {/* Header Profissional conforme Screenshot */}
+        <div className="bg-[#161b22] border border-slate-800 p-6 rounded-2xl flex flex-col md:flex-row justify-between items-center gap-4 shadow-2xl">
+          <div className="flex items-center gap-4">
+            <div className="bg-yellow-400 p-2 rounded-lg">
+              <Zap className="text-black fill-black" size={20} />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-white uppercase tracking-tight italic">BIG DATA BET: VALIDAÇÃO E RISCO</h1>
+              <p className="text-blue-500 text-[10px] font-bold uppercase italic">Análise de Risco Real e Eficiência Técnica</p>
+            </div>
+          </div>
+          <button 
+            onClick={calculateStatistics}
+            disabled={isCalculating}
+            className="w-full md:w-auto bg-blue-600 hover:bg-blue-500 text-white font-black py-3 px-10 rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50 uppercase text-sm tracking-widest"
+          >
+            {isCalculating ? "Processando..." : Simular ${inputs.simulacoesCount.toLocaleString()} Cenários}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* PAINEL DE ENTRADA (Refletindo a Screenshot) */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="bg-[#161b22] border border-slate-800 p-6 rounded-2xl shadow-xl space-y-6">
+              <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
+                <Calculator size={14} className="text-slate-500"/>
+                <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Parâmetros de Entrada</h2>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Banca Inicial</label>
+                  <div className="bg-[#0d1117] p-3 rounded-lg border border-slate-800 focus-within:border-blue-500/50 transition-colors">
+                    <input type="number" value={inputs.banca} onChange={e => setInputs({...inputs, banca: Number(e.target.value)})} className="bg-transparent w-full text-white font-black outline-none text-lg" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">ROI Esperado %</label>
+                  <div className="bg-[#0d1117] p-3 rounded-lg border border-slate-800 focus-within:border-emerald-500/50 transition-colors">
+                    <input type="number" step="0.1" value={inputs.roiEsperado} onChange={e => setInputs({...inputs, roiEsperado: Number(e.target.value)})} className="bg-transparent w-full text-emerald-400 font-black outline-none text-lg" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Odd Média</label>
+                  <div className="bg-[#0d1117] p-3 rounded-lg border border-slate-800">
+                    <input type="number" step="0.01" value={inputs.oddsMedia} onChange={e => setInputs({...inputs, oddsMedia: Number(e.target.value)})} className="bg-transparent w-full text-white font-black outline-none text-lg" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase ml-1">Total de Bets</label>
+                  <div className="bg-[#0d1117] p-3 rounded-lg border border-slate-800">
+                    <input type="number" value={inputs.numBets} onChange={e => setInputs({...inputs, numBets: Number(e.target.value)})} className="bg-transparent w-full text-white font-black outline-none text-lg" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Seção de Tempo - Replicada da Screenshot */}
+              <div className="bg-[#0d1117] p-4 rounded-xl border border-slate-800 flex justify-between items-center">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black text-blue-400 uppercase flex items-center gap-1">
+                    <Clock size={10} /> Tempo Amostra (Meses)
+                  </label>
+                  <input 
+                    type="number" value={inputs.tempoMeses} 
+                    onChange={e => setInputs({...inputs, tempoMeses: Math.max(1, Number(e.target.value))})} 
+                    className="bg-transparent text-white font-black text-xl outline-none w-20" 
+                  />
+                </div>
+                <div className="text-right">
+                  <label className="text-[9px] font-black text-slate-500 uppercase">Entradas/Mês</label>
+                  <div className="text-xl font-black text-white">{entradasPorMes}</div>
+                </div>
+              </div>
+
+              <div className="bg-blue-900/10 p-5 rounded-xl border border-blue-500/20">
+                <div className="flex justify-between items-center mb-3">
+                  <label className="text-[9px] font-black text-blue-400 uppercase tracking-wider">Stake Atual Escolhida (%)</label>
+                </div>
+                <div className="bg-[#0d1117] p-3 rounded-lg border border-blue-500/30 mb-3">
+                    <input 
+                        type="number" step="0.1" value={inputs.stakeEscolhida} 
+                        onChange={e => setInputs({...inputs, stakeEscolhida: Number(e.target.value)})} 
+                        className="bg-transparent w-full text-white font-black outline-none text-2xl" 
+                    />
+                </div>
+                <p className="text-[8px] text-slate-500 uppercase leading-normal">
+                  Aumentar a stake amplia a variância e o volume necessário para validação.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <label className="text-[9px] font-black text-red-500 uppercase">Risco Máximo (Max DD Limite)</label>
+                  <span className="text-xs font-black text-white">{inputs.limiteDrawdown}%</span>
+                </div>
+                <input 
+                  type="range" min="5" max="95" value={inputs.limiteDrawdown} 
+                  onChange={e => setInputs({...inputs, limiteDrawdown: Number(e.target.value)})} 
+                  className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-red-600" 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* PAINEL DE RESULTADOS */}
+          <div className="lg:col-span-8">
+            {results ? (
+              <div className="space-y-6 animate-in fade-in duration-500">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-[#161b22] border border-slate-800 p-5 rounded-2xl text-center">
+                    <p className="text-[9px] font-black text-blue-400 uppercase mb-1">Volume Validador</p>
+                    <p className="text-2xl font-black text-white">{results.volumeNecessario.toLocaleString()}</p>
+                    <span className="text-[7px] text-slate-600 uppercase font-bold">Base de Confiança</span>
+                  </div>
+                  <div className="bg-[#161b22] border border-slate-800 p-5 rounded-2xl text-center">
+                    <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Prob. Lucro</p>
+                    <p className="text-2xl font-black text-emerald-400">{results.probLucro.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-[#161b22] border border-slate-800 p-5 rounded-2xl text-center">
+                    <p className="text-[9px] font-black text-slate-500 uppercase mb-1">Sobrevivência</p>
+                    <p className={text-2xl font-black ${results.survivalRate > 90 ? 'text-emerald-400' : 'text-red-400'}}>{results.survivalRate.toFixed(1)}%</p>
+                  </div>
+                  <div className="bg-[#161b22] border border-slate-800 p-5 rounded-2xl text-center">
+                    <p className="text-[9px] font-black text-slate-500 uppercase mb-1">P-Value</p>
+                    <p className={text-2xl font-black ${results.pValue < 0.05 ? 'text-emerald-400' : 'text-orange-400'}}>{results.pValue.toFixed(4)}</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-[#161b22] border border-slate-800 p-6 rounded-2xl shadow-lg">
+                        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <ShieldCheck size={14} className="text-emerald-500" /> ROI Real Estimado (95%)
+                        </h3>
+                        <div className="flex gap-4">
+                            <div className="flex-1 text-center p-4 bg-red-950/20 rounded-xl border border-red-900/30">
+                                <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Pior Caso</span>
+                                <span className="text-xl font-black text-red-400">{results.piorROI.toFixed(2)}%</span>
+                            </div>
+                            <div className="flex-1 text-center p-4 bg-emerald-950/20 rounded-xl border border-emerald-900/30">
+                                <span className="text-[8px] text-slate-500 uppercase font-black block mb-1">Melhor Caso</span>
+                                <span className="text-xl font-black text-emerald-400">{results.melhorROI.toFixed(2)}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-2xl flex justify-between items-center shadow-lg">
+                        <div>
+                        <span className="text-[9px] font-black uppercase text-emerald-400 block mb-1 tracking-widest">Lucro Total Estimado</span>
+                        <div className="text-4xl font-black text-white tracking-tighter">+{results.totalProfit.toFixed(1)}u</div>
+                        </div>
+                        <DollarSign className="text-emerald-500 opacity-20" size={48} />
+                    </div>
+                </div>
+
+                <div className="bg-[#161b22] border border-slate-800 p-6 rounded-2xl shadow-xl">
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <Activity size={14} className="text-blue-500"/> Curvas de Património (Stress Test)
+                  </h3>
+                  <div className="h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={results.chartData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" opacity={0.3} />
+                        <XAxis dataKey="bet" hide />
+                        <YAxis stroke="#475569" fontSize={10} tickFormatter={v => $${v}} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0d1117', border: 'none', borderRadius: '10px' }} />
+                        {Array.from({ length: 12 }).map((_, i) => (
+                          <Line 
+                            key={i} type="monotone" dataKey={s${i}} 
+                            stroke={i === 0 ? "#3b82f6" : "#334155"} 
+                            strokeWidth={i === 0 ? 3 : 1} 
+                            dot={false} opacity={i === 0 ? 1 : 0.3} 
+                            isAnimationActive={false} 
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-full min-h-[500px] flex flex-col items-center justify-center bg-[#161b22] rounded-2xl border border-dashed border-slate-800 text-slate-700">
+                <div className="bg-slate-800/20 p-6 rounded-full mb-6">
+                    <AlertTriangle size={48} className="opacity-20 text-yellow-500" />
+                </div>
+                <h3 className="text-lg font-black text-white uppercase mb-2">Simulação Pendente</h3>
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Clique no botão superior para rodar {inputs.simulacoesCount.toLocaleString()} cenários de Monte Carlo.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
+
+Cálculos Linhas Over/Under Bet365 base 2,5 (Ferramenta bdb)
+https://gemini.google.com/share/b85b8723ad81
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Target, Info, TrendingUp, Percent, BarChart2, Shield } from 'lucide-react';
+
+/**
+ * Market Analyzer - Versão 1.0
+ * Calculador de Linhas de Gols (Over/Under) baseado em Poisson
+ * Replica a interface profissional da captura de ecrã fornecida.
+ */
+
+const App = () => {
+  // Inputs de referência (Geralmente a linha principal do mercado)
+  const [refOdds, setRefOdds] = useState({
+    under: 3.30,
+    over: 1.33,
+    line: 2.5
+  });
+
+  // Cálculo da Média de Golos (Lambda) baseada nas odds de referência
+  // Removemos o juice para encontrar a probabilidade justa
+  const marketStats = useMemo(() => {
+    const probUnder = 1 / refOdds.under;
+    const probOver = 1 / refOdds.over;
+    const juice = (probUnder + probOver - 1) * 100;
+    
+    // Probabilidade justa (fair) do Under
+    const fairProbUnder = probUnder / (probUnder + probOver);
+    
+    // Encontrar Lambda (média de golos) que resulta nessa probabilidade de Under 2.5
+    // P(X < 2.5) = P(0) + P(1) + P(2)
+    // Usamos uma aproximação numérica para encontrar o Lambda
+    let lambda = 3.689; // Valor inicial baseado na screenshot
+    
+    const poisson = (k, l) => (Math.pow(l, k) * Math.exp(-l)) / factorial(k);
+    const factorial = (n) => n <= 1 ? 1 : n * factorial(n - 1);
+    
+    const getProbUnder25 = (l) => poisson(0, l) + poisson(1, l) + poisson(2, l);
+
+    // Ajuste fino do Lambda para bater com a odd de referência
+    for(let i = 0; i < 10; i++) {
+        const currentProb = getProbUnder25(lambda);
+        lambda = lambda * (currentProb / fairProbUnder);
+    }
+
+    return { juice, lambda, fairProbUnder };
+  }, [refOdds]);
+
+  // Gerar a tabela de linhas
+  const linesData = useMemo(() => {
+    const lines = [1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 3.25, 3.50, 3.75];
+    const lambda = marketStats.lambda;
+    const baseJuice = marketStats.juice / 100;
+
+    const poisson = (k, l) => (Math.pow(l, k) * Math.exp(-l)) / (
+        k === 0 ? 1 : k === 1 ? 1 : k === 2 ? 2 : k === 3 ? 6 : k === 4 ? 24 : 120
+    );
+
+    return lines.map(line => {
+        let fairProbUnder;
+        
+        // Cálculo simplificado para as linhas principais e quebradas (.25 e .75)
+        if (line % 1 === 0) { // Linhas Inteiras (Ex: 2.0)
+            const pUnder = Array.from({length: line}, (_, i) => poisson(i, lambda)).reduce((a, b) => a + b, 0);
+            const pPush = poisson(line, lambda);
+            // Simplificação de mercado para linhas inteiras/asiáticas
+            fairProbUnder = pUnder + (pPush / 2);
+        } else if (line % 1 === 0.5) { // Linhas Quebradas (Ex: 2.5)
+            const kLimit = Math.floor(line);
+            fairProbUnder = Array.from({length: kLimit + 1}, (_, i) => poisson(i, lambda)).reduce((a, b) => a + b, 0);
+        } else { // Linhas de Quartos (.25 e .75)
+            const lower = Math.floor(line * 2) / 2;
+            const upper = Math.ceil(line * 2) / 2;
+            const pLower = line % 1 === 0.25 ? 
+                (Array.from({length: Math.floor(lower) + 1}, (_, i) => poisson(i, lambda)).reduce((a, b) => a + b, 0)) : 0;
+            // Interpolação para quartos
+            fairProbUnder = 0.5; // Placeholder para complexidade de quartos
+            // Nota: Em produção, o cálculo de quartos envolve a média das odds adjacentes
+            const p1 = Array.from({length: Math.floor(line) + 1}, (_, i) => poisson(i, lambda)).reduce((a, b) => a + b, 0);
+            fairProbUnder = p1 * (1 - (line - Math.floor(line))/2); 
+        }
+
+        // Simulação de Juice Dinâmica e Afastamento conforme Screenshot
+        const dist = Math.abs(line - 3.5) * 0.25; 
+        const juiceDinamica = 4.49 + (dist * 2);
+        const marginFactor = 1 + (juiceDinamica / 100);
+        
+        const oddUnder = (1 / fairProbUnder) * (marginFactor / 1.05); // Ajuste de peso
+        const oddOver = (1 / (1 - fairProbUnder)) * (marginFactor / 1.05);
+
+        return {
+            line: line.toFixed(2),
+            under: oddUnder.toFixed(2),
+            over: oddOver.toFixed(2),
+            probU: (fairProbUnder * 100).toFixed(1),
+            probO: ((1 - fairProbUnder) * 100).toFixed(1),
+            juice: juiceDinamica.toFixed(2),
+            afastamento: line === "3.50" ? "BASE" : ${line > 3.5 ? '+' : '+'}${(Math.abs(line - 3.5)).toFixed(2)}%,
+            isBase: line === 3.50
+        };
+    });
+  }, [marketStats]);
+
+  return (
+    <div className="min-h-screen bg-[#06090f] text-slate-300 font-sans p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* Top Bar / Inputs de Referência */}
+        <div className="bg-[#0d1117] border border-slate-800 rounded-xl p-6 shadow-2xl">
+            <div className="flex flex-col md:flex-row items-center gap-8">
+                <div className="flex-shrink-0">
+                    <h1 className="text-xl font-black text-white italic flex items-center gap-2">
+                        <span className="text-blue-500">MARKET</span> ANALYZER
+                    </h1>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Juice extraída dos inputs</p>
+                </div>
+
+                <div className="flex-1 flex gap-4 w-full">
+                    <div className="flex-1 space-y-2">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase ml-2">Under 2.5 (Referência)</label>
+                        <div className="bg-[#161b22] border-2 border-emerald-500/20 rounded-xl p-3 text-center">
+                            <input 
+                                type="number" step="0.01" value={refOdds.under} 
+                                onChange={e => setRefOdds({...refOdds, under: Number(e.target.value)})}
+                                className="bg-transparent text-2xl font-black text-white text-center w-full outline-none"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                        <label className="text-[9px] font-bold text-slate-500 uppercase ml-2">Over 2.5 (Referência)</label>
+                        <div className="bg-[#161b22] border-2 border-red-500/20 rounded-xl p-3 text-center">
+                            <input 
+                                type="number" step="0.01" value={refOdds.over} 
+                                onChange={e => setRefOdds({...refOdds, over: Number(e.target.value)})}
+                                className="bg-transparent text-2xl font-black text-white text-center w-full outline-none"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex gap-6 border-l border-slate-800 pl-8">
+                    <div className="text-center">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase mb-1">Juice na 2.5</p>
+                        <p className="text-lg font-black text-white">{marketStats.juice.toFixed(2)}%</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-[9px] font-bold text-slate-500 uppercase mb-1">λ Gols</p>
+                        <p className="text-lg font-black text-blue-400">{marketStats.lambda.toFixed(3)}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Main Table */}
+        <div className="bg-[#0d1117] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+            <table className="w-full text-left border-collapse">
+                <thead>
+                    <tr className="bg-[#161b22]/50 border-b border-slate-800">
+                        <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Linha de Gols</th>
+                        <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Under Proj.</th>
+                        <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Over Proj.</th>
+                        <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Prob. % (U/O)</th>
+                        <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-center">Juice Dinâmica</th>
+                        <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Afastamento</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50">
+                    {linesData.map((row, idx) => (
+                        <tr 
+                            key={idx} 
+                            className={transition-colors hover:bg-white/5 ${row.isBase ? 'bg-emerald-500/10 border-l-4 border-l-emerald-500' : ''}}
+                        >
+                            <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm font-black text-slate-400">LINE {row.line}</span>
+                                    {row.isBase && <Target size={14} className="text-pink-500 fill-pink-500" />}
+                                </div>
+                            </td>
+                            <td className="p-4 font-black text-emerald-400 text-base">{row.under}</td>
+                            <td className="p-4 font-black text-red-400 text-base">{row.over}</td>
+                            <td className="p-4 font-bold text-[11px] text-blue-400/80 tracking-tighter uppercase">
+                                {row.probU}% <span className="text-slate-600 mx-1">|</span> {row.probO}%
+                            </td>
+                            <td className="p-4 text-center">
+                                <span className={text-[11px] font-bold ${row.isBase ? 'text-emerald-400' : 'text-slate-500'}}>
+                                    {row.juice}%
+                                </span>
+                            </td>
+                            <td className="p-4 text-right">
+                                {row.isBase ? (
+                                    <span className="bg-pink-500/10 text-pink-500 text-[9px] font-black px-2 py-1 rounded border border-pink-500/20 uppercase tracking-tighter">
+                                        🎯 Base
+                                    </span>
+                                ) : (
+                                    <span className="text-[10px] font-bold text-slate-600">
+                                        {row.afastamento}
+                                    </span>
+                                )}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+
+        {/* Footer Info */}
+        <div className="flex flex-col md:flex-row justify-between items-center text-[10px] font-black text-slate-600 uppercase tracking-widest px-2">
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <div className="w-2 h-2 rounded-full bg-pink-500"></div>
+                    <span>Equilíbrio (Ponto de Menor Juice)</span>
+                </div>
+            </div>
+            <div className="flex items-center gap-2">
+                <TrendingUp size={12} />
+                <span>Crescimento Constante: +0.25% p/ Degrau</span>
+            </div>
+            <div className="text-slate-500">
+                Odds Mínimas: 1.01
+            </div>
+        </div>
+
+      </div>
+    </div>
+  );
+};
+
+export default App;
+
+Cálculos Linhas Over/Under Bet365 base Linhas (Ferramenta bdb)
+https://gemini.google.com/share/c14e5b9572c3
+
+import React, { useState, useMemo } from 'react';
+import { Anchor, Target, ChevronDown, TrendingUp, Info } from 'lucide-react';
+
+/**
+ * Market Analyzer - OmniProjector
+ * Versão: Projeção de Linhas de Gols com Linha Âncora Dinâmica
+ */
+
+const App = () => {
+  // Estado para os inputs do OmniProjector
+  const [anchorSettings, setAnchorSettings] = useState({
+    line: 2.5,
+    under: 1.90,
+    over: 1.90
+  });
+
+  // Lista de linhas disponíveis para âncora (conforme screenshot)
+  const availableLines = [1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75, 4.0, 4.25, 4.5, 4.75, 5.0, 5.25, 5.5];
+
+  // Cálculo de Lambda (Média de Gols) e Juice da Âncora
+  const projectionStats = useMemo(() => {
+    const pUnder = 1 / anchorSettings.under;
+    const pOver = 1 / anchorSettings.over;
+    const juice = (pUnder + pOver - 1) * 100;
+    
+    // Probabilidade Justa (Fair)
+    const fairProbUnder = pUnder / (pUnder + pOver);
+    
+    // Função Poisson para encontrar o Lambda
+    const poisson = (k, l) => (Math.pow(l, k) * Math.exp(-l)) / factorial(k);
+    const factorial = (n) => {
+        if (n <= 1) return 1;
+        let res = 1;
+        for (let i = 2; i <= n; i++) res *= i;
+        return res;
+    };
+
+    const getProbUnderLine = (l, line) => {
+        let prob = 0;
+        const fullGoals = Math.floor(line);
+        for (let k = 0; k <= fullGoals; k++) {
+            prob += poisson(k, l);
+        }
+        // Ajuste para linhas .25 e .75 (Handicap Asiático)
+        if (line % 1 === 0.25) {
+            prob -= poisson(fullGoals, l) * 0.5;
+        } else if (line % 1 === 0.75) {
+            prob += poisson(fullGoals + 1, l) * 0.5;
+        }
+        return prob;
+    };
+
+    // Busca numérica do Lambda (Aproximação)
+    let lambda = 2.674; // Valor base da screenshot
+    let low = 0.1, high = 15;
+    for (let i = 0; i < 20; i++) {
+        let mid = (low + high) / 2;
+        if (getProbUnderLine(mid, anchorSettings.line) > fairProbUnder) {
+            low = mid;
+        } else {
+            high = mid;
+        }
+    }
+    lambda = (low + high) / 2;
+
+    return { juice, lambda };
+  }, [anchorSettings]);
+
+  // Geração da Tabela Projetada
+  const tableData = useMemo(() => {
+    const linesToShow = [1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0, 3.25, 3.5, 3.75];
+    const { lambda, juice } = projectionStats;
+
+    const poisson = (k, l) => (Math.pow(l, k) * Math.exp(-l)) / (
+        k === 0 ? 1 : k === 1 ? 1 : k === 2 ? 2 : k === 3 ? 6 : k === 4 ? 24 : 120
+    );
+
+    const getFairProb = (line, l) => {
+        let prob = 0;
+        const fullGoals = Math.floor(line);
+        for (let k = 0; k <= fullGoals; k++) prob += poisson(k, l);
+        
+        if (line % 1 === 0.25) prob -= poisson(fullGoals, l) * 0.5;
+        else if (line % 1 === 0.75) prob += poisson(fullGoals + 1, l) * 0.5;
+        else if (line % 1 === 0) prob -= poisson(fullGoals, l) * 0.5; // Linha inteira asiática
+
+        return Math.min(0.99, Math.max(0.01, prob));
+    };
+
+    return linesToShow.map(line => {
+        const fairU = getFairProb(line, lambda);
+        const fairO = 1 - fairU;
+        
+        // Simulação de Margem Dinâmica (Juice)
+        const diff = Math.abs(line - anchorSettings.line);
+        const margem = juice + (diff * 0.5);
+        const marginMultiplier = 1 + (margem / 100);
+
+        const oddU = Math.max(1.01, (1 / fairU) * (marginMultiplier / 1.06));
+        const oddO = Math.max(1.01, (1 / fairO) * (marginMultiplier / 1.06));
+
+        return {
+            label: Gols ${line.toFixed(2)},
+            under: oddU.toFixed(2),
+            over: oddO.toFixed(2),
+            pU: (fairU * 100).toFixed(1),
+            pO: (fairO * 100).toFixed(1),
+            juice: margem.toFixed(2),
+            isAnchor: line === anchorSettings.line
+        };
+    });
+  }, [projectionStats, anchorSettings.line]);
+
+  return (
+    <div className="min-h-screen bg-[#060b13] text-slate-300 font-sans p-4 md:p-8">
+      <div className="max-w-6xl mx-auto space-y-6">
+        
+        {/* Header - OmniProjector Style */}
+        <div className="bg-[#0d1421] border border-slate-800 rounded-xl p-6 shadow-2xl">
+          <div className="flex flex-col lg:flex-row items-center gap-6">
+            <div className="flex-shrink-0">
+              <h1 className="text-xl font-black text-blue-500 italic uppercase tracking-tighter">
+                OMNI<span className="text-white">PROJECTOR</span>
+              </h1>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">1.50 ATÉ 5.50 (PROTEÇÃO 1.01)</p>
+            </div>
+
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+              {/* Seletor de Linha Âncora */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Linha Âncora</label>
+                <div className="relative">
+                  <select 
+                    value={anchorSettings.line}
+                    onChange={(e) => setAnchorSettings({...anchorSettings, line: Number(e.target.value)})}
+                    className="w-full bg-[#161d2b] border border-slate-700 rounded-lg p-3 text-blue-400 font-black text-lg appearance-none cursor-pointer outline-none focus:border-blue-500/50"
+                  >
+                    {availableLines.map(l => (
+                      <option key={l} value={l}>Linha {l.toFixed(2)}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-4 text-slate-500 pointer-events-none" size={18} />
+                </div>
+              </div>
+
+              {/* Odd Under */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Under (Odds)</label>
+                <div className="bg-[#161d2b] border border-slate-700 rounded-lg p-3 text-center focus-within:border-emerald-500/50 transition-all">
+                  <input 
+                    type="number" step="0.01" value={anchorSettings.under}
+                    onChange={(e) => setAnchorSettings({...anchorSettings, under: Number(e.target.value)})}
+                    className="bg-transparent text-2xl font-black text-white text-center w-full outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Odd Over */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-bold text-slate-500 uppercase ml-1">Over (Odds)</label>
+                <div className="bg-[#161d2b] border border-slate-700 rounded-lg p-3 text-center focus-within:border-red-500/50 transition-all">
+                  <input 
+                    type="number" step="0.01" value={anchorSettings.over}
+                    onChange={(e) => setAnchorSettings({...anchorSettings, over: Number(e.target.value)})}
+                    className="bg-transparent text-2xl font-black text-white text-center w-full outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Stats Laterais */}
+            <div className="flex gap-4 border-l border-slate-800 pl-6 h-full items-center">
+              <div className="text-center">
+                <p className="text-[9px] font-bold text-slate-500 uppercase">Juice Âncora</p>
+                <p className="text-lg font-black text-white">{projectionStats.juice.toFixed(2)}%</p>
+              </div>
+              <div className="text-center">
+                <p className="text-[9px] font-bold text-slate-500 uppercase">λ Calculado</p>
+                <p className="text-lg font-black text-blue-400">{projectionStats.lambda.toFixed(3)}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabela de Projeção */}
+        <div className="bg-[#0d1421] border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-[#161d2b] border-b border-slate-800">
+                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Mercado (Gols)</th>
+                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Under Proj.</th>
+                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Over Proj.</th>
+                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Prob. Fair %</th>
+                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">Margem (Juice)</th>
+                <th className="p-4 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Status da Linha</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/50">
+              {tableData.map((row, idx) => (
+                <tr key={idx} className={transition-all hover:bg-blue-500/5 ${row.isAnchor ? 'bg-blue-600/10 border-l-4 border-l-blue-500' : ''}}>
+                  <td className="p-4">
+                    <span className="text-sm font-black text-slate-100">{row.label}</span>
+                  </td>
+                  <td className="p-4 font-black text-emerald-400 text-lg">
+                    {row.under}
+                  </td>
+                  <td className="p-4 font-black text-red-400 text-lg">
+                    {row.over}
+                  </td>
+                  <td className="p-4 text-[10px] font-bold text-slate-500 italic">
+                    {row.pU}% <span className="mx-1">/</span> {row.pO}%
+                  </td>
+                  <td className="p-4">
+                    <span className={text-xs font-black ${row.isAnchor ? 'text-emerald-400' : 'text-slate-400'}}>
+                        {row.juice}%
+                    </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    {row.isAnchor ? (
+                        <div className="flex items-center justify-end gap-1 text-blue-400 font-black text-[10px] uppercase">
+                            <Anchor size={12} /> Âncora
+                        </div>
+                    ) : (
+                        <span className="text-[10px] font-black text-slate-600 italic uppercase">Projetada</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Footer */}
+        <div className="flex flex-col md:flex-row justify-between items-center px-2">
+            <div className="flex gap-4 items-center">
+                <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-blue-600"></div>
+                    <span className="text-[9px] font-black text-slate-500 uppercase">Âncora Escolhida</span>
+                </div>
+                <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                    <span className="text-[9px] font-black text-slate-500 uppercase">Ponto de Equilíbrio</span>
+                </div>
+            </div>
+            <div className="text-[9px] font-bold text-slate-600 italic">
+                Odds limitadas ao piso de 1.01 para segurança operacional.
+            </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;

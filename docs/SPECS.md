@@ -1,10 +1,10 @@
 # SPECS
 
-# SPECS.md — Big Data Bet | Fase 1
+# SPECS.md — Big Data Bet
 
-> **Versão:** 1.0 | **Atualizado:** 24/04/2026
-**Referências:** PRD v1.1 · [SCHEMA.md](http://schema.md/) v1.0
-**Escopo:** Fase 1 completa — especificações técnicas por item para implementação pelo agente
+> **Versão:** 2.2 | **Atualizado:** 02/05/2026
+> **Referências:** PRD v1.4 · SCHEMA.md v2.1
+> **Escopo:** Fase 1 concluída, Fase 2 mapeada, Fase 3 especificada — especificações técnicas por item para implementação pelo agente
 > 
 
 ---
@@ -1274,3 +1274,705 @@ Semana 6
 
 > **Regra para o agente:** Antes de implementar qualquer feature, confirmar que está descrita neste SPECS. Em caso de ambiguidade, perguntar antes de assumir.
 >
+
+---
+
+## 2A — Engine de Cálculo Estatístico
+
+### Estrutura de pastas
+
+```
+lib/analytics/
+├── poisson.ts             # Poisson padrão
+├── zero-inflated.ts       # Poisson Zero-Inflacionado (ZIP)
+├── negative-binomial.ts   # Binomial Negativa
+├── dixon-coles.ts         # Dixon-Coles com tau + decay temporal
+├── medias.ts              # médias móveis, DP, CV, custo/peso do gol
+├── forca-time.ts          # força ofensiva/defensiva por mando
+├── mapa-valor.ts          # ROI por faixa de odds
+├── ev-calculator.ts       # odd justa vs mercado, EV%
+└── index.ts               # API pública unificada
+```
+
+### Contrato de API
+
+```typescript
+type ModeloEstatistico = 'POISSON' | 'ZIP' | 'NB' | 'DIXON_COLES'
+
+interface MediasTime {
+  golsMarcados:   number
+  golsSofridos:   number
+  pontos:         number
+  pesoGol:        number   // peso médio do gol (replica DASH)
+  custoGol:       number   // custo médio do gol (replica DASH)
+}
+
+interface MediasLiga {
+  mediaGolsCasa:  number
+  mediaGolsVis:   number
+  mediaGolsTotal: number
+}
+
+interface ForcaTime {
+  ataque: number   // alpha — força ofensiva
+  defesa: number   // beta  — força defensiva
+}
+
+interface PrevisaoConfronto {
+  modelo:  ModeloEstatistico
+
+  medias: {
+    home: MediasTime
+    away: MediasTime
+    liga: MediasLiga
+  }
+
+  forcas: {
+    home: ForcaTime
+    away: ForcaTime
+    homeAdvantage: number   // gamma — vantagem de mando
+  }
+
+  lambdas: {
+    home: number   // gols esperados do mandante
+    away: number   // gols esperados do visitante
+  }
+
+  matrizPlacares: number[][]   // grid 11x11 com probabilidades
+
+  mercados: {
+    home:       { prob: number; oddJusta: number }
+    draw:       { prob: number; oddJusta: number }
+    away:       { prob: number; oddJusta: number }
+    btts:       { sim: number; nao: number }
+    overUnder:  Record<string, { over: number; under: number }>   // 0.5, 1.5, 2.5, 3.5, 4.5
+    handicaps:  Array<{ linha: number; home: number; away: number }>
+  }
+
+  evPorMercado: Record<string, number>   // EV% calculado vs odds de mercado
+}
+
+function calcularPrevisao(
+  homeTeamId: string,
+  awayTeamId: string,
+  modelo: ModeloEstatistico,
+  filtros?: {
+    ultimasRodadas?: number
+    mandoOnly?:      boolean
+  }
+): Promise<PrevisaoConfronto>
+```
+
+## 2B — Importação de Dados (Admin)
+
+### Rota
+```
+POST /api/admin/ligas/[slug]/importar
+Body: FormData com arquivo CSV
+Restrição: role ADMIN
+```
+
+### Fluxo
+1. Validar role ADMIN via requireAuth
+2. Parsear CSV com biblioteca `papaparse` (justificativa: padrão de mercado, leve)
+3. Validar colunas obrigatórias do football-data: Date, HomeTeam, AwayTeam, FTHG, FTAG, FTR, B365H/D/A
+4. Upsert de Teams (criar se não existir)
+5. Upsert de Matches por chave composta (date, homeTeamId, awayTeamId)
+6. Criar registro em MatchImport com estatísticas
+7. Retornar { rowsProcessed, rowsCreated, rowsUpdated, rowsSkipped }
+
+### Mapeamento de Colunas por Tier
+
+O football-data.co.uk publica CSVs com estruturas diferentes por tier de liga. O parser deve lidar com ambos lendo apenas o **subset comum**, ignorando silenciosamente colunas extras do Tier 1.
+
+#### Colunas Obrigatórias (presentes em todos os tiers)
+| Coluna CSV | Campo Prisma | Tipo |
+| --- | --- | --- |
+| `Date` | `date` | DateTime (formato DD/MM/YYYY ou DD/MM/YY) |
+| `HomeTeam` | (lookup → Team.name) | String |
+| `AwayTeam` | (lookup → Team.name) | String |
+| `FTHG` | `fthg` | Int |
+| `FTAG` | `ftag` | Int |
+| `FTR` | `ftr` | MatchResult (H/D/A) |
+
+#### Colunas Desejáveis (presentes na maioria dos tiers)
+| Coluna CSV | Campo Prisma | Observação |
+| --- | --- | --- |
+| `B365H` | `oddHome` | Odd Bet365 vitória mandante |
+| `B365D` | `oddDraw` | Odd Bet365 empate |
+| `B365A` | `oddAway` | Odd Bet365 vitória visitante |
+| `B365>2.5` | `oddOver25` | Odd Over 2.5 gols |
+| `B365<2.5` | `oddUnder25` | Odd Under 2.5 gols |
+
+#### Colunas Ignoradas no MVP
+- HTHG, HTAG, HTR (resultado HT) — pode ser adicionado em fase futura
+- HS, AS, HST, AST, HC, AC, HF, AF, HY, AY, HR, AR (estatísticas Tier 1) — fora do escopo
+- Odds BTTS (B365BB, B365BNB) — raras, fora do escopo MVP
+- Odds Asian Handicap (B365AHH, B365AHA, AHh) — fora do escopo MVP
+- Odds de outras casas (BWH, IWH, PSCH, WHH, VCH, etc) — fora do escopo MVP
+
+#### Comportamento do Parser
+1. Detectar colunas presentes no header do CSV
+2. Validar que todas as **obrigatórias** existem → erro 400 se faltar
+3. Para **desejáveis** ausentes, salvar campo como `null` no banco
+4. Para **outras colunas** presentes (Tier 1), ignorar silenciosamente
+5. Registrar em `MatchImport.notes`: lista de colunas ignoradas e desejáveis ausentes
+
+## 2C — Telas e Componentes
+
+### Rota Principal
+```
+/dashboard/ligas                       → grid de ligas (MVP: só Brasileirão A)
+/dashboard/ligas/[slug]                → dashboard único da liga
+/cms/ligas/importar                    → tela de upload (ADMIN)
+```
+
+### Componentes
+| Componente | Localização | Responsabilidade |
+| --- | --- | --- |
+| `SeletorConfronto` | `components/ligas/SeletorConfronto.tsx` | Dropdown casa/visitante + filtros |
+| `SeletorModelo` | `components/ligas/SeletorModelo.tsx` | Toggle Poisson/ZIP/NB/DC |
+| `PainelMedias` | `components/ligas/PainelMedias.tsx` | Replicação aba DASH |
+| `PainelMatrizPlacares` | `components/ligas/PainelMatrizPlacares.tsx` | Grid 11x11 |
+| `PainelMercados` | `components/ligas/PainelMercados.tsx` | 1X2, BTTS, O/U, AH |
+| `PainelMapaValor` | `components/ligas/PainelMapaValor.tsx` | ROI por faixa |
+| `PainelEvolucao` | `components/ligas/PainelEvolucao.tsx` | Gráfico Recharts |
+| `BotaoImportarCSV` | `components/ligas/BotaoImportarCSV.tsx` | Upload (ADMIN) |
+
+## 2D — Validação contra Ground Truth
+
+A planilha `BRA1DASHv261.xlsx` é a fonte de verdade dos cálculos atuais. Toda implementação do modelo Poisson padrão deve ser validada contra os valores das abas DASH e CS dessa planilha. Diferenças aceitáveis: < 0.5% por arredondamento.
+
+Criar arquivo `__tests__/analytics/poisson.test.ts` com casos de teste extraídos da planilha.
+
+## 2E — Bibliotecas Permitidas
+
+Justificativas obrigatórias antes de incluir:
+
+| Lib | Uso | Justificativa |
+| --- | --- | --- |
+| `papaparse` | Parsing CSV | Padrão de mercado, leve, sem deps |
+| (não há outras libs novas para Fase 2 — todos os cálculos estatísticos são implementados manualmente em TypeScript puro) | | |
+
+---
+
+> SPECS detalhados das Fases 3+ serão escritos sob demanda, conforme cada fase for desbloqueada.
+
+# SPECS — Fase 3: Ferramentas Gratuitas (Migração Gemini)
+
+> **Referências:** PRD v1.4 · Arquivo fonte: `Ferramentas BDB Gemini.txt`
+> **Princípio:** Converter código Gemini Canvas → componentes React nativos com design system BDB.
+> **Regra:** Nenhum estilo inline do código Gemini deve sobreviver na versão final. Tudo passa pelos tokens Tailwind e componentes shadcn/ui.
+
+---
+
+## Estrutura de Pastas
+
+```
+lib/ferramentas/
+├── validacao-risco/
+│   ├── monte-carlo.ts          # Simulação Monte Carlo (funções puras)
+│   ├── estatisticas.ts         # P-value, volume validador, IC
+│   └── types.ts                # Interfaces e tipos
+├── over-under-linhas/
+│   ├── poisson.ts              # Cálculo Poisson para linhas O/U
+│   ├── juice.ts                # Extração de juice e fair odds
+│   └── types.ts
+├── distribuicao/
+│   ├── gram-charlier.ts        # PDF com ajuste Gram-Charlier
+│   ├── medidas-centrais.ts     # Média, mediana, moda
+│   └── types.ts
+└── index.ts                    # Re-export público
+
+components/ferramentas/
+├── FerramentasGrid.tsx         # Grid da página /dashboard/ferramentas
+├── validacao-risco/
+│   ├── ValidacaoRiscoTool.tsx  # Client Component principal
+│   ├── PainelEntradas.tsx      # Painel lateral de inputs
+│   ├── PainelResultados.tsx    # Cards de métricas + gráficos
+│   └── CurvasPatrimonio.tsx    # Gráfico Recharts de stress test
+├── over-under-linhas/
+│   ├── OverUnderLinhasTool.tsx  # Client Component principal
+│   ├── InputsReferencia.tsx    # Barra superior de odds de referência
+│   └── TabelaLinhas.tsx        # Tabela de linhas calculadas
+├── distribuicao/
+│   ├── DistribuicaoTool.tsx    # Client Component principal
+│   ├── PainelParametros.tsx    # Sliders de μ, σ, skew, curtose
+│   └── GraficoCurva.tsx        # Gráfico Recharts da curva
+└── EmBreve.tsx                 # Placeholder para ferramenta 4
+```
+
+---
+
+## 3A — Ferramenta 1: Validação e Risco (Monte Carlo)
+
+### Descrição
+Simulador de risco que roda N cenários de Monte Carlo para avaliar a viabilidade estatística de uma estratégia de apostas. Calcula p-value, volume validador, intervalo de confiança do ROI, probabilidade de lucro, taxa de sobrevivência e drawdown máximo.
+
+### Rota
+```
+/dashboard/ferramentas/validacao-risco
+```
+
+### Inputs (State do Client Component)
+
+| Campo | Tipo | Default | Range/Validação |
+|---|---|---|---|
+| `banca` | number | 1000 | > 0 |
+| `oddsMedia` | number | 2.00 | ≥ 1.01 |
+| `roiEsperado` | number | 5.0 | -100 a 100 (%) |
+| `numBets` | number | 1000 | ≥ 10 |
+| `tempoMeses` | number | 6 | ≥ 1 |
+| `limiteDrawdown` | number | 25 | 5 a 95 (%) |
+| `stakeEscolhida` | number | 1.0 | 0.1 a 100 (%) |
+| `simulacoesCount` | number | 1000 | 100 a 10000 |
+
+### Outputs Calculados
+
+| Métrica | Descrição |
+|---|---|
+| `volumeNecessario` | Número mínimo de apostas para validação estatística (95% confiança) |
+| `pValue` | Significância estatística do ROI observado vs hipótese nula |
+| `probLucro` | % de simulações que terminaram com lucro |
+| `survivalRate` | % de simulações que não atingiram o drawdown limite |
+| `piorROI` / `melhorROI` | Intervalo de confiança 95% do ROI |
+| `totalProfit` | Lucro total estimado em unidades |
+| `avgMDD` / `worstDD` | Drawdown máximo médio e pior caso |
+| `histData` | Distribuição de drawdown em 10 buckets |
+| `chartData` | 12 curvas de patrimônio (stress test visual) |
+
+### Derivado Calculado Automaticamente
+```
+entradasPorMes = numBets / tempoMeses
+```
+
+### Lógica Crítica — `lib/ferramentas/validacao-risco/monte-carlo.ts`
+
+```typescript
+interface MonteCarloInputs {
+  banca: number
+  oddsMedia: number
+  roiEsperado: number       // percentual
+  numBets: number
+  tempoMeses: number
+  limiteDrawdown: number    // percentual
+  stakeEscolhida: number   // percentual da banca
+  simulacoesCount: number
+}
+
+interface MonteCarloResults {
+  pValue: number
+  probLucro: number         // percentual
+  survivalRate: number      // percentual
+  volumeNecessario: number
+  piorROI: number           // percentual
+  melhorROI: number         // percentual
+  totalProfit: number       // em unidades
+  avgMDD: number            // percentual
+  worstDD: number           // percentual
+  histData: DrawdownBucket[]
+  chartData: PatrimonioPoint[]
+}
+
+interface DrawdownBucket {
+  range: string             // "0%", "10%", ..., "90%"
+  percent: number           // % de simulações neste bucket
+  danger: boolean           // true se bucket >= limiteDrawdown
+}
+
+interface PatrimonioPoint {
+  bet: number
+  [key: `s${number}`]: number   // valor da banca em cada simulação
+}
+
+/**
+ * Executa a simulação completa de Monte Carlo.
+ * Função pura — sem side effects.
+ */
+function executarMonteCarlo(inputs: MonteCarloInputs): MonteCarloResults
+```
+
+### Lógica Crítica — `lib/ferramentas/validacao-risco/estatisticas.ts`
+
+```typescript
+/**
+ * Distribuição normal cumulativa (aproximação de Abramowitz & Stegun).
+ * Usada para calcular p-value.
+ */
+function cumulativeNormal(z: number): number
+
+/**
+ * Calcula p-value: probabilidade de obter o ROI observado
+ * assumindo que a hipótese nula (ROI = 0) é verdadeira.
+ */
+function calcularPValue(
+  probVitoria: number,
+  numBets: number,
+  oddsMedia: number
+): number
+
+/**
+ * Volume mínimo de apostas necessário para validar o ROI
+ * com 95% de confiança e precisão de ±20% do ROI esperado.
+ */
+function calcularVolumeValidador(
+  probVitoria: number,
+  oddsMedia: number,
+  roiDecimal: number
+): number
+
+/**
+ * Intervalo de confiança do ROI a 95%.
+ */
+function calcularIntervaloConfianca(
+  probVitoria: number,
+  oddsMedia: number,
+  roiDecimal: number,
+  numBets: number
+): { piorROI: number; melhorROI: number }
+```
+
+### Componentes UI
+
+| Componente | Tipo | Responsabilidade |
+|---|---|---|
+| `ValidacaoRiscoTool` | Client Component | Orquestra state + cálculos + layout |
+| `PainelEntradas` | Client Component | Grid de inputs com validação visual |
+| `PainelResultados` | Client Component | 4 cards de métricas + ROI IC + lucro estimado |
+| `CurvasPatrimonio` | Client Component | Gráfico Recharts LineChart com 12 curvas |
+
+### Mapeamento de Estilo Gemini → BDB
+
+| Gemini (remover) | BDB (usar) |
+|---|---|
+| `bg-[#0d1117]` | `bg-background` |
+| `bg-[#161b22]` | `bg-surface` ou `bg-card` |
+| `border-slate-800` | `border-border` |
+| `text-blue-600` / `bg-blue-600` | `bg-primary` / `text-primary` |
+| `text-emerald-400` | `text-primary` (verde BDB) |
+| `text-red-400` | `text-data-red` |
+| `font-black uppercase text-[9px]` | Classes semânticas do design system |
+| Inputs inline `<input className="bg-transparent...">` | `<Input />` shadcn/ui |
+| Botão inline | `<Button />` shadcn/ui |
+| Range slider inline | Componente `<Slider />` shadcn/ui se disponível, senão estilizar com tokens |
+
+### Bugs e Melhorias Identificados no Código Gemini
+
+1. **Template literals quebrados:** O código usa backticks sem escape correto em vários locais (ex: `` `s${idx}` ``, `` `Simular ${inputs...}` ``). Corrigir na conversão.
+2. **setTimeout artificial:** A simulação usa `setTimeout(400)` para simular loading. Substituir por execução real — se for pesada (>100ms), usar `requestIdleCallback` ou Web Worker.
+3. **Seed aleatório:** `Math.random()` não é reproduzível. Aceitável para MVP, mas documentar como melhoria futura (seed determinístico para testes).
+4. **Validação de inputs ausente:** Nenhum input é validado (banca negativa, odds < 1, etc.). Adicionar validação Zod client-side.
+5. **Magic numbers:** Constantes como `0.2316419`, `0.3989423` são coeficientes da aproximação normal — documentar com comentários.
+
+---
+
+## 3B — Ferramenta 2: Market Analyzer (Linhas Over/Under)
+
+### Descrição
+Calculador de linhas de gols (Over/Under) baseado em Poisson. A partir de uma odd de referência na linha 2.5, extrai o lambda (média de gols implícita) e projeta odds justas para todas as linhas adjacentes (1.5 a 3.75).
+
+### Rota
+```
+/dashboard/ferramentas/over-under-linhas
+```
+
+### Inputs
+
+| Campo | Tipo | Default | Descrição |
+|---|---|---|---|
+| `underRef` | number | 3.30 | Odd Under 2.5 de referência |
+| `overRef` | number | 1.33 | Odd Over 2.5 de referência |
+
+### Outputs (por linha)
+
+| Campo | Descrição |
+|---|---|
+| `line` | Linha de gols (1.50, 1.75, ..., 3.75) |
+| `under` | Odd projetada Under |
+| `over` | Odd projetada Over |
+| `probU` / `probO` | Probabilidade justa (%) |
+| `juice` | Margem da casa (%) |
+| `afastamento` | Distância da linha base |
+
+### Derivados Exibidos no Header
+```
+juice = (1/underRef + 1/overRef - 1) × 100
+lambda = encontrado por aproximação numérica a partir da fairProbUnder
+```
+
+### Lógica Crítica — `lib/ferramentas/over-under-linhas/poisson.ts`
+
+```typescript
+/**
+ * Calcula P(X = k) para distribuição Poisson.
+ * Reutiliza a função poissonPmf de lib/analytics/poisson.ts se já existir na Fase 2.
+ */
+function poissonPmf(lambda: number, k: number): number
+
+/**
+ * Calcula P(X ≤ n) = soma de P(X=0) até P(X=n).
+ */
+function poissonCdf(lambda: number, n: number): number
+
+/**
+ * Encontra o lambda implícito a partir da probabilidade justa de Under 2.5.
+ * Usa aproximação numérica iterativa (10 iterações).
+ */
+function encontrarLambda(fairProbUnder25: number): number
+```
+
+### Lógica Crítica — `lib/ferramentas/over-under-linhas/juice.ts`
+
+```typescript
+interface OddsReferencia {
+  under: number
+  over: number
+}
+
+interface LinhaCalculada {
+  line: string           // "1.50", "1.75", ..., "3.75"
+  under: string          // odd formatada
+  over: string           // odd formatada
+  probU: string          // percentual formatado
+  probO: string          // percentual formatado
+  juice: string          // percentual formatado
+  afastamento: string    // distância da base
+  isBase: boolean        // true para linha 2.5 (ou linha de ref)
+}
+
+/**
+ * Extrai juice e fair probs das odds de referência.
+ */
+function extrairJuice(refs: OddsReferencia): {
+  juice: number
+  fairProbUnder: number
+  fairProbOver: number
+}
+
+/**
+ * Gera tabela completa de linhas projetadas.
+ * Linhas: [1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 3.25, 3.50, 3.75]
+ */
+function calcularLinhas(lambda: number, juiceBase: number): LinhaCalculada[]
+```
+
+### Componentes UI
+
+| Componente | Tipo | Responsabilidade |
+|---|---|---|
+| `OverUnderLinhasTool` | Client Component | Orquestra state + cálculos + layout |
+| `InputsReferencia` | Client Component | Barra superior com inputs de odds + juice + lambda |
+| `TabelaLinhas` | Client Component | Tabela estilizada com destaque na linha base |
+
+### Bugs e Melhorias Identificados
+
+1. **Fatorial recursivo sem cache:** O código Gemini tem `factorial = (n) => n <= 1 ? 1 : n * factorial(n - 1)`. Substituir pela implementação com cache já existente em `lib/analytics/poisson.ts` (Fase 2).
+2. **Cálculo de linhas de quartos (.25/.75) incompleto:** O código contém comentário `// Placeholder para complexidade de quartos` e a lógica é uma interpolação simplificada. Documentar como limitação conhecida do MVP e refinar posteriormente.
+3. **Linhas hardcoded:** Array `[1.50, 1.75, ..., 3.75]` está fixo. Aceitar para MVP, mas preparar para ser configurável.
+4. **Reutilização:** A função `poissonPmf` já existe no motor da Fase 2 (`lib/analytics/poisson.ts`). Importar em vez de reimplementar.
+5. **Afastamento calculado incorretamente:** O código Gemini calcula afastamento relativo à linha 3.50 (hardcoded), mas a linha base deveria ser a linha de referência (2.5 por padrão). Corrigir na migração.
+
+---
+
+## 3C — Ferramenta 3: Simulador de Distribuição Estatística
+
+### Descrição
+Laboratório visual interativo para explorar distribuições estatísticas. O usuário manipula 4 parâmetros (média, desvio padrão, assimetria e curtose) via sliders e observa em tempo real o efeito na curva de distribuição e nas medidas de tendência central (média, mediana, moda).
+
+### Rota
+```
+/dashboard/ferramentas/distribuicao
+```
+
+### Inputs (Sliders)
+
+| Campo | Tipo | Default | Range | Step |
+|---|---|---|---|---|
+| `baseMean` | number | 0 | -4 a 4 | 0.1 |
+| `stdDev` | number | 1 | 0.6 a 2.5 | 0.1 |
+| `skewness` | number | 0 | -2 a 2 | 0.1 |
+| `kurtosis` | number | 3.0 | 1.5 a 6.0 | 0.1 |
+
+### Outputs Visuais
+
+| Elemento | Descrição |
+|---|---|
+| Curva principal | PDF ajustada por Gram-Charlier |
+| Linha vermelha | Média (desloca com skew) |
+| Linha verde tracejada | Mediana (intermediária) |
+| Linha âmbar pontilhada | Moda (ponto mais alto) |
+| Áreas sombreadas | Zonas de ±1σ, ±2σ, ±3σ |
+| Cards pedagógicos | Explicações sobre deslocamento da média e controle de amplitude |
+
+### Lógica Crítica — `lib/ferramentas/distribuicao/gram-charlier.ts`
+
+```typescript
+/**
+ * Calcula a média real ajustada pela assimetria.
+ * Em distribuições assimétricas, a média é puxada pela cauda.
+ */
+function calcularMediaReal(baseMean: number, skewness: number, stdDev: number): number
+
+/**
+ * Calcula a PDF (densidade de probabilidade) usando aproximação de Gram-Charlier.
+ * Inclui ajuste de amplitude pela curtose.
+ *
+ * Parâmetros:
+ * - x: ponto no eixo X
+ * - mean: média real (já ajustada)
+ * - sd: desvio padrão
+ * - skew: coeficiente de assimetria
+ * - kurt: curtose (3 = normal, >3 leptocúrtica, <3 platicúrtica)
+ *
+ * Retorna: valor da densidade (≥ 0)
+ */
+function gramCharlierPdf(
+  x: number,
+  mean: number,
+  sd: number,
+  skew: number,
+  kurt: number
+): number
+
+/**
+ * Gera array de pontos para renderização do gráfico.
+ * Range fixo: -12 a 12, step 0.15.
+ * Cada ponto inclui: x, y (PDF), z1/z2/z3 (zonas de desvio padrão).
+ */
+function gerarPontosCurva(
+  mean: number,
+  sd: number,
+  skew: number,
+  kurt: number
+): CurvePoint[]
+```
+
+### Lógica Crítica — `lib/ferramentas/distribuicao/medidas-centrais.ts`
+
+```typescript
+/**
+ * Calcula posições relativas da moda e mediana em função da assimetria.
+ * Relação pedagógica: em assimetria positiva → Moda < Mediana < Média
+ */
+function calcularMedidasCentrais(
+  mean: number,
+  skewness: number,
+  stdDev: number
+): { mode: number; median: number }
+```
+
+### Componentes UI
+
+| Componente | Tipo | Responsabilidade |
+|---|---|---|
+| `DistribuicaoTool` | Client Component | Orquestra state + cálculos + layout |
+| `PainelParametros` | Client Component | 4 sliders + legenda de cores |
+| `GraficoCurva` | Client Component | ComposedChart Recharts com áreas + linhas de referência |
+
+### Mapeamento de Estilo Específico
+
+| Gemini (remover) | BDB (usar) |
+|---|---|
+| `bg-slate-900 text-white` (painel lateral) | `bg-surface` com tokens do dark theme |
+| `bg-white` (área do gráfico) | `bg-card` (manter dark) |
+| `text-blue-400` (parâmetro μ) | `text-data-blue` |
+| `text-emerald-400` (parâmetro σ) | `text-primary` |
+| `text-amber-400` (skew) | `text-data-yellow` |
+| `text-purple-400` (curtose) | Adicionar token `data.purple: '#a855f7'` se não existir, ou usar `text-data-blue` |
+| Cards pedagógicos `bg-rose-50` / `bg-purple-50` | `bg-surface` com borda colorida |
+
+### Bugs e Melhorias Identificados
+
+1. **Layout light mode:** O código Gemini usa fundo branco no gráfico (`bg-white`, `bg-slate-50`). Converter para dark mode obrigatoriamente.
+2. **Range fixo do eixo X:** Vai de -12 a 12, mas o domínio visual é -10 a 10. Consistir ambos.
+3. **Tooltip com template literal:** `` `Valor: ${v}` `` — corrigir escape para JSX.
+4. **`isAnimationActive={false}`:** Bom para performance — manter.
+5. **Nenhuma validação de input:** Os sliders têm min/max no HTML, mas a lógica não valida. Adicionar clamp nas funções puras.
+6. **Responsividade:** O layout `flex-row` do Gemini não funciona bem em mobile. Converter para `flex-col` em breakpoints menores.
+
+---
+
+## 3D — Ferramenta 4: Over/Under 2.5 (Placeholder)
+
+### Status: ❌ Aguardando código do Marcelo
+
+### Rota
+```
+/dashboard/ferramentas/over-under-25
+```
+
+### Implementação Temporária
+- Renderizar componente `<EmBreve />` com mensagem "Ferramenta em desenvolvimento"
+- Manter no grid de ferramentas com badge visual "Em breve"
+- Quando o código for fornecido, criar tasks 3D.1–3D.N seguindo o mesmo padrão das ferramentas anteriores
+
+---
+
+## 3E — Grid de Ferramentas (`/dashboard/ferramentas`)
+
+### Componente: `FerramentasGrid`
+
+```typescript
+const FERRAMENTAS = [
+  {
+    nome: 'Validação e Risco',
+    descricao: 'Simulação Monte Carlo para avaliar viabilidade estatística de estratégias',
+    href: '/dashboard/ferramentas/validacao-risco',
+    icone: 'ShieldCheck',       // lucide-react
+    disponivel: true,
+  },
+  {
+    nome: 'Linhas Over/Under',
+    descricao: 'Projeção de odds para todas as linhas de gols a partir de Poisson',
+    href: '/dashboard/ferramentas/over-under-linhas',
+    icone: 'TrendingUp',
+    disponivel: true,
+  },
+  {
+    nome: 'Distribuição Estatística',
+    descricao: 'Laboratório visual interativo de distribuições e medidas de tendência central',
+    href: '/dashboard/ferramentas/distribuicao',
+    icone: 'BarChart3',
+    disponivel: true,
+  },
+  {
+    nome: 'Over/Under 2.5',
+    descricao: 'Em breve',
+    href: '/dashboard/ferramentas/over-under-25',
+    icone: 'Target',
+    disponivel: false,          // renderiza badge "Em breve"
+  },
+] as const
+```
+
+### Layout
+- Grid responsivo: 1 coluna mobile, 2 colunas tablet, 2-3 colunas desktop
+- Cada card usa `<Card>` do shadcn/ui com hover effect
+- Cards indisponíveis: opacidade reduzida + badge "Em breve" + sem link clicável
+
+---
+
+## Convenções Gerais da Fase 3
+
+### Reutilização de Código
+- `poissonPmf` e `fatorial` devem ser importados de `lib/analytics/poisson.ts` (Fase 2), não reimplementados
+- Se a Fase 2 ainda não estiver implementada quando a Fase 3 iniciar, criar as funções em `lib/ferramentas/shared/poisson.ts` e migrar depois
+
+### Validação de Inputs
+- Todas as ferramentas devem usar schemas Zod para validação client-side dos inputs
+- Um schema por ferramenta em `lib/validations/ferramentas.ts`: `validacaoRiscoSchema`, `overUnderLinhasSchema`, `overUnder25Schema`, `distribuicaoSchema`
+
+### Performance
+- Monte Carlo com >1000 simulações: usar `requestIdleCallback` ou chunking
+- Gráficos Recharts: `isAnimationActive={false}` em todos
+
+### Testes
+- `__tests__/ferramentas/validacao-risco/` — estatisticas.test.ts, monte-carlo.test.ts
+- `__tests__/ferramentas/over-under-linhas/` — poisson-linhas.test.ts, juice.test.ts
+- `__tests__/ferramentas/over-under-25/` — poisson-25.test.ts, juice.test.ts
+- `__tests__/ferramentas/distribuicao/` — gram-charlier.test.ts, medidas-centrais.test.ts
+- Testar edge cases: inputs extremos, banca zero, odds 1.01, desvio padrão mínimo
+
+# SPECS — Fase 4: Multi-Liga + Pagamentos
+# SPECS — Fase 5: Curso + Backtest
+# SPECS — Fase 6: Automações

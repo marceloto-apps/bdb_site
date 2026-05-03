@@ -2,7 +2,7 @@
 
 # SCHEMA.md — Big Data Bet
 
-> **Versão:** 1.0 | **Atualizado:** 24/04/2026
+> **Versão:** 2.1 | **Atualizado:** 02/05/2026
 **Banco:** MySQL (Hostgator) | **ORM:** Prisma
 **Regra:** Nunca usar SQL raw, exceto em casos de performance crítica documentados aqui.
 > 
@@ -81,6 +81,8 @@ model User {
   revisions       ArticleRevision[]
   favorites       Favorite[]
   readHistory     ReadHistory[]
+  matchImports    MatchImport[]   // Fase 2 — auditoria de imports
+  legacyAccess    LegacyAccess?   // Fase 4 — flag de assinante vitalício Hubla
 }
 ```
 
@@ -408,12 +410,182 @@ const admin = {
 
 | Fase | Modelos novos |
 | --- | --- |
-| Fase 2 | `ToolUsage` — controle de uso das ferramentas por usuário |
-| Fase 3 | `Plan`, `Subscription`, `Backtest`, `BacktestResult` |
-| Fase 4 | `Course`, `Lesson`, `LessonProgress` |
-| Fase 5 | `MatchData`, `Job`, índices de performance em tabelas históricas |
+| Fase 2 | League, Team, Match, MatchImport |
+| Fase 3 | (sem modelos novos — ferramentas client-side) |
+| Fase 4 | LegacyAccess, Plan, Subscription, StripeWebhookEvent |
+| Fase 5 | Backtest, BacktestResult, Course, Lesson, LessonProgress |
+| Fase 6 | Job, índices de performance em tabelas históricas |
 
 ---
 
 > **Regra para evoluções:** Nenhum modelo novo adicionado sem PRD da fase correspondente aprovado. Migrations sempre versionadas e nunca revertidas em produção sem backup confirmado.
 >
+
+---
+
+## Modelos da Fase 2 (Dashboards de Liga)
+
+### Enums
+
+```prisma
+enum LeagueTier {
+  FREE      // Brasileirão A (MVP)
+  VIP       // demais 25+ ligas
+}
+
+enum MatchResult {
+  H   // Home win
+  D   // Draw
+  A   // Away win
+}
+```
+
+### `League`
+
+Liga esportiva. MVP popula somente Brasileirão Série A.
+
+```prisma
+model League {
+  id        String      @id @default(cuid())
+  name      String
+  country   String
+  slug      String      @unique
+  season    String      // "2026"
+  tier      LeagueTier  @default(FREE)
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  teams     Team[]
+  matches   Match[]
+  imports   MatchImport[]
+}
+```
+
+**Regras de negócio:**
+- `slug` usado nas rotas: `/dashboard/ligas/[slug]`
+- `tier: FREE` é acessível a qualquer autenticado; `VIP` exige plano Básico+ ou LegacyAccess (Fase 4)
+- `season` permite múltiplas temporadas no futuro
+
+### `Team`
+
+Time vinculado a uma liga e temporada.
+
+```prisma
+model Team {
+  id        String  @id @default(cuid())
+  name      String
+  shortName String?
+  leagueId  String
+
+  league      League  @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  homeMatches Match[] @relation("HomeTeam")
+  awayMatches Match[] @relation("AwayTeam")
+
+  @@unique([name, leagueId])
+  @@index([leagueId])
+}
+```
+
+### `Match`
+
+Partida com resultado e odds. Origem: football-data.co.uk.
+
+```prisma
+model Match {
+  id         String      @id @default(cuid())
+  leagueId   String
+  date       DateTime
+  round      Int?
+  homeTeamId String
+  awayTeamId String
+
+  // Resultado
+  fthg       Int?
+  ftag       Int?
+  ftr        MatchResult?
+
+  // Odds (Pinnacle/Bet365 conforme football-data)
+  oddHome    Float?
+  oddDraw    Float?
+  oddAway    Float?
+  oddOver25  Float?
+  oddUnder25 Float?
+  oddBttsYes Float?
+  oddBttsNo  Float?
+
+  // Rastreabilidade da importação
+  sourceFile  String?   // nome do CSV de origem (ex: "BRA-2024.csv")
+  importedAt  DateTime  @default(now())
+
+  league   League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  homeTeam Team   @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam Team   @relation("AwayTeam", fields: [awayTeamId], references: [id])
+
+  @@index([leagueId, date])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+  @@index([date])
+  @@index([sourceFile])
+}
+```
+
+### `MatchImport`
+
+Auditoria de importações de CSV pelo admin.
+
+```prisma
+model MatchImport {
+  id            String   @id @default(cuid())
+  leagueId      String
+  importedById  String
+  fileName      String
+  rowsProcessed Int
+  rowsCreated   Int
+  rowsUpdated   Int
+  rowsSkipped   Int
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  league       League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  importedBy   User   @relation(fields: [importedById], references: [id])
+
+  @@index([leagueId])
+  @@index([importedById])
+}
+```
+
+**Regras de negócio:**
+- Registro imutável (auditoria)
+- Apenas usuários com role ADMIN podem disparar importação
+- `rowsProcessed = created + updated + skipped`
+
+---
+
+## Modelos Reservados — Fase 4 (Não Implementar Ainda)
+
+> ⚠️ **Aviso:** Os modelos abaixo estão documentados apenas para preservar a consistência das relações já adicionadas ao `User`. **Não criar migration nem implementar até a Fase 4 ser oficialmente iniciada.**
+
+### `LegacyAccess`
+
+Flag de acesso vitalício para assinantes legados do Hubla. Garante que usuários que assinaram o produto vitalício antes da migração para Stripe nunca percam o acesso.
+
+```prisma
+model LegacyAccess {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  source    String   // "hubla" (futuramente outras origens)
+  grantedAt DateTime @default(now())
+  notes     String?  @db.Text
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([source])
+}
+```
+
+**Regras de negócio (a serem aplicadas na Fase 4):**
+- Registro imutável após criação
+- Importação inicial via script admin a partir de lista de e-mails do Hubla
+- Middleware deve verificar `LegacyAccess` antes de exigir plano pago
+- Cancelamento de assinatura Stripe **não** afeta `LegacyAccess`

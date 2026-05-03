@@ -1,16 +1,19 @@
-# PRD_Fase1
+# PRD — Plataforma Big Data Bet
 
-# PRD — Fase 1: Big Data Bet
-
-**Versão:** 1.1 | **Atualizado:** 24/04/2026 | **Prazo:** 01/06/2026
+**Versão:** 1.4 | **Atualizado:** 02/05/2026 | **Prazo:** 01/06/2026
 
 ---
 
 ## Visão Geral
 
-Site institucional + base da plataforma Big Data Bet. Esta fase entrega o site público, autenticação, CMS interno de artigos, área do membro e infraestrutura base para as fases seguintes.
-
-**O que NÃO entra nesta fase:** Stripe/pagamentos (Fase 3), ferramentas de análise (Fase 2), backtest (Fase 3), curso (Fase 4).
+| Fase | Nome | Status |
+|---|---|---|
+| 1 | Fundação (Site + CMS + Auth + Dashboard) | 🟢 Concluída |
+| **2** | **Dashboards de Liga (MVP Brasileirão A)** | ⚪ Próxima |
+| **3** | **Ferramentas Gratuitas (Migração Gemini)** | 🟢 Concluída |
+| **4** | **Multi-Liga + Pagamentos (Stripe + Hubla Legacy)** | ⚪ Pendente |
+| **5** | **Curso + Backtest Interativo** | ⚪ Pendente |
+| **6** | **Automações + Bases Históricas (Bull + Redis)** | ⚪ Pendente |
 
 ---
 
@@ -28,40 +31,27 @@ Site institucional + base da plataforma Big Data Bet. Esta fase entrega o site p
 
 ---
 
-## Status Geral dos Itens
+## Status Geral — Fase 1 ✅ Concluída
 
-| # | Item | Status |
-| --- | --- | --- |
-| 1A | Identidade visual + Manual de Marca | ✅ Concluído |
-| 1B | Setup do projeto | 🔲 Pendente |
-| 1C | Banco de dados + modelos Prisma | 🔲 Pendente |
-| 1D | Autenticação | 🔲 Pendente |
-| 1E | CMS interno | 🔲 Pendente |
-| 1F | ~~Pagamentos Stripe~~ | ⏭️ Movido para Fase 3 |
-| 1G | Email Brevo | 🔲 Pendente |
-| 1H | Analytics Posthog | 🔲 Pendente |
-| 1I | Páginas públicas | 🔲 Pendente |
-| 1J | Dashboard (área do membro) | ✅ Concluído |
-| 1K | Deploy + domínio | 🔲 Pendente |
+Toda a infraestrutura, CMS, Auth, Dashboard, Email, Analytics, Páginas Públicas e Deploy foram entregues em **01/05/2026**.
+
+Detalhamento histórico de cada subtask em `TASKS.md` (seção "Fase 1 — Concluída").
+Especificações técnicas originais arquivadas em `docs/historico/PRD_Fase1.md`.
 
 ---
 
 ## Ordem de Execução
 
 ```
-1B Setup
+Fase 2: Dashboards de Liga
    ↓
-1C Banco + Prisma
+Fase 3: Ferramentas Gratuitas (standby)
    ↓
-1D Auth (NextAuth)
+Fase 4: Multi-Liga + Pagamentos
    ↓
-1G Brevo + 1H Posthog      ← paralelo
+Fase 5: Curso + Backtest
    ↓
-1E CMS interno
-   ↓
-1I Páginas públicas + 1J Dashboard    ← paralelo
-   ↓
-1K Deploy
+Fase 6: Automações
 ```
 
 ---
@@ -78,551 +68,7 @@ Site institucional + base da plataforma Big Data Bet. Esta fase entrega o site p
 
 ---
 
-## 1B — Setup do Projeto
-
-**Objetivo:** Repositório funcional com toda a stack configurada, tokens de marca aplicados e estrutura de pastas pronta.
-
-### Critérios de Aceite
-
-- [ ]  `create-next-app` com TypeScript strict, Tailwind, App Router
-- [ ]  shadcn/ui instalado, tema dark, accent verde `#22c55e`
-- [ ]  Fontes Google configuradas: Plus Jakarta Sans · Inter · JetBrains Mono
-- [ ]  `tailwind.config.ts` com tokens do Manual de Marca
-- [ ]  `globals.css` com CSS variables shadcn (dark)
-- [ ]  `.env.example` documentado com todas as variáveis necessárias
-- [ ]  ESLint + Prettier configurados
-- [ ]  Logo SVG em `/public/logo.svg` e `/public/logo-icon.svg`
-- [ ]  Favicon gerado a partir do ícone BDB
-- [ ]  Estrutura de pastas criada conforme App Router
-- [ ]  Repositório com branch `main` protegida + branch `develop`
-- [ ]  Preview deploy funcional no Vercel apontando para `develop`
-
-### Estrutura de Pastas
-
-```
-bigdatabet/
-├── app/
-│   ├── (public)/
-│   │   ├── page.tsx              → Home
-│   │   ├── sobre/page.tsx
-│   │   ├── planos/page.tsx       → Estático, sem checkout
-│   │   ├── planilhas/page.tsx    → Planilhas gratuitas e VIP
-│   │   └── artigos/
-│   │       ├── page.tsx          → Listagem unificada (Estudos e Análises)
-│   │       └── [slug]/page.tsx   → Leitura do artigo
-│   ├── (auth)/
-│   │   ├── login/page.tsx
-│   │   └── cadastro/page.tsx
-│   ├── (dashboard)/
-│   │   ├── dashboard/page.tsx
-│   │   ├── dashboard/perfil/page.tsx
-│   │   ├── dashboard/historico/page.tsx
-│   │   └── dashboard/favoritos/page.tsx
-│   ├── (cms)/
-│   │   ├── cms/page.tsx          → Listagem de artigos
-│   │   ├── cms/novo/page.tsx     → Criar artigo
-│   │   └── cms/[id]/page.tsx     → Editar artigo
-│   └── api/
-│       ├── auth/[...nextauth]/route.ts
-│       ├── artigos/route.ts
-│       ├── artigos/[id]/route.ts
-│       └── usuarios/route.ts
-├── components/
-│   ├── ui/                       → shadcn/ui (gerados)
-│   ├── layout/                   → Header, Footer, Sidebar
-│   ├── artigos/                  → Cards, listagem, editor
-│   └── shared/                   → Badges de plano, avatares, etc.
-├── lib/
-│   ├── prisma.ts                 → Cliente Prisma singleton
-│   ├── auth.ts                   → Config NextAuth
-│   ├── brevo.ts                  → Helper emails
-│   └── posthog.ts                → Helper analytics
-├── prisma/
-│   ├── schema.prisma
-│   └── seed.ts
-├── middleware.ts                 → Proteção de rotas
-└── .env.example
-```
-
-### Tokens Tailwind (Manual de Marca)
-
-```tsx
-// tailwind.config.ts
-colors: {
-  background: '#0d0d0d',
-  surface:    '#1f2937',  // gray-800
-  border:     '#374151',  // gray-700
-  primary: {
-    DEFAULT: '#22c55e',   // green-500
-    dark:    '#16a34a',   // green-600
-  },
-  text: {
-    primary:   '#ffffff',
-    secondary: '#e5e7eb',
-    muted:     '#6b7280',
-  },
-  data: {
-    blue:   '#3b82f6',
-    yellow: '#eab308',
-    red:    '#ef4444',
-  }
-}
-```
-
----
-
-## 1C — Banco de Dados + Modelos Prisma
-
-**Objetivo:** Schema Prisma completo, conectado ao MySQL Hostgator em database separado das tabelas legadas. Migrations e seed funcionando.
-
-### Critérios de Aceite
-
-- [ ]  Conexão Prisma → MySQL Hostgator validada
-- [ ]  Schema sem conflito com tabelas legadas (usar prefixo `bdb_` ou database exclusivo)
-- [ ]  Migrations executadas sem erro
-- [ ]  Seed com dados iniciais: categorias padrão e usuário admin
-- [ ]  Todos os modelos com relações e tipos corretos
-- [ ]  Nenhuma query SQL raw (exceto performance crítica documentada)
-
-### Schema Prisma
-
-```
-// prisma/schema.prisma
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
-}
-
-// ─── Enums ───────────────────────────────────────────
-
-enum Role {
-  ADMIN
-  EDITOR
-  REVISOR
-  AUTOR
-  MEMBRO
-}
-
-enum ArticleStatus {
-  RASCUNHO
-  REVISAO
-  PUBLICADO
-}
-
-enum ArticleType {
-  ESTUDO
-  ANALISE
-}
-
-// ─── Autenticação (NextAuth) ──────────────────────────
-
-model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?   // null se OAuth
-  role          Role      @default(MEMBRO)
-  newsletterOptIn Boolean @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  accounts      Account[]
-  sessions      Session[]
-  articles      Article[]        @relation("AutorArticles")
-  revisions     ArticleRevision[]
-  favorites     Favorite[]
-  readHistory   ReadHistory[]
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-}
-
-// ─── Conteúdo ─────────────────────────────────────────
-
-model Article {
-  id        String        @id @default(cuid())
-  title     String
-  slug      String        @unique
-  excerpt   String?       @db.Text
-  content   String        @db.LongText
-  thumbnail String?
-  type      ArticleType
-  status    ArticleStatus @default(RASCUNHO)
-  authorId  String
-  categoryId String?
-  publishedAt DateTime?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
-  author    User          @relation("AutorArticles", fields: [authorId], references: [id])
-  category  Category?     @relation(fields: [categoryId], references: [id])
-  tags      ArticleTag[]
-  revisions ArticleRevision[]
-  favorites Favorite[]
-  readHistory ReadHistory[]
-}
-
-model Category {
-  id        String    @id @default(cuid())
-  name      String
-  slug      String    @unique
-  createdAt DateTime  @default(now())
-
-  articles  Article[]
-}
-
-model Tag {
-  id        String       @id @default(cuid())
-  name      String
-  slug      String       @unique
-  createdAt DateTime     @default(now())
-
-  articles  ArticleTag[]
-}
-
-model ArticleTag {
-  articleId String
-  tagId     String
-
-  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
-
-  @@id([articleId, tagId])
-}
-
-// ─── CMS ──────────────────────────────────────────────
-
-model ArticleRevision {
-  id        String   @id @default(cuid())
-  articleId String
-  editorId  String
-  fromStatus ArticleStatus
-  toStatus   ArticleStatus
-  note      String?  @db.Text
-  createdAt DateTime @default(now())
-
-  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  editor    User     @relation(fields: [editorId], references: [id])
-}
-
-// ─── Área do Membro ───────────────────────────────────
-
-model Favorite {
-  id        String   @id @default(cuid())
-  userId    String
-  articleId String
-  createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, articleId])
-}
-
-model ReadHistory {
-  id        String   @id @default(cuid())
-  userId    String
-  articleId String
-  readAt    DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, articleId])
-}
-```
-
----
-
-## 1D — Autenticação (NextAuth v5)
-
-**Objetivo:** Login seguro com controle de sessão por role. Todos os cadastros criam usuário com role `MEMBRO`. Estrutura de middleware preparada para planos futuros.
-
-### Critérios de Aceite
-
-- [ ]  Login email/senha funcional com hash bcrypt
-- [ ]  Login com Google (OAuth)
-- [ ]  Cadastro cria `User` com `role: MEMBRO` automaticamente
-- [ ]  Checkbox de opt-in newsletter no cadastro (LGPD)
-- [ ]  Sessão JWT contém: `id`, `email`, `role`
-- [ ]  `middleware.ts` protege rotas por role
-- [ ]  Redirecionamento pós-login para `/dashboard`
-- [ ]  Páginas de login e cadastro com layout dark (Manual de Marca)
-- [ ]  Validação de formulários com Zod
-
-### Proteção de Rotas (middleware.ts)
-
-| Rota | Acesso mínimo |
-| --- | --- |
-| `/dashboard/*` | Autenticado (qualquer role) |
-| `/cms/*` | `AUTOR`, `REVISOR`, `EDITOR`, `ADMIN` |
-| `/api/artigos` POST/PATCH/DELETE | `AUTOR`+ |
-| Demais rotas | Público |
-
-### Variáveis de Ambiente
-
-```bash
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=
-
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-```
-
----
-
-## 1E — CMS Interno
-
-**Objetivo:** Fluxo completo de criação e publicação de artigos com múltiplos autores e controle de status.
-
-### Critérios de Aceite
-
-- [ ]  Editor Markdown (`@uiw/react-md-editor`) — leve, sem dependências extras
-- [ ]  Campos: título, slug (auto-gerado e editável), tipo (ESTUDO ou ANALISE), excerpt, conteúdo, categoria, tags, thumbnail, status
-- [ ]  Slug validado como único antes de salvar (API + Zod)
-- [ ]  Workflow de status com permissões por role:
-
-| Transição | Quem pode |
-| --- | --- |
-| RASCUNHO → REVISAO | AUTOR, EDITOR, ADMIN |
-| REVISAO → RASCUNHO (devolver) | REVISOR, EDITOR, ADMIN |
-| REVISAO → PUBLICADO | EDITOR, ADMIN |
-| PUBLICADO → RASCUNHO (despublicar) | EDITOR, ADMIN |
-- [ ]  Cada mudança de status salva registro em `ArticleRevision`
-- [ ]  Email Brevo disparado a cada mudança de status (ver 1G)
-- [ ]  Listagem do CMS filtrável por: status, tipo, autor
-- [ ]  AUTOR vê apenas seus próprios artigos; EDITOR/ADMIN veem todos
-
-### Fluxo Visual
-
-```
-AUTOR cria rascunho
-      ↓
-  [RASCUNHO] → clica "Enviar para revisão"
-      ↓
-  [REVISÃO]  → notifica REVISOR e EDITOR por email
-      ↓
-  Aprovado? ──Não──→ devolve com comentário → [RASCUNHO] → notifica AUTOR
-      │
-     Sim
-      ↓
-  EDITOR clica "Publicar"
-      ↓
-  [PUBLICADO] → aparece no site → notifica AUTOR
-```
-
----
-
-## 1G — Email (Brevo)
-
-**Objetivo:** Emails transacionais com identidade visual BDB em PT-BR.
-
-### Critérios de Aceite
-
-- [ ]  SDK Brevo configurado (`@getbrevo/brevo`)
-- [ ]  Helper `lib/brevo.ts` com função `sendEmail(to, templateId, params)`
-- [ ]  Todos os templates criados no painel Brevo (HTML com identidade BDB)
-- [ ]  Opt-in de newsletter salvo em `User.newsletterOptIn` (LGPD)
-- [ ]  Limite de 300 emails/dia respeitado (free tier)
-
-### Templates
-
-| # | Template | Gatilho | Destinatário |
-| --- | --- | --- | --- |
-| T1 | Boas-vindas | Cadastro confirmado | Novo usuário |
-| T2 | Artigo enviado para revisão | RASCUNHO → REVISAO | REVISOREs + EDITOREs |
-| T3 | Artigo devolvido | REVISAO → RASCUNHO | AUTOR do artigo |
-| T4 | Artigo publicado | REVISAO → PUBLICADO | AUTOR do artigo |
-
-### Variáveis de Ambiente
-
-```bash
-BREVO_API_KEY=
-BREVO_SENDER_EMAIL=contato@bigdatabet.com.br
-BREVO_SENDER_NAME=Big Data Bet
-```
-
----
-
-## 1H — Analytics (Posthog)
-
-**Objetivo:** Tracking de comportamento desde o primeiro acesso.
-
-### Critérios de Aceite
-
-- [ ]  Provider Posthog no `layout.tsx` root (client-side)
-- [ ]  `posthog.identify()` chamado após login com `id` e `role`
-- [ ]  `posthog.reset()` chamado no logout
-- [ ]  Eventos customizados implementados:
-
-| Evento | Propriedades | Onde |
-| --- | --- | --- |
-| `user_signed_up` | `method: email\|google` | Cadastro |
-| `user_logged_in` | `method: email\|google` | Login |
-| `article_viewed` | `slug, type, category` | Abertura de artigo |
-| `article_favorited` | `slug, type` | Clique em favoritar |
-| `cms_article_created` | `type` | Rascunho salvo |
-| `cms_status_changed` | `from, to, articleId` | Mudança de status |
-
-### Variáveis de Ambiente
-
-```bash
-NEXT_PUBLIC_POSTHOG_KEY=
-NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
-```
-
----
-
-## 1I — Páginas Públicas
-
-**Objetivo:** Site institucional completo com SEO e identidade visual BDB.
-
-### Páginas
-
-### `/` — Home
-
-- Hero com headline, subheadline e CTA principal ("Cadastre-se grátis")
-- Métricas da comunidade: 1.600 Telegram · 2.800 YouTube · 819 Instagram
-- Seção de proposta de valor (o que é o BDB, metodologia em 3 pontos)
-- Preview dos planos (card estático, sem checkout — "em breve")
-- Últimos artigos publicados (máx. 3, dinâmico)
-- CTA final para cadastro
-
-### `/sobre`
-
-- Quem somos + metodologia
-- Pilares do projeto (dados, estatística, transparência)
-- Links para as comunidades (Telegram, YouTube, Instagram)
-
-### `/planos`
-
-- Tabela comparativa dos 4 planos (Free · Básico · Pro · Premium)
-- Conteúdo estático com badge "Em breve" nos planos pagos
-- CTA de cadastro gratuito
-
-### `/artigos`
-
-- Listagem unificada de Estudos e Análises
-- Filtro integrado (categoria, tag, tipo) via barra superior
-- Busca por título
-- Paginação (20 artigos por página)
-- Exibe apenas artigos com `status: PUBLICADO`
-
-### `/artigos/[slug]`
-
-- Conteúdo completo do artigo renderizado (Markdown → HTML)
-- Metadados: autor, data, categoria, tags
-- Botão de favoritar (requer login)
-- Navegação: artigo anterior / próximo
-- Share buttons (Twitter/X, WhatsApp, copiar link)
-
-### SEO — Obrigatório em Todas as Páginas
-
-- [ ]  `metadata` estático nas páginas institucionais
-- [ ]  `generateMetadata()` dinâmico em `[slug]`
-- [ ]  Open Graph + Twitter Card em artigos
-- [ ]  `sitemap.xml` gerado via `app/sitemap.ts`
-- [ ]  `robots.txt` via `app/robots.ts`
-- [ ]  Canonical URL configurado
-
----
-
-## 1J — Dashboard (Área do Membro)
-
-**Objetivo:** Área autenticada com informações e histórico do usuário.
-
-### Critérios de Aceite
-
-- [x]  Layout com sidebar (desktop) e menu inferior (mobile)
-- [x]  Badge de role visível no header
-
-### Páginas
-
-| Rota | Conteúdo |
-| --- | --- |
-| `/dashboard` | Visão geral: últimas leituras, artigos favoritos, atalhos rápidos |
-| `/dashboard/perfil` | Editar nome, avatar (upload ou URL), senha |
-| `/dashboard/historico` | Lista de artigos lidos ordenados por data (últimos 30) |
-| `/dashboard/favoritos` | Artigos salvos como favorito com opção de remover |
-
----
-
-## 1K — Deploy + Domínio
-
-**Objetivo:** Ambiente de produção estável com CI/CD via Vercel.
-
-### Critérios de Aceite
-
-- [ ]  Projeto conectado ao Vercel via GitHub
-- [ ]  Todas as variáveis de ambiente configuradas no Vercel (production + preview)
-- [ ]  Domínio `bigdatabet.com.br` apontado para Vercel
-- [ ]  SSL ativo (automático Vercel)
-- [ ]  Deploy automático no push para `main`
-- [ ]  Preview deploy ativo em PRs
-- [ ]  MySQL Hostgator com acesso externo liberado para IPs Vercel
-- [ ]  Health check: todas as rotas principais retornando 200
-
-### Variáveis de Ambiente — Consolidado
-
-```bash
-# Banco
-DATABASE_URL=mysql://user:pass@host:3306/database
-
-# Auth
-NEXTAUTH_SECRET=
-NEXTAUTH_URL=https://bigdatabet.com.br
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-
-# Brevo
-BREVO_API_KEY=
-BREVO_SENDER_EMAIL=contato@bigdatabet.com.br
-BREVO_SENDER_NAME=Big Data Bet
-
-# Posthog
-NEXT_PUBLIC_POSTHOG_KEY=
-NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
-```
+> 📚 Documentação técnica detalhada da Fase 1 disponível em [`docs/historico/PRD_Fase1.md`](./historico/PRD_Fase1.md)
 
 ---
 
@@ -642,5 +88,146 @@ NEXT_PUBLIC_POSTHOG_HOST=https://app.posthog.com
 
 ---
 
-> **Próximo passo:** Confirmar as dependências externas da tabela do item 1B e iniciar pela execução do item **1B — Setup do Projeto**.
->
+# PRD — Fase 2: Dashboards de Liga (MVP Brasileirão A)
+
+**Objetivo:** Migrar a inteligência das planilhas BDB (.xlsm) para uma tela web nativa na área logada, expandindo os modelos estatísticos com Poisson Zero-Inflacionado, Binomial Negativa e Dixon-Coles.
+
+## Escopo MVP
+- Liga única: Brasileirão Série A (acesso FREE para todos os usuários autenticados)
+- Tela única consolidada com todos os painéis (DASH + CS + FT + EVOL + MAPVAL)
+- Origem dos dados: football-data.co.uk via upload manual de CSV pelo admin
+- 4 modelos estatísticos selecionáveis pelo usuário
+
+## O que NÃO entra na Fase 2
+- Outras ligas (Fase 4, atrelado a planos pagos)
+- Ingestão automática (Fase 6)
+- Backtest interativo (Fase 5)
+
+## Modelos Estatísticos Suportados
+1. Poisson padrão (já presente na planilha original)
+2. Poisson Zero-Inflacionado (ZIP) — corrige excesso de 0x0
+3. Binomial Negativa — lida com superdispersão (variância > média)
+4. Dixon-Coles — correção tau para placares baixos + decaimento temporal
+
+## Painéis da Tela Única (`/dashboard/ligas/[slug]`)
+1. **Seletor de Confronto** — dropdown casa/visitante + filtros (rodadas, mando, faixa de odds)
+2. **Painel de Médias** — gols, pontos, peso e custo do gol (replica aba DASH)
+3. **Matriz de Placares** — grid 11x11 com modelo selecionável (replica aba CS)
+4. **Painel de Mercados** — 1X2, BTTS, Over/Under, Handicaps Asiáticos com odds justas e EV%
+5. **Mapa de Valor** — ROI por faixa de odds (replica aba MAPVAL)
+6. **Evolução de Gols** — gráfico Recharts por rodada (replica aba EVOL)
+7. **Seletor de Modelo** — toggle Poisson | ZIP | NB | Dixon-Coles aplicado em tempo real
+
+## Ingestão de Dados (Admin)
+- Botão "Importar CSV" na área administrativa (`/cms/ligas/importar` — restrito a ADMIN)
+- Upload de arquivo CSV no padrão football-data.co.uk
+- Parser converte em upsert de Teams + Matches com log de importação
+- MVP é 100% manual (sem cron)
+
+## Critérios de Aceite Fase 2
+- [ ] Schema Prisma com League, Team, Match aplicado sem afetar tabelas legadas
+- [ ] Upload de CSV do Brasileirão A funciona e popula o banco
+- [ ] Tela única `/dashboard/ligas/brasileirao-serie-a` renderiza todos os painéis
+- [ ] 4 modelos estatísticos calculam corretamente e podem ser alternados
+- [ ] Cálculos validados contra a planilha BRA1DASHv261.xlsx (ground truth)
+- [ ] Performance: tela carrega em < 2s com dados do Brasileirão completo
+- [ ] Acesso liberado para qualquer usuário autenticado (MEMBRO+)
+
+---
+
+# PRD — Fase 3: Ferramentas Gratuitas (Migração Gemini)
+
+**Objetivo:** Migrar 4 ferramentas hospedadas no Google Gemini Canvas para a área logada da plataforma, convertendo-as em componentes React nativos com design system BDB (shadcn/ui dark + tokens Tailwind).
+
+## Ferramentas e Códigos-Fonte
+| # | Ferramenta | Código Gemini | Rota |
+|---|---|---|---|
+| 1 | Validação e Risco (Monte Carlo) | ✅ Disponível | `/dashboard/ferramentas/validacao-risco` |
+| 2 | Over/Under Linhas (OmniProjector) | ✅ Disponível | `/dashboard/ferramentas/over-under-linhas` 🆕 |
+| 3 | Over/Under 2.5 | ✅ Disponível | `/dashboard/ferramentas/over-under-25` |
+| 4 | Simulador de Distribuição | ✅ Disponível | `/dashboard/ferramentas/distribuicao` |
+
+## Ordem de Implementação
+1. **Validação e Risco** — ferramenta mais completa, maior valor percebido
+2. **Over/Under Linhas (OmniProjector)** — linha âncora dinâmica, mais flexível
+3. **Over/Under 2.5** — versão fixa na linha 2.5, complementar
+4. **Simulador de Distribuição** — pedagógica, menor prioridade de negócio
+
+## Escopo Técnico
+- Acesso: **FREE** — qualquer usuário autenticado (MEMBRO+)
+- Persistência: **nenhuma** — cálculos 100% client-side, sem banco de dados
+- Gráficos: **Recharts** (já na stack desde Fase 2)
+- UI: converter todos os estilos inline/Gemini para **tokens do design system BDB** (shadcn/ui + Tailwind config)
+- Lógica: isolar em `lib/ferramentas/` como funções puras testáveis
+- Lib nova: **nenhuma** — Recharts já previsto, cálculos implementados manualmente
+
+## Alterações na Sidebar do Dashboard
+| Label Atual | Label Novo | Rota | Ação |
+|---|---|---|---|
+| Validação de Risco | **Validação e Risco** | `/dashboard/ferramentas/validacao-risco` | Renomear |
+| Cálculo Over/Under | **Over/Under 2.5** | `/dashboard/ferramentas/over-under-25` | Renomear |
+| Distribuição AH | **Simulador de Distribuição** | `/dashboard/ferramentas/distribuicao` | Renomear |
+| *(não existe)* | **Over/Under Linhas** | `/dashboard/ferramentas/over-under-linhas` | Criar |
+
+## Estrutura de Rotas
+- `/dashboard/ferramentas` — grid com cards das 4 ferramentas
+- `/dashboard/ferramentas/validacao-risco`
+- `/dashboard/ferramentas/over-under-linhas`
+- `/dashboard/ferramentas/over-under-25`
+- `/dashboard/ferramentas/distribuicao`
+
+## Critérios de Aceite Fase 3
+- [x] 4 ferramentas funcionais e acessíveis na área logada
+- [x] Sidebar atualizada com labels corretos e item novo (Over/Under Linhas)
+- [x] Cada ferramenta convertida em Client Component com shadcn/ui
+- [x] Estilos 100% aderentes ao design system BDB (zero estilos inline do Gemini)
+- [x] Lógica de cálculo isolada em `lib/ferramentas/` com funções puras
+- [x] Testes unitários para funções de cálculo críticas
+- [x] Acesso liberado para qualquer usuário autenticado (MEMBRO+)
+- [x] Sem persistência de dados (cálculos client-side puros)
+- [x] Responsivo: mobile (375px) e desktop (1440px)
+- [x] Build sem erros TypeScript strict ou ESLint
+
+---
+---
+
+# PRD — Fase 4: Multi-Liga + Pagamentos (Stripe + Hubla Legacy)
+
+**Objetivo:** Liberar as 25+ ligas adicionais para usuários do plano Básico, mantendo acesso vitalício para assinantes legados do Hubla.
+
+## Estratégia Híbrida de Acesso
+- Brasileirão A → FREE (todos os autenticados)
+- Demais ligas → Plano Básico ou superior
+  - Usuário com flag LegacyAccess (assinantes Hubla) → acesso vitalício gratuito
+  - Novo usuário → checkout Stripe mensal
+
+## Componentes
+1. Migração de assinantes legados do Hubla (importação de e-mails → LegacyAccess)
+2. Configuração de produtos e preços no Stripe
+3. Webhooks Stripe (checkout.completed, subscription.updated, etc.)
+4. Tela de checkout integrada ao /planos
+5. Middleware estendido com requirePlan(['BASICO', 'PRO', 'PREMIUM']) ou flag LegacyAccess
+6. UI: badge visual diferenciando "Acesso Vitalício" vs "Assinante Ativo"
+
+## Critérios de Aceite Fase 4
+- [ ] Lista de assinantes Hubla importada para tabela LegacyAccess
+- [ ] Stripe configurado com plano Básico mensal
+- [ ] Checkout funcional e webhook processando eventos
+- [ ] Ligas VIP visíveis no seletor para usuários habilitados
+- [ ] Usuários sem acesso veem CTA de upgrade
+- [ ] Cancelamento de assinatura revoga acesso (não afeta legacy)
+
+---
+
+# Fase 5: Curso + Backtest Interativo
+- Player de vídeo protegido por plano Premium
+- Progresso por aula salvo no banco
+- Backtest com filtros → query → cálculo Node → gráficos Recharts + tabela + resumo
+
+---
+
+# Fase 6: Automações + Bases Históricas
+- Bull + Redis para fila de processamento
+- Ingestão automática football-data via cron
+- Bases históricas para múltiplas temporadas
+- Otimização de índices para queries de larga escala

@@ -1,6 +1,6 @@
 # Resumo Executivo — Big Data Bet (Fase 1)
 
-**Data de Atualização:** 01/05/2026
+**Data de Atualização:** 02/05/2026
 
 Este documento apresenta um resumo executivo do progresso atual do projeto Big Data Bet (Fase 1), detalhando o passo a passo de tudo que foi construído até o momento, bem como o que está pendente para a conclusão da fase.
 
@@ -244,9 +244,49 @@ Após a reestruturação da Home em componentes modulares, esta sessão foi dedi
 
 ---
 
+### 18. Planejamento Arquitetural e Estatístico da Fase 2 — 02/05/2026
+
+**Reorganização do Roadmap:**
+- O roadmap do projeto foi estrategicamente reorganizado. A Fase 2 agora tem foco absoluto no **MVP de Dashboards de Liga** (iniciando com o Brasileirão Série A 2026), adiando as ferramentas gratuitas e integração de pagamentos para as Fases 3 e 4.
+- Atualização massiva e síncrona dos artefatos de documentação (`PRD.md`, `SCHEMA.md`, `SPECS.md` e `TASKS.md`) para refletir o novo escopo sem escrever nenhuma linha de código prematura.
+
+**Auditoria e Calibração do Motor Estatístico (Ground Truth):**
+- O arquivo `MODELOS_ESTATISTICOS.md` (agora na versão 1.1) foi rigorosamente revisado para garantir aderência matemática total à planilha legada de referência da BDB (`BRA1DASHv261.xlsx`).
+- A notação das variáveis (ex: `FCAtC`, `FCDfC`) foi unificada com o padrão da planilha para facilitar manutenibilidade.
+- O cálculo da Vantagem de Mando (Home Advantage) foi embutido arquiteturalmente na separação de médias por mando de campo.
+- Foram estabelecidos testes de regressão e casos de teste blindados baseados no Ground Truth real (117 jogos da temporada), estabelecendo limites de tolerância matemática (< 0.5% de divergência).
+- Documentou-se claramente as diferenças entre o modelo estático do Excel (Poisson Padrão) e as evoluções nativas do sistema novo (ZIP, Binomial Negativa e Dixon-Coles), garantindo escalabilidade estatística futura.
+
+---
+
 ## Conclusão Final (Fase 1 100% Concluída)
 
 A fundação da infraestrutura pública e interna (Painel e CMS) concluiu-se de forma magistral e a **Fase 1 atinge seus 100% de conclusão**. O sistema de contas, painéis modulares, rotas restritas, analytics, SEO e deploy de produção na Vercel estão finalizados e totalmente funcionais.
 
-A plataforma agora caminha para a **Fase 2 (Ferramentas Práticas e Integrações de Pagamento)** com um ecossistema front-end/back-end consolidado, seguro e pronto para receber lógica comercial avançada.
+A plataforma agora caminha para a **Fase 2 (Dashboards de Liga)** suportada por uma arquitetura de dados blindada e um contrato matemático rigorosamente calibrado e validado contra o modelo de negócios atual da BDB.
 
+
+
+### 19. Detalhamento da Fase 3 — Ferramentas Gratuitas — 02/05/2026
+
+**Recebimento dos Códigos-Fonte:**
+- Marcelo forneceu o arquivo `Ferramentas BDB Gemini.txt` contendo o código React completo das 4 ferramentas previstas para a Fase 3, originalmente hospedadas no Google Gemini Canvas.
+- Ferramentas recebidas:
+  1. Validação e Risco (Monte Carlo)
+  2. Over/Under Linhas (OmniProjector) — Nova rota `/dashboard/ferramentas/over-under-linhas`
+  3. Over/Under 2.5
+  4. Simulador de Distribuição Estatística
+
+**Análise Técnica e Planejamento:**
+- Cada código Gemini foi analisado tecnicamente, identificando: estrutura de dados, lógica de cálculo, bugs, estilos a converter e oportunidades de reutilização com o motor da Fase 2.
+- Ordem de implementação definida por valor percebido: (1) Validação e Risco, (2) Over/Under Linhas, (3) Over/Under 2.5, (4) Distribuição.
+- Decisões-chave: acesso livre para usuários autenticados (MEMBRO+), zero persistência em banco, reutilização do Recharts e funções estatísticas (Poisson/Fatorial), conversão obrigatória de todos os estilos inline para o design system BDB.
+- Correção de lógica: identificados e planejadas correções para diversos bugs dos códigos Gemini (fatorial sem cache, cálculos de afastamento com base incorreta, etc.).
+
+**Atualização Síncrona da Documentação:**
+- `PRD.md` (v1.4) atualizado com o escopo completo das 4 ferramentas.
+- `SPECS.md` (v2.2) expandido com especificações detalhadas das 4 ferramentas, mapeamento de estilos e identificação de bugs a corrigir.
+- `TASKS.md` (v2.3) reconstruído com 7 blocos (3A–3G) contendo mais de 50 subtasks granulares e interdependências lógicas mapeadas.
+- `SCHEMA.md` confirmado sem alterações, já que a Fase 3 opera estritamente no Client-Side (Client Components).
+
+Esta sincronização assegura que o Agente de IA responsável pela execução possua a bússola técnica e arquitetural definitiva para implementar o módulo de ferramentas analíticas sem fricção de escopo.

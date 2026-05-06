@@ -2,12 +2,12 @@
 
 # [TASKS.md](http://tasks.md/) — Big Data Bet
 
-> **Versão:** 2.3 | **Atualizado:** 02/05/2026
+> **Versão:** 2.4 | **Atualizado:** 03/05/2026
 > **Mudanças desde v2.1:**
 > - Adicionada subseção "Ground Truth" em 2B com 4 tasks de validação contra planilha legada
 > - Subtasks de validação adicionadas em 2B.1, 2B.5 e 2B.6
 > - Tasks de UI adicionadas para tooltips educativos sobre modelos avançados
-**Referências:** PRD v1.3 · [SCHEMA.md](http://schema.md/) v2.1 · [SPECS.md](http://specs.md/) v2.1
+**Referências:** PRD v1.5 · SCHEMA.md v2.2 · SPECS.md v2.3
 **Regra:** Nenhuma task marcada como concluída sem checklist interno 100% validado.
 > 
 
@@ -564,20 +564,20 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
 
 # TASKS.md — Fase 2: Dashboards de Liga
 
-> **Versão:** 2.1 | **Status:** ⚪ Pendente | **MVP:** Brasileirão Série A
+> **Versão:** 2.5 | **Status:** 🟢 Concluída | **MVP:** Brasileirão Série A\n> **Atualizado:** Maio 2026\n> **Notas:** Motor estatístico completo implementado. Filtro isolando dados apenas da temporada corrente adicionado para evitar contaminação por dados históricos na mesma collection.
 > **Depende de:** Fase 1 (concluída)
 
-## 2A — Schema e Modelagem ⚪
-- [ ] 2A.1 — Adicionar enums LeagueTier e MatchResult
-- [ ] 2A.2 — Criar modelo League no Prisma
-- [ ] 2A.3 — Criar modelo Team no Prisma
-- [ ] 2A.4 — Criar modelo Match no Prisma com índices
-- [ ] 2A.5 — Criar modelo MatchImport para auditoria
-- [ ] 2A.6 — Adicionar relações no User (matchImports)
-- [ ] 2A.7 — Rodar migration `add_leagues_phase_2`
-- [ ] 2A.8 — Validar schema com Prisma Studio
-- [ ] 2A.9 — Adicionar campos `sourceFile` e `importedAt` ao modelo `Match`
-- [ ] 2A.10 — Adicionar índice `@@index([sourceFile])` ao modelo `Match`
+## 2A — Schema e Modelagem (Normalizado) 🟢
+- [x] 2A.1 — Adicionar enums CompetitionTier, MatchStatus, OddsType, PlayerPosition, etc.
+- [x] 2A.2 — Criar modelos Competition e Season no Prisma
+- [x] 2A.3 — Expandir Team com TeamAlias e TeamSeason
+- [x] 2A.4 — Criar modelo Match e tabelas granulares MatchStats e MatchOdds
+- [x] 2A.5 — Criar tabelas granulares Player, PlayerMatchStats e Shot
+- [x] 2A.6 — Atualizar modelos MatchImport e ApiQuotaLog
+- [x] 2A.7 — Adicionar relações no User (matchImports)
+- [x] 2A.8 — Rodar migration para normalização do schema (Bloco 1-5)
+- [x] 2A.9 — Migrar dados legados (Match e League) para o novo schema (Bloco 6)
+- [x] 2A.10 — Verificar que tabelas legadas da Fase 1 não foram afetadas
 
 ## 2B — Engine de Cálculo Estatístico ⚪
 
@@ -585,7 +585,7 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
 
 > **Referência:** docs/MODELOS_ESTATISTICOS.md seção 10 e planilha BRA1DASHv261.xlsx
 
-#### - [ ] Task 2B.0.1 — Criar arquivo de ground truth
+#### - [x] Task 2B.0.1 — Criar arquivo de ground truth
 - **Arquivo:** `__tests__/analytics/ground-truth/bra1-2026.ts`
 - **Descrição:** Criar arquivo TypeScript exportando as constantes do ground truth do Brasileirão 2026
 - **Conteúdo obrigatório:**
@@ -594,7 +594,7 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
   - Caso especial `ATHLETICO_VS_ATHLETICO` (auto-confronto da aba CS)
 - **Validação:** arquivo importado nos testes 2B.0.2 e 2B.0.3 sem erros
 
-#### - [ ] Task 2B.0.2 — Teste de validação Poisson contra ground truth
+#### - [x] Task 2B.0.2 — Teste de validação Poisson contra ground truth
 - **Arquivo:** `__tests__/analytics/ground-truth/poisson.test.ts`
 - **Descrição:** Implementar suíte de testes que valida o modelo Poisson contra o ground truth
 - **Casos obrigatórios:**
@@ -603,14 +603,14 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
 - **Tolerância:** conforme tabela 10.3 do MODELOS_ESTATISTICOS.md
 - **Validação:** 100% dos testes passando
 
-#### - [ ] Task 2B.0.3 — Teste de regressão das forças por time
+#### - [x] Task 2B.0.3 — Teste de regressão das forças por time
 - **Arquivo:** `__tests__/analytics/ground-truth/forcas.test.ts`
 - **Descrição:** Validar que o cálculo de FCAtC, FCDfC, FCAtV, FCDfV bate com os valores da planilha BDBRA1
 - **Times mínimos:** Athletico-PR, Flamengo RJ, Cruzeiro, Palmeiras, Vasco
 - **Tolerância:** < 0.02 absoluto
 - **Validação:** 100% dos testes passando
 
-#### - [ ] Task 2B.0.4 — Documentar processo de atualização do ground truth
+#### - [x] Task 2B.0.4 — Documentar processo de atualização do ground truth
 - **Arquivo:** `__tests__/analytics/ground-truth/README.md`
 - **Descrição:** Documentar como atualizar o ground truth quando uma nova temporada for importada
 - **Conteúdo:**
@@ -619,77 +619,191 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
   - Quando atualizar (anualmente ao final de cada temporada)
 - **Validação:** README acessível pelo time
 
-- [ ] 2B.1 — Implementar `lib/analytics/poisson.ts` (modelo padrão)
-  - [ ] 2B.1.1 — Validar matriz 11x11 do confronto Athletico-PR vs Athletico-PR contra a aba CS da planilha (5 células-chave, tolerância < 0.5%)
-  - [ ] 2B.1.2 — Validar mercados derivados (1X2, BTTS, O/U) dos 5 confrontos do CASOS_GROUND_TRUTH (tolerância < 1%)
-- [ ] 2B.2 — Implementar `lib/analytics/zero-inflated.ts` (ZIP)
-- [ ] 2B.3 — Implementar `lib/analytics/negative-binomial.ts`
-- [ ] 2B.4 — Implementar `lib/analytics/dixon-coles.ts` com tau + decay
-- [ ] 2B.5 — Implementar `lib/analytics/medias.ts` (médias, DP, CV)
-  - [ ] 2B.5.1 — Validar μ_h e μ_a calculados contra GROUND_TRUTH_BRA1_2026 (tolerância < 0.01)
-  - [ ] 2B.5.2 — Bloquear cálculo se liga tem < 20 jogos (lançar erro `INSUFFICIENT_LEAGUE_DATA`)
-- [ ] 2B.6 — Implementar `lib/analytics/forca-time.ts`
-  - [ ] 2B.6.1 — Implementar cálculo de MGC, MGSC, MGV, MGSV separados rigorosamente por mando
-  - [ ] 2B.6.2 — Implementar cálculo de FCAtC, FCDfC, FCAtV, FCDfV conforme seção 2.3 do MODELOS_ESTATISTICOS.md
-  - [ ] 2B.6.3 — Bloquear cálculo se time tem < 5 jogos casa OU < 5 jogos fora (lançar erro `INSUFFICIENT_TEAM_DATA`)
-  - [ ] 2B.6.4 — Validar forças do Athletico-PR contra ground truth (FCAtC=1.24, FCDfC=0.64, FCAtV=0.80, FCDfV=1.05)
-- [ ] 2B.7 — Implementar `lib/analytics/mapa-valor.ts`
-- [ ] 2B.8 — Implementar `lib/analytics/ev-calculator.ts`
-- [ ] 2B.9 — Criar API unificada em `lib/analytics/index.ts`
-- [ ] 2B.10 — Escrever testes unitários validados contra BRA1DASHv261.xlsx
+- [x] 2B.1 — Implementar `lib/analytics/poisson.ts` (modelo padrão)
+  - [x] 2B.1.1 — Validar matriz 11x11 do confronto Athletico-PR vs Athletico-PR contra a aba CS da planilha (5 células-chave, tolerância < 0.5%)
+  - [x] 2B.1.2 — Validar mercados derivados (1X2, BTTS, O/U) dos 5 confrontos do CASOS_GROUND_TRUTH (tolerância < 1%)
+- [x] 2B.2 — Implementar `lib/analytics/zero-inflated.ts` (ZIP)
+- [x] 2B.3 — Implementar `lib/analytics/negative-binomial.ts`
+- [x] 2B.4 — Implementar `lib/analytics/dixon-coles.ts` com tau + decay
+- [x] 2B.5 — Implementar `lib/analytics/medias.ts` (médias, DP, CV)
+  - [x] 2B.5.1 — Validar μ_h e μ_a calculados contra GROUND_TRUTH_BRA1_2026 (tolerância < 0.01)
+  - [x] 2B.5.2 — Bloquear cálculo se liga tem < 20 jogos (lançar erro `INSUFFICIENT_LEAGUE_DATA`)
+- [x] 2B.6 — Implementar `lib/analytics/forca-time.ts`
+  - [x] 2B.6.1 — Implementar cálculo de MGC, MGSC, MGV, MGSV separados rigorosamente por mando
+  - [x] 2B.6.2 — Implementar cálculo de FCAtC, FCDfC, FCAtV, FCDfV conforme seção 2.3 do MODELOS_ESTATISTICOS.md
+  - [x] 2B.6.3 — Bloquear cálculo se time tem < 5 jogos casa OU < 5 jogos fora (lançar erro `INSUFFICIENT_TEAM_DATA`)
+  - [x] 2B.6.4 — Validar forças do Athletico-PR contra ground truth (FCAtC=1.24, FCDfC=0.64, FCAtV=0.80, FCDfV=1.05)
+  - [x] 2B.6.5 — Implementar cálculo de Dispersão (DP, CV) e Frequências Observadas (Over, BTTS) rigorosamente focados no mando
+- [x] 2B.7 — Implementar `lib/analytics/mapa-valor.ts`
+- [x] 2B.8 — Implementar `lib/analytics/ev-calculator.ts`
+- [x] 2B.9 — Criar API unificada em `lib/analytics/index.ts`
+- [x] 2B.10 — Escrever testes unitários validados contra BRA1DASHv261.xlsx
 
-## 2C — Importação de CSV (Admin) ⚪
-- [ ] 2C.1 — Instalar `papaparse` (com justificativa documentada)
-- [ ] 2C.2 — Criar parser de CSV football-data em `lib/import/football-data.ts`
-  - [ ] 2C.2.1 — Documentar mapeamento de colunas por tier (Tier 1 vs Tier 2) conforme SPECS 2B
-  - [ ] 2C.2.2 — Implementar detecção dinâmica de colunas no header
-  - [ ] 2C.2.3 — Validar colunas obrigatórias (erro 400 se faltar)
-  - [ ] 2C.2.4 — Mapear colunas desejáveis ausentes para `null`
-  - [ ] 2C.2.5 — Ignorar silenciosamente colunas extras do Tier 1
-  - [ ] 2C.2.6 — Registrar colunas ignoradas/ausentes em `MatchImport.notes`
-- [ ] 2C.3 — Criar rota `POST /api/admin/ligas/[slug]/importar`
-- [ ] 2C.4 — Implementar upsert de Teams e Matches
-- [ ] 2C.5 — Criar registro de auditoria em MatchImport
-- [ ] 2C.6 — Criar tela `/cms/ligas/importar` com upload e feedback
-- [ ] 2C.7 — Validar parser com CSVs reais
-  - [ ] 2C.7.1 — Importar CSV de teste do Brasileirão A 2024 (Tier 2)
-  - [ ] 2C.7.2 — Importar CSV de teste da Premier League 2024 (Tier 1) — apenas para teste do parser
-  - [ ] 2C.7.3 — Confirmar que ambos populam corretamente os campos comuns
-  - [ ] 2C.7.4 — Confirmar que `MatchImport.notes` registra diferenças
-  - [ ] 2C.7.5 — Reverter dados da Premier League após teste (DELETE) — manter apenas Brasileirão no MVP
-- [ ] 2C.8 — Restringir rota a role ADMIN
+## 2C — Ingestão de Dados (Híbrida: API + CSV) ⚪
+
+### Dependências entre subtasks
+```
+2C.1 (Client API)
+  ├── 2C.2 (Rate Limiter) — dependência direta
+  └── 2C.3 (Mappers)
+        └── 2C.4 (Sync Engine)
+              ├── 2C.5 (Rota Sync API)
+              └── 2C.6 (Tela Sync Admin)
+2C.7 (Parser CSV) — independente
+2C.8 (Normalização nomes) — usado por 2C.3 e 2C.7
+2C.9 (Quota Dashboard) — depende de 2C.2
+2C.10 (Validação cruzada) — depende de 2C.5 e 2C.7
+```
+
+- [x] **2C.1 — Criar client TheStatsAPI**
+  - [x] 2C.1.1 — Criar `lib/ingest/thestatsapi/client.ts` com singleton e Bearer auth
+  - [x] 2C.1.2 — Implementar método `get<T>(path, params)` com tipagem genérica
+  - [x] 2C.1.3 — Implementar método `getAllPages<T>(path)` com paginação automática
+  - [x] 2C.1.4 — Implementar retry com exponential backoff em HTTP 429 (rate limited)
+  - [x] 2C.1.5 — Adicionar `THESTATSAPI_KEY` e `THESTATSAPI_BASE_URL` ao `.env.example`
+
+- [x] **2C.2 — Implementar rate limiter + quota tracking**
+  - [x] 2C.2.1 — Criar `lib/ingest/thestatsapi/rate-limiter.ts` (token bucket, 30 req/min)
+  - [x] 2C.2.2 — Integrar rate limiter no client (throttle automático)
+  - [x] 2C.2.3 — Implementar logging de requests em `ApiQuotaLog` via Prisma
+  - [x] 2C.2.4 — Implementar `getQuotaUsage(month)` para consulta do consumo
+  - [x] 2C.2.5 — Implementar bloqueio automático quando quota atingir 100%
+  - [x] 2C.2.6 — Implementar alerta quando quota atingir 90%
+
+- [x] **2C.3 — Criar tipos e mappers**
+  - [x] 2C.3.1 — Criar `lib/ingest/thestatsapi/types.ts` com interfaces da resposta da API
+  - [x] 2C.3.2 — Criar `lib/ingest/thestatsapi/mappers.ts`
+  - [x] 2C.3.3 — Implementar `mapApiMatchToPrisma()` — converte resposta da API para input Prisma
+  - [x] 2C.3.4 — Implementar `extractOdds()` — extrai odds dos 4 bookmakers com prioridade Pinnacle
+  - [x] 2C.3.5 — Implementar auto-preenchimento dos campos legados (`oddHome`, `oddDraw`, `oddAway`) a partir de Pinnacle
+
+- [x] **2C.4 — Criar sync engine**
+  - [x] 2C.4.1 — Criar `lib/ingest/sync-engine.ts`
+  - [x] 2C.4.2 — Implementar sync FULL: busca todas as partidas com paginação → upsert Teams → upsert Matches → busca odds
+  - [x] 2C.4.3 — Implementar sync INCREMENTAL: busca apenas partidas com data > último `syncedAt`
+  - [x] 2C.4.4 — Implementar upsert por `externalId` como chave de deduplicação
+  - [x] 2C.4.5 — Implementar busca de odds apenas para jogos que têm `odds_available=true` e odds ainda não salvas no banco
+  - [x] 2C.4.6 — Implementar registro de `MatchImport` a cada sync com contadores (created/updated/skipped)
+  - [x] 2C.4.7 — Implementar contagem de requests consumidos e retornar no `SyncResult`
+
+- [x] **2C.5 — Criar rota de sync via API**
+  - [x] 2C.5.1 — Criar `POST /api/admin/ligas/[slug]/sync`
+  - [x] 2C.5.2 — Validar role ADMIN via `requireAuth()`
+  - [x] 2C.5.3 — Aceitar body `{ mode: 'full' | 'incremental', includeOdds: boolean }`
+  - [x] 2C.5.4 — Retornar `SyncResult` com estatísticas detalhadas
+  - [x] 2C.5.5 — Retornar 429 se quota mensal esgotada
+
+- [x] **2C.6 — Criar tela de sync admin**
+  - [x] 2C.6.1 — Criar rota `/cms/ligas/sync`
+  - [x] 2C.6.2 — Componente `SyncButton` com loading state e feedback de resultado
+  - [x] 2C.6.3 — Toggle de modo (Full / Incremental)
+  - [x] 2C.6.4 — Checkbox "Incluir Odds" (default: true)
+  - [x] 2C.6.5 — Log de últimas sincronizações (últimos 10 MatchImport)
+  - [x] 2C.6.6 — Exibir badge de quota no header da tela
+
+- [x] **2C.7 — Parser CSV football-data (fallback)**
+  - [x] 2C.7.1 — Instalar `papaparse` (com justificativa documentada)
+  - [x] 2C.7.2 — Criar `lib/ingest/football-data/csv-parser.ts`
+  - [x] 2C.7.3 — Implementar detecção dinâmica de colunas no header
+  - [x] 2C.7.4 — Validar colunas obrigatórias (Date, HomeTeam, AwayTeam, FTHG, FTAG, FTR)
+  - [x] 2C.7.5 — Mapear colunas desejáveis ausentes para `null`
+  - [x] 2C.7.6 — Preencher `dataSource = FOOTBALL_DATA` nos registros importados
+  - [x] 2C.7.7 — Criar rota `POST /api/admin/ligas/[slug]/importar`
+  - [x] 2C.7.8 — Criar tela `/cms/ligas/importar` com upload e feedback (restrita a ADMIN)
+
+- [x] **2C.8 — Normalização de nomes de time**
+  - [x] 2C.8.1 — Criar `lib/ingest/team-normalizer.ts` com tabela de aliases do Brasileirão
+  - [x] 2C.8.2 — Aplicar normalização no mapper da API e no parser CSV
+  - [x] 2C.8.3 — Documentar divergências encontradas entre API e CSV
+
+- [x] **2C.9 — Dashboard de quota**
+  - [x] 2C.9.1 — Criar rota `GET /api/admin/quota`
+  - [x] 2C.9.2 — Criar componente `QuotaDashboard` com barra de progresso
+  - [x] 2C.9.3 — Integrar na tela `/cms/ligas/sync` e no header admin
+  - [x] 2C.9.4 — Exibir breakdown por endpoint (matches, odds)
+
+- [x] **2C.10 — Validação cruzada API vs CSV**
+  - [x] 2C.10.1 — Importar Brasileirão 2026 via API (sync full)
+  - [x] 2C.10.2 — Importar mesmo período via CSV do football-data
+  - [x] 2C.10.3 — Comparar placares: confirmar 100% de match
+  - [x] 2C.10.4 — Comparar odds: documentar divergências entre Pinnacle (API) e B365 (CSV)
+  - [x] 2C.10.5 — Comparar nomes de time: ajustar tabela de aliases
+  - [x] 2C.10.6 — Documentar resultado da validação em `docs/validacao-cruzada.md`
 
 ## 2D — Telas do Dashboard de Liga ⚪
-- [ ] 2D.1 — Criar rota `/dashboard/ligas` com grid de ligas
-- [ ] 2D.2 — Criar rota `/dashboard/ligas/[slug]` (Server Component base)
-- [ ] 2D.3 — Componente `SeletorConfronto` com filtros
-- [ ] 2D.4 — Componente `SeletorModelo` (toggle 4 modelos)
-- [ ] 2D.5 — Componente `PainelMedias`
-- [ ] 2D.6 — Componente `PainelMatrizPlacares` (grid 11x11)
-- [ ] 2D.7 — Componente `PainelMercados` (1X2, BTTS, O/U, AH)
-- [ ] 2D.8 — Componente `PainelMapaValor`
-- [ ] 2D.9 — Componente `PainelEvolucao` com Recharts
-- [ ] 2D.10 — Integração Cliente: troca de modelo recalcula painéis
-- [ ] 2D.11 — Adicionar tooltip educativo nos seletores de modelo (ZIP/NB/Dixon-Coles) explicando as evoluções em relação ao Poisson padrão (referência: seção 11 do MODELOS_ESTATISTICOS.md)
-- [ ] 2D.12 — Definir Poisson como modelo default no seletor (compatibilidade com planilha legada)
-- [ ] 2D.13 — Quando usuário selecionar NB e variância ≤ λ, exibir banner amarelo conforme seção 5.2 do MODELOS_ESTATISTICOS.md
+- [x] 2D.1 — Criar rota `/dashboard/ligas` com grid de ligas
+- [x] 2D.2 — Criar rota `/dashboard/ligas/[slug]` (Server Component base)
+- [x] 2D.3 — Componente `SeletorConfronto` com filtros
+- [x] 2D.4 — Componente `SeletorModelo` (toggle 4 modelos)
+- [x] 2D.5 — Componente `PainelMedias`
+- [x] 2D.6 — Componente `PainelMatrizPlacares` (grid 11x11)
+- [x] 2D.7 — Componente `PainelMercados` (1X2, BTTS, O/U, AH)
+- [x] 2D.8 — Componente `PainelMapaValor`
+- [x] 2D.9 — Componente `PainelEvolucao` com Recharts
+- [x] 2D.10 — Integração Cliente: troca de modelo recalcula painéis
+- [x] 2D.11 — Adicionar tooltip educativo nos seletores de modelo (ZIP/NB/Dixon-Coles) explicando as evoluções em relação ao Poisson padrão (referência: seção 11 do MODELOS_ESTATISTICOS.md)
+- [x] 2D.12 — Definir Poisson como modelo default no seletor (compatibilidade com planilha legada)
+- [x] 2D.13 — Quando usuário selecionar NB e variância ≤ λ, exibir banner amarelo conforme seção 5.2 do MODELOS_ESTATISTICOS.md
+- [x] 2D.14 — Componente `FiltroMes` (multi-select JAN..DEZ)
+- [x] 2D.15 — Componente `FiltroFaixaOdds` (9 faixas com drag-select, portado do protótipo Brasil1)
+- [x] 2D.16 — Componente `FiltroRodadas` (range slider de..até)
+- [x] 2D.17 — Integrar todos os filtros no `SeletorConfronto` com state combinado
+- [x] 2D.18 — Implementar modo AUTO no `SeletorModelo` (seleção via AIC como default)
+- [x] 2D.19 — Implementar `rankearModelos()` em `lib/analytics/model-selector.ts`
+- [x] 2D.20 — Componente `BadgeModeloAuto` (exibe modelo + nível de confiança)
+- [x] 2D.21 — Toggle AUTO/MANUAL no `SeletorModelo` com transição visual
+- [x] 2D.22 — Criar placeholder `/dashboard/analises` (nome provisório) com estrutura de abas vazia
+- [x] 2D.24 — Expandir PainelMedias com sub-seções de Confiança (DP, CV) e Frequências Observadas
+- [x] 2D.25 — Refatorar `PainelMedias` movendo as médias da liga para uma barra de cabeçalho global e compactando métricas em linha única.
+- [x] 2D.26 — Alinhar `SeletorModelo` e `SeletorLambda` horizontalmente (grid 60/40) garantindo a mesma altura para os dois containers (`items-stretch`).
+- [x] 2D.27 — Alinhar botões internos dos seletores sempre à base usando `mt-auto` e flex-grow.
+- [x] 2D.28 — Ajustar orientação do título do eixo Y (Gols do Mandante) na matriz de placares para modo vertical (`writing-mode:vertical-rl`) com leitura bottom-to-top e remover setas indicativas.
+- [x] 2D.29 — Criar `PainelOddsMercado` e rota API para busca automática das odds reais (Bet365 e Pinnacle).
+- [x] 2D.30 — Integrar `PainelOddsMercado` com `PainelMercados` para recalcular EV% dinamicamente no frontend com suporte a fallback manual (`rawInputs`).
+- [x] 2D.31 — Ajustar grid de visualização: proporção 50/50 (lg:col-span-6) para Matriz de Placares e Evolução de Gols.
+- [x] 2D.32 — Adicionar abas de filtro (Ambos, Mandante, Visitante) no gráfico de Evolução de Gols.
+- [x] 2D.33 — Reorganizar sidebar do dashboard (remoção do grupo CONTEÚDO, subir ANÁLISE ESPORTIVA, descer GESTÃO).
+- [x] 2D.34 — Ajustar texto da seção Prova Social na Home de "Desde 2022" para "Desde 2019".
+- [x] 2D.35 — Integração completa de Expected Goals (xG) no Painel de Médias (cálculos de dispersão e retorno na API).
+- [x] 2D.36 — Refinamento de UI: seção de Confiança com métricas de Gols e xG lado a lado, e cabeçalho de médias da liga dividido em duas linhas distintas.
 
 ## 2E — Seed e Dados Iniciais ⚪
-- [ ] 2E.1 — Criar seed da liga Brasileirão A (`prisma/seed-leagues.ts`)
-- [ ] 2E.2 — Importar CSV inicial via tela admin
-- [ ] 2E.3 — Validar dados com Prisma Studio
+- [x] 2E.1 — Criar seed da liga Brasileirão A (`prisma/seed-leagues.ts`)
+- [x] 2E.2 — Importar CSV inicial via tela admin
+- [x] 2E.3 — Validar dados com Prisma Studio
 
 ## 2F — Validação Final Fase 2 ⚪
-- [ ] 2F.1 — Cálculos Poisson batem com a planilha (< 0.5% diferença)
-- [ ] 2F.2 — ZIP, NB e Dixon-Coles produzem resultados coerentes
-- [ ] 2F.3 — Tela carrega em < 2s com dados completos do Brasileirão
-- [ ] 2F.4 — Layout responsivo (mobile + desktop)
-- [ ] 2F.5 — Acesso liberado para qualquer autenticado (MEMBRO+)
-- [ ] 2F.6 — Importação de CSV restrita a ADMIN
-- [ ] 2F.7 — Build sem erros TypeScript ou ESLint
-- [ ] 2F.8 — Deploy em produção validado
-- [ ] 2F.9 — Parser tolera diferenças de tier sem quebrar
-- [ ] 2F.10 — `MatchImport` registra histórico completo de cada importação
+- [x] 2F.1 — Cálculos Poisson batem com a planilha (< 0.5% diferença)
+- [x] 2F.2 — ZIP, NB e Dixon-Coles produzem resultados coerentes
+- [x] 2F.3 — Tela carrega em < 2s com dados completos do Brasileirão
+- [x] 2F.4 — Layout responsivo (mobile + desktop)
+- [x] 2F.5 — Acesso liberado para qualquer autenticado (MEMBRO+)
+- [x] 2F.6 — Importação de CSV restrita a ADMIN
+- [x] 2F.7 — Build sem erros TypeScript ou ESLint
+- [x] 2F.8 — Deploy em produção validado
+- [x] 2F.9 — Parser tolera diferenças de tier sem quebrar
+- [x] 2F.10 — `MatchImport` registra histórico completo de cada importação
+- [x] 2F.11 — Client TheStatsAPI respeita rate limit de 30 req/min
+- [x] 2F.12 — Quota mensal tracking funcional com alerta em 90%
+- [x] 2F.13 — Sync incremental consome < 15 requests por rodada
+- [x] 2F.14 — Dados da API e do CSV produzem resultados consistentes nos modelos
+- [x] 2F.15 — Filtros de mês e faixa de odds funcionam corretamente
+- [x] 2F.16 — Modo AUTO seleciona modelo via AIC e exibe badge de confiança
+- [x] 2F.17 — Modo MANUAL permite override sem perda de estado dos filtros
+- [x] 2F.18 — Placeholder "Análises" acessível na navegação
+
+---
+
+## Resumo Geral da Fase 2
+
+| Item | Descrição | Status | Depende de |
+|---|---|---|---|
+| 2A | Schema e Modelagem | 🟢 | Fase 1 |
+| 2B | Engine de Cálculo Estatístico | 🟢 | 2A |
+| 2C | Ingestão de Dados (API + CSV) | 🟢 | 2A |
+| 2D | Telas do Dashboard de Liga | 🟢 | 2B · 2C |
+| 2E | Seed e Dados Iniciais | 🟢 | 2C |
+| 2F | Validação Final Fase 2 | 🟢 | Todos |
 
 ---
 

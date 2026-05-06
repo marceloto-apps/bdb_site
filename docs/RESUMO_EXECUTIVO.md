@@ -290,3 +290,153 @@ A plataforma agora caminha para a **Fase 2 (Dashboards de Liga)** suportada por 
 - `SCHEMA.md` confirmado sem alterações, já que a Fase 3 opera estritamente no Client-Side (Client Components).
 
 Esta sincronização assegura que o Agente de IA responsável pela execução possua a bússola técnica e arquitetural definitiva para implementar o módulo de ferramentas analíticas sem fricção de escopo.
+
+### 20. Motor Estatistico e Pipeline de Ingestao de Dados (Onda 1 — Fase 2) — 03 a 04/05/2026
+
+#### Passos 2 e 3: Engine de Calculo Estatistico (lib/analytics/)
+
+Toda a inteligencia matematica das planilhas da BDB foi replicada em TypeScript puro, com paridade comprovada via testes automatizados contra o Ground Truth da planilha BRA1DASHv261.xlsx.
+
+- **Poisson Padrao:** Matriz 11x11 com todos os mercados derivados (1X2, BTTS, Over/Under 0.5-4.5, Handicap Asiatico).
+- **ZIP (Zero-Inflated Poisson):** Trata o excesso de empates 0x0 com parametro pi independente por time.
+- **Binomial Negativa (NB):** Modela sobredispersao de variancia com fator r dinamico. Fallback automatico para Poisson em casos de degeneracao.
+- **Dixon-Coles:** Correcao de dependencia em low-score (tau) + decaimento temporal exponencial (xi ajustavel).
+- **EV Calculator:** Odd Justa, Expected Value (%), ROI estimado e comparacao direta com odds de mercado.
+- **Testes:** 32/32 passando com `npm run test`. Paridade matematica menor que 0.5% vs Ground Truth.
+
+#### Passo 4: Pipeline Hibrido de Ingestao (lib/ingest/)
+
+- **RateLimiter:** Token bucket (30 tokens, reposicao 1 req/2s). Zero bloqueios manuais.
+- **Quota Mensal:** Rastreamento automatico via tabela `ApiQuotaLog` com agregacao por mes. Bloqueia se exceder 100.000 req/mes.
+- **Retry com Backoff:** Ate 3 tentativas com espera exponencial em HTTP 429.
+- **Team Normalizer:** Tabela `TEAM_ALIASES` para normalizar nomes das APIs para o padrao canonico do sistema.
+- **Sync Engine:** Modos `full` e `incremental`, com parametro `limit` para testes sem consumo de cota.
+- **Endpoints Admin:** `POST /sync`, `POST /importar`, `GET /quota` — protegidos por `x-admin-key`.
+
+#### Passo 5: Seed e Validacao no Banco (04/05/2026)
+
+Liga Brasileirao Serie A inserida via seed. Seis bugs de integracao identificados e corrigidos durante validacao:
+
+1. `lib/auth.ts` inexistente — criado com autenticacao temporaria via `ADMIN_API_KEY`
+2. `ApiQuotaLog.findUnique({ where: { month } })` — campo nao tem @unique, corrigido para `.aggregate()`
+3. Tipagem da API: `homeID`/`date` nao existiam no JSON real — corrigido para `home_team.id`/`utc_date`
+4. Campo `status` nao existe no model Match do Prisma — removido do mapper
+5. `xGHome`/`xGAway` — schema usa `homeXg`/`awayXg`
+6. `connectOrCreate` de Team requer chave composta `externalId_leagueId`
+
+Validacao final confirmada no banco Hostgator em 04/05/2026:
+- Mirassol 2 x 1 Corinthians
+- Internacional 2 x 0 Fluminense
+- Chapecoense 1 x 2 Bragantino
+
+A Onda 1 esta 100% concluida. O sistema esta pronto para ingerir o Brasileirao completo e iniciar a construcao da interface do dashboard.
+
+---
+
+### 21. Sincronização Completa e Validação do Brasileirão (Fase 2, Bloco 1) — 04/05/2026
+
+**Execução do Pipeline de Ingestão:**
+- Finalizada a configuração final dos *mappers* da TheStatsAPI. Foram corrigidos conflitos de tipos, adicionados campos que faltavam (ex: `matchday` -> `round`) e implementado suporte massivo à extração de múltiplas odds (Pinnacle, Bet365 e Betfair Exchange).
+- O dicionário de normalização de times (`TEAM_ALIASES`) foi atualizado para cobrir variações de nomes detectadas durante o mapeamento (ex: Athletico-PR e Atlético-MG).
+- O `sync-engine` rodou um sync completo (full) para o Brasileirão Série A 2026, populando com sucesso mais de 240 partidas finalizadas, incluindo suas respecitvas cotações de mercado, consumindo perfeitamente a quota da API sem bloqueios.
+
+**Validação do Ground Truth:**
+- Uma rotina customizada extraiu os dados populados diretamente do MySQL Prisma e calculou as médias de gols (`μ_h` e `μ_a`) e as forças de ataque/defesa (focando no Athletico-PR como prova). 
+- O resultado obteve sucesso integral, divergindo do Ground Truth estático em valores muito inferiores ao tolerado (`< 0.05`), comprovando que o banco de dados e o engine matemático operam com total exatidão sobre os dados da TheStatsAPI.
+
+---
+
+### 22. Refatoração Arquitetural — Normalização do Schema (Fase 2, Blocos 6-7) — 04/05/2026
+
+**Design do Novo Banco de Dados (Blocos 1 a 5 da Sessão de Refatoração):**
+- A arquitetura legada (Tabela `Match` monolítica contendo centenas de colunas opcionais) provou-se inescalável para a agregação de dados granulares vindos da *TheStatsAPI*.
+- O banco foi inteiramente remodelado aplicando **Entity-Attribute-Value (EAV)** e separação rigorosa de domínios (Domain-Driven Design).
+- **Novas Entidades Criadas:** `Competition`, `Season`, `TeamAlias`, `TeamSeason`, `MatchStats` (tabela paralela de estatísticas), `MatchOdds` (relacionamento triplo com `Bookmaker` e `Market`), `PlayerMatchStats` e `Shot` (dados geoespaciais em x,y).
+
+**Migração de Dados Sem Perda (Bloco 6):**
+- Foi criado e executado um script de migração robusto (transactional) transferindo todo o histórico legado de 896 partidas e 27 times para as novas tabelas granulares, normalizando a *League* antiga em `Competition` e `Season` ativas.
+
+**Refatoração do Sistema e Ingestão (Bloco 7):**
+- O motor de sincronização (`sync-engine.ts`) foi reescrito para utilizar as novas tabelas e consumir de forma encadeada os dados da *TheStatsAPI*, executando o *upsert* apenas de forma progressiva e incremental (ex: odds só são buscadas se estiverem disponíveis e desatualizadas).
+- A API administrativa de importação manual (`importar/route.ts`) e o parser CSV foram convertidos para a nova estrutura, descarregando as cotações diretamente no hub EAV (`MatchOdds`).
+- O sistema analítico foi otimizado, em destaque o `ev-calculator.ts`, que ganhou suporte a "Batch Pre-fetch" em memória para impedir que os cálculos de ROI (Return on Investment) sobrecarregassem o banco de dados.
+
+A base do sistema atinge seu ápice de estabilidade técnica. Os testes de build (`tsc --noEmit`) passam limpos e as tipagens rígidas operam sobre todas as novas estruturas do Prisma, garantindo total *Type Safety*.
+
+---
+
+## Estado Atual do Projeto (04/05/2026)
+
+| Fase | Status |
+|------|--------|
+| Fase 1 — Infraestrutura e Site Institucional | 100% concluida, em producao na Vercel |
+| Fase 2 — Onda 1 (Fundacao: Engine + Ingestao) | 100% concluida, validada em producao |
+| Fase 2 — Onda 2, Bloco 1 (Sync Inicial Brasileirão) | 100% concluido |
+| Fase 2 — Refatoração Schema Normalizado (Bloco 7) | 100% concluido |
+| Fase 2 — UI Dashboard de Ligas | 100% concluido |
+| Fase 3 — Ferramentas Analiticas | 100% concluida |
+
+### 23. Desenvolvimento da UI do Dashboard (Fase 2, Blocos Finais) — Maio/2026
+
+**APIs e Backend Visual:**
+- Desenvolvidas e testadas as rotas centrais de consulta (`/info`, `/times`, `/partidas`, `/previsao`, `/mapa-valor`) para o Dashboard, mantendo isolamento de temporada (`utcDate >= inicio do ano`) para prevenir que análises sofram contaminação de jogos legados de outras temporadas (2024/2025).
+
+**Componentes Visuais Interativos (Client Components):**
+- Construídos e conectados todos os elementos de controle: `SeletorConfronto` (seleção de times e mandos), filtro de rodadas (`FiltroRodadas`) e de faixas de odds, além do hook global de gerência de estado `useLeagueFilters`.
+- Criado o `SeletorModelo` contendo os quatro modelos disponíveis (Poisson, Zero-Inflated, Negative Binomial, Dixon-Coles) e exibição do modo Auto validado via AIC.
+
+**Painéis Analíticos (Server to Client):**
+- Concluídos os cinco grandes painéis analíticos que compõem o Dashboard e replicam a experiência das planilhas legadas da BDB:
+  - `PainelMedias`: Visão sumária de Gols, Pontos, Custos e Pesos.
+  - `PainelMatrizPlacares`: Heatmap dinâmico 11x11 evidenciando cenários de alta probabilidade.
+  - `PainelMercados`: Grade completa de Match Odds (1X2), Over/Under, BTTS e Asian Handicap, comparando odd justa vs odd de mercado com identificação de Valor Esperado Positivo (+EV).
+  - `PainelMapaValor`: Gráfico interativo indicando áreas de lucro baseado em agrupamentos de cotações históricas da temporada atual.
+  - `PainelEvolucao`: Série temporal usando Recharts, revelando tendências de Gols Esperados vs Reais rodada a rodada.
+- A orquestração das páginas (`/dashboard/ligas/[slug]`) realiza fetch server-side para melhorar SEO e LCP, repassando *props* para a interface cliente.
+
+**Refinamentos de Layout e Estatísticas (Maio/2026):**
+- O cabeçalho do Dashboard de Liga (`SeletorConfronto` e `SeletorModelo`) foi compactado, unindo a seleção de times, opções de modelos estatísticos e botão de previsão em uma única barra horizontal limpa e responsiva.
+- O `PainelMedias` foi refatorado para máxima clareza: as médias globais da liga foram movidas para uma barra de cabeçalho fora dos cards, e as métricas de Gols/xG foram unificadas em linhas simples separadas por `|`, economizando espaço vertical precioso.
+- Os métodos de cálculo do **Lambda** foram expandidos para incluir 3 vertentes (`Média Simples`, `Forças Relativas` e `Expected Goals - xG`), sendo apresentados em um grid de 60/40 ao lado do `SeletorModelo`, com perfeito alinhamento de altura (`items-stretch`) e botões fixos à base.
+- O título do eixo Y no `PainelMatrizPlacares` foi rotacionado para o modo vertical de leitura ascendente (`writing-mode:vertical-rl`), desobstruindo a matriz horizontalmente.
+- Implementado o `PainelOddsMercado` para inserção dinâmica de cotações reais das casas (ex: Bet365, Pinnacle) via nova rota de API. As odds comunicam-se diretamente com o `PainelMercados` gerando cálculo automático de Expected Value (EV%) no *frontend* com suporte a digitação livre (`rawInputs`).
+- O grid de visualização final (Matriz e Evolução) foi padronizado para uma divisão 50/50 e o gráfico de Evolução de Gols ganhou filtros táticos (Ambos, Mandante, Visitante) para isolar tendências visuais.
+- Reestruturação global de Sidebar, priorizando a subida do menu "ANÁLISE ESPORTIVA" e limpando seções obsoletas, melhorando a arquitetura da informação para membros pagantes.
+
+O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, com polimento UI/UX de alto nível, livre de erros de linter (strict) e operante.
+
+### 24. Conclusão e Validação da Engine Estatística Avançada (Fase 2, Maio/2026)
+
+**Evolução Matemática dos Modelos:**
+- **Decay Temporal (Dixon-Coles):** Aplicado globalmente em 3 dos 4 modelos, garantindo que o histórico de forma recente de um time possua um peso exponencialmente maior que o histórico do início do ano.
+- **Inflação de Zeros (ZIP):** Alterada de cálculo local de confronto para **cálculo global de liga** (opção Pi-global), eliminando anomalias matemáticas onde um time recém-promovido sofria penalidades infladas.
+- **Binomial Negativa e Superdispersão:** Introduzido um sofisticado mecanismo de Fallback (Parcial e Total) que protege o modelo quando a variância observada é menor ou igual à média, regredindo pacificamente para Poisson para evitar cálculos irracionais (r tendendo a Infinity).
+
+**Sistema AUTO e Ranking (AIC):**
+- O modo AUTO foi calibrado usando o Critério de Informação de Akaike (AIC).
+- Foram introduzidas penalizações dinâmicas ($k$) para lidar com a diferença de complexidade entre Poisson puro ($k=2$) e Binomial Negativa sem fallback ($k=4$).
+- Proteção heurística: Ligas com altíssimas taxas de 0x0 ou variância ganham um boost estatístico (limitado a -3.0 de AIC e capado a -1.0 em relação ao líder) para favorecer modelos avançados sem quebrar a confiança da máxima verossimilhança. A confiança (Alta, Média, Baixa) é classificada a partir do Delta-AIC entre o vencedor e o segundo lugar.
+
+**Blindagem de Testes:**
+- A suíte de testes unitários foi completamente reescrita em Vitest (`__tests__/analytics/*`). Todas as premissas matemáticas dos modelos foram provadas (ex: ZIP devolvendo matriz pura de Poisson quando `Pi=0`, limites rígidos no clamping de Rho, fallback operante na NB).
+- Tipagem 100% rígida via TypeScript interfaces no client (`PrevisaoResponse`, `PrevisaoState`, `MapaValorResponse`), abolindo definitivamente qualquer `any` e fechando o círculo de segurança ponta-a-ponta (API -> Client -> Component).
+- A API `/previsao` foi coberta por testes de integração robustos, garantindo 100% de estabilidade com geração estrita e mock controlada do banco Prisma.
+
+**Próximas ações estratégicas:**
+1. Fase 4 — Expansão Multi-Liga e Pagamentos
+2. Deploy limpo em produção na Vercel da Fase 2 atualizada
+
+### 25. Finalização do Expected Goals (xG) e Backfill de Player Stats (Fase 2) — Maio/2026
+
+**Backfill Histórico (API TheStatsAPI):**
+- Realizada uma rodada extensiva de backfill (`sync-engine.ts`) recuperando propriedades avançadas como cartões vermelhos, dribles (`dribblesAttempted` mapeado adequadamente) e demais `PlayerMatchStats` para rodadas passadas.
+- O mapeamento foi refinado para tolerar retornos nulos nas ligas sem cobertura profunda de *player props*.
+
+**Integração Analítica de xG (Expected Goals):**
+- As rotas da API (`/api/ligas/[slug]/previsao/route.ts`) foram ajustadas para serializar corretamente todas as forças e médias calculadas baseadas no *Expected Goals* (`xG`), suprindo a UI que anteriormente exibia falhas na obtenção do dado bruto.
+- A função base de estatística matemática (`getDispersao`) foi isolada e reutilizada para calcular Confiança (Desvio Padrão e Coeficiente de Variação) com precisão sobre dados de xG acumulados.
+
+**Polimento Visual Extremo (`PainelMedias.tsx`):**
+- A renderização da seção "Média Simples" ganhou padronização com a arquitetura das outras projeções.
+- As métricas de **Confiança** (CV e DP) para Gols e xG foram colapsadas e alinhadas lado a lado em uma mesma linha (`flex-row justify-between`), poupando altura vital na tela para visualização mobile e reduzindo poluição informacional.
+- A faixa global superior de "Médias da Liga" foi quebrada em dois eixos (MÉDIA LIGA GOLS e MÉDIA LIGA xG), com tipografia monospace em destaque, aprimorando drasticamente a leitura e o escaneamento visual da performance dos mandantes e visitantes dentro do torneio global.

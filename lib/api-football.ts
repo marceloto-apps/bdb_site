@@ -44,8 +44,6 @@ async function registrarQuota(used: number, limit: number, remaining: number): P
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     
-    // Fallback: the schema might not exist yet if db push failed, so we suppress errors here temporarily
-    // @ts-expect-error Fallback: the schema might not exist yet
     await prisma.apiQuota.upsert({
       where: { date: today },
       update: { used, limit, remaining },

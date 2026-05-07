@@ -1,4 +1,4 @@
-import { env } from 'process'
+
 
 const BASE_URL = process.env.THESTATSAPI_BASE_URL || 'https://api.thestatsapi.com/api'
 const API_KEY = process.env.THESTATSAPI_KEY

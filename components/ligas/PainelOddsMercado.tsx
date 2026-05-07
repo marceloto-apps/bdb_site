@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
@@ -122,6 +122,7 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
     }
 
     fetchOdds()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, homeTeamId, awayTeamId, bookmaker])
 
   // Efeito para repassar mudanças no modo manual com debounce

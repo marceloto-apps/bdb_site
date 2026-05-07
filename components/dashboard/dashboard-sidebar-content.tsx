@@ -12,8 +12,6 @@ import {
 } from '@/components/ui/sidebar'
 import { 
   LayoutDashboard,
-  FileSpreadsheet,
-  MessageCircle,
   Wallet,
   Calculator,
   FlaskConical,

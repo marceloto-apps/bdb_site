@@ -77,7 +77,7 @@ export function rankearModelos(
 
   const resDC = matrizPlacaresDixonColes(lambdaH, lambdaA, parametrosExtras.rho)
   const matrizDixonColes = resDC.matriz
-  let kDC = resDC.rhoClamped && resDC.rhoUsado === 0 ? 2 : 3 // se clampado a 0, rho não impacta, reduz penalidade
+  const kDC = resDC.rhoClamped && resDC.rhoUsado === 0 ? 2 : 3 // se clampado a 0, rho não impacta, reduz penalidade
 
   // 2. Calcular logLikelihood
   const llPoisson = calcularLogLikelihood(jogos, matrizPoisson)

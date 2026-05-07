@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Gauge, RefreshCw } from 'lucide-react'
 
@@ -22,7 +22,7 @@ export function QuotaPanel() {
         const json = await res.json()
         setError(json.error || 'Erro ao carregar quota')
       }
-    } catch (e) {
+    } catch (_e) {
       setError('Falha de conexão')
     } finally {
       setIsLoading(false)

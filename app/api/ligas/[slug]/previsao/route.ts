@@ -8,7 +8,7 @@ import {
   calcularMediasTime,
   calcularMediasTimeComDecay,
   calcularForcasTime,
-  calcularLambdasForcas,
+
   rankearModelos,
   matrizPlacaresPoisson,
   matrizPlacaresZIP,
@@ -27,8 +27,7 @@ import {
   calcularForcasTimeXG,
   calcularMediasTimeXGComDecay,
   type MediasLigaXG,
-  type ForcasTimeXG,
-  type MediasTimeXG
+
 } from '@/lib/analytics'
 
 export async function GET(

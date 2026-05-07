@@ -12,9 +12,8 @@ import { PainelOddsMercado } from '@/components/ligas/PainelOddsMercado'
 import { PainelEvolucao } from '@/components/ligas/PainelEvolucao'
 import { PainelMapaValor } from '@/components/ligas/PainelMapaValor'
 import { BannerModeloWarning } from '@/components/ligas/BannerModeloWarning'
-import { Card } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { BarChart3, AlertCircle } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { TimeOption, ModoModelo, PrevisaoState, MapaValorResponse } from '@/types/liga'
 import type { LambdaMethod } from '@/lib/analytics/types'
 import { OddsMercado } from '@/lib/validations/odds-mercado'
@@ -48,7 +47,7 @@ export function DashboardLigaClient({
   partidasIniciais
 }: DashboardLigaClientProps) {
   const filters = useLeagueFilters(maxRodada)
-  const { filtros, modelo, setModelo, lambdaMethod, setLambdaMethod, podeCalcular, queryParams, ...setters } = filters
+  const { filtros, modelo, setModelo, lambdaMethod: _lambdaMethod, setLambdaMethod, podeCalcular: _podeCalcular, queryParams, ...setters } = filters
 
   const [previsao, setPrevisao] = useState<PrevisaoState | null>(null)
   const [mapaValor, setMapaValor] = useState<MapaValorResponse | null>(null)
@@ -104,7 +103,7 @@ export function DashboardLigaClient({
           setMapaValor(jsonMapa.data)
         }
       }
-    } catch (err) {
+    } catch (_err) {
       setError('Erro de conexão ao calcular previsão')
       setPrevisao(null)
     } finally {

@@ -1,6 +1,5 @@
 import { Prisma } from '@prisma/client'
 import { normalizeTeamName } from '../team-normalizer'
-import fs from 'fs'
 
 export interface CsvRow {
   Date: string

@@ -2,7 +2,6 @@
 // Calculadoras de λ (gols esperados) — 3 métodos independentes
 
 import type {
-  MediasTimeXG,
   ForcasTimeXG,
   MediasLigaXG,
   LambdaMethod,

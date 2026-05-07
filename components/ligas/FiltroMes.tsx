@@ -47,7 +47,6 @@ export function FiltroMes({ selectedMonths, onChange }: FiltroMesProps) {
   }
 
   const handleSelectAll = () => onChange([])
-  const handleSelectNone = () => onChange([99]) // Passa um array inválido ou lida de outra forma? Na serialização vazio=todos.
   // Vamos definir que se length===12 é todos, se length===0 é todos (default).
   // Se quiser enviar vazio real, precisaria de uma flag extra no useLeagueFilters.
   // Vamos assumir que length === 0 significa TODOS (sem filtro).

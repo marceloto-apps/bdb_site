@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Trophy, Lock } from 'lucide-react'
-import Image from 'next/image'
 
 interface LigaCardProps {
   nome: string

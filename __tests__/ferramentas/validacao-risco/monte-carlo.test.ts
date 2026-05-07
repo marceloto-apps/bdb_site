@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest'
+
 import { executarMonteCarlo } from '@/lib/ferramentas/validacao-risco/monte-carlo'
 
 describe('executarMonteCarlo', () => {

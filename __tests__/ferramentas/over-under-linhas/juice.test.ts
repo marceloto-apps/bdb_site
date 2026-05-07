@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest'
+
 import { extrairJuiceAncora, calcularTabelaProjecao } from '@/lib/ferramentas/over-under-linhas/juice'
 
 describe('extrairJuiceAncora', () => {

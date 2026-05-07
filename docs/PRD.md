@@ -1,6 +1,6 @@
 # PRD — Plataforma Big Data Bet
 
-**Versão:** 1.4 | **Atualizado:** 02/05/2026 | **Prazo:** 01/06/2026
+**Versão:** 1.5 | **Atualizado:** 03/05/2026 | **Prazo:** 01/06/2026
 
 ---
 
@@ -9,7 +9,7 @@
 | Fase | Nome | Status |
 |---|---|---|
 | 1 | Fundação (Site + CMS + Auth + Dashboard) | 🟢 Concluída |
-| **2** | **Dashboards de Liga (MVP Brasileirão A)** | ⚪ Próxima |
+| **2** | **Dashboards de Liga (MVP Brasileirão A)** | 🟢 Concluída |
 | **3** | **Ferramentas Gratuitas (Migração Gemini)** | 🟢 Concluída |
 | **4** | **Multi-Liga + Pagamentos (Stripe + Hubla Legacy)** | ⚪ Pendente |
 | **5** | **Curso + Backtest Interativo** | ⚪ Pendente |
@@ -24,6 +24,7 @@
 | Frontend | Next.js 14 (App Router) + TypeScript strict |
 | UI | shadcn/ui (dark) + Tailwind CSS |
 | Banco | MySQL Hostgator via Prisma (schema novo) |
+| Dados Esportivos | TheStatsAPI (API primária) + football-data.co.uk (CSV fallback) |
 | Auth | NextAuth.js v5 |
 | Email | Brevo |
 | Analytics | Posthog |
@@ -31,9 +32,10 @@
 
 ---
 
-## Status Geral — Fase 1 ✅ Concluída
+## Status Geral — Fases 1 e 2 ✅ Concluídas
 
-Toda a infraestrutura, CMS, Auth, Dashboard, Email, Analytics, Páginas Públicas e Deploy foram entregues em **01/05/2026**.
+Toda a infraestrutura, CMS, Auth, Dashboard, Email, Analytics, Páginas Públicas e Deploy (Fase 1) foram entregues em **01/05/2026**.
+O Motor Analítico completo, as rotas de API robustas com filtros isolados de temporada, os seletores e painéis de Dashboard da Liga (Fase 2) foram concluídos em **04/05/2026**.
 
 Detalhamento histórico de cada subtask em `TASKS.md` (seção "Fase 1 — Concluída").
 Especificações técnicas originais arquivadas em `docs/historico/PRD_Fase1.md`.
@@ -65,6 +67,7 @@ Fase 6: Automações
 | Conta Posthog criada + project key | Marcelo |
 | Acesso DNS do domínio `bigdatabet.com.br` | Marcelo |
 | Repositório GitHub criado | Marcelo |
+| API key TheStatsAPI (variável `THESTATSAPI_KEY`) | Marcelo ✅ Resolvido |
 
 ---
 
@@ -90,48 +93,97 @@ Fase 6: Automações
 
 # PRD — Fase 2: Dashboards de Liga (MVP Brasileirão A)
 
-**Objetivo:** Migrar a inteligência das planilhas BDB (.xlsm) para uma tela web nativa na área logada, expandindo os modelos estatísticos com Poisson Zero-Inflacionado, Binomial Negativa e Dixon-Coles.
+**Objetivo:** Migrar a inteligência das planilhas BDB (.xlsm) para uma tela web nativa na área logada, expandindo os modelos estatísticos com Poisson Zero-Inflacionado, Binomial Negativa e Dixon-Coles. Dados ingeridos via TheStatsAPI com persistência em banco para eliminar requests repetidos.
 
 ## Escopo MVP
 - Liga única: Brasileirão Série A (acesso FREE para todos os usuários autenticados)
 - Tela única consolidada com todos os painéis (DASH + CS + FT + EVOL + MAPVAL)
-- Origem dos dados: football-data.co.uk via upload manual de CSV pelo admin
-- 4 modelos estatísticos selecionáveis pelo usuário
+- Origem dos dados: TheStatsAPI (primária) + football-data.co.uk CSV (fallback/validação)
+- 4 modelos estatísticos com modo automático (AIC) e override manual
+- Odds de 4 bookmakers: Pinnacle (referência), Bet365, Betfair Exchange, Kambi
+- Dados persistidos em MySQL — nunca buscar na API o que já está no banco
 
 ## O que NÃO entra na Fase 2
-- Outras ligas (Fase 4, atrelado a planos pagos)
-- Ingestão automática (Fase 6)
+- Outras ligas além do Brasileirão A (Fase 4, atrelado a planos pagos)
+- Ingestão automática via cron (Fase 6)
 - Backtest interativo (Fase 5)
+- Aba Mercado/EV+Kelly (placeholder — nome provisório "Análises")
+
+## Fonte de Dados — Estratégia Híbrida
+
+### TheStatsAPI (fonte primária)
+- Base URL: `https://api.thestatsapi.com/api/football`
+- Auth: Bearer token via variável de ambiente `THESTATSAPI_KEY`
+- Rate limit: 30 req/min, 100.000 req/mês (plano Starter $50/mês)
+- Dados disponíveis: resultados, odds (4 bookmakers), xG, stats de partida, standings
+- 80 competições padrão, até 1.196 sob demanda
+- ID do Brasileirão A: `comp_4795`
+
+### football-data.co.uk (fallback/validação)
+- Upload manual de CSV pelo admin
+- Usado para validação cruzada de dados e como backup offline
+- Mantido como opção visível apenas para ADMIN
+
+### Regra de ouro
+Todo dado buscado na API é imediatamente salvo no banco. Buscas subsequentes lêem do banco. A API só é chamada para dados novos (sync incremental por `syncedAt`).
 
 ## Modelos Estatísticos Suportados
-1. Poisson padrão (já presente na planilha original)
+1. Poisson padrão (ground truth da planilha legada)
 2. Poisson Zero-Inflacionado (ZIP) — corrige excesso de 0x0
 3. Binomial Negativa — lida com superdispersão (variância > média)
 4. Dixon-Coles — correção tau para placares baixos + decaimento temporal
 
+## Seleção de Modelo
+- **Modo AUTO (default):** Seleciona automaticamente o melhor modelo via AIC. Badge visual indica o modelo escolhido e confiança (Alta/Média).
+- **Modo MANUAL (override):** Toggle entre Poisson | ZIP | NB | Dixon-Coles. Quando NB selecionado e variância ≤ λ, exibir banner amarelo de alerta.
+
 ## Painéis da Tela Única (`/dashboard/ligas/[slug]`)
-1. **Seletor de Confronto** — dropdown casa/visitante + filtros (rodadas, mando, faixa de odds)
+1. **Seletor de Confronto** — dropdown casa/visitante + filtros (rodadas, mês, mando, faixa de odds)
 2. **Painel de Médias** — gols, pontos, peso e custo do gol (replica aba DASH)
 3. **Matriz de Placares** — grid 11x11 com modelo selecionável (replica aba CS)
 4. **Painel de Mercados** — 1X2, BTTS, Over/Under, Handicaps Asiáticos com odds justas e EV%
 5. **Mapa de Valor** — ROI por faixa de odds (replica aba MAPVAL)
 6. **Evolução de Gols** — gráfico Recharts por rodada (replica aba EVOL)
-7. **Seletor de Modelo** — toggle Poisson | ZIP | NB | Dixon-Coles aplicado em tempo real
+7. **Seletor de Modelo** — modo AUTO (AIC) | modo MANUAL (toggle 4 modelos)
+
+## Filtros do Seletor de Confronto
+| Filtro | Tipo | Comportamento |
+|---|---|---|
+| Time Casa | Dropdown único | Filtra jogos como mandante |
+| Time Visitante | Dropdown único | Filtra jogos como visitante |
+| Rodadas | Range (de X a Y) | Filtra por intervalo de rodadas |
+| Mês | Multi-select (JAN..DEZ) | Filtra por mês do jogo |
+| Faixa de Odds Casa | Multi-select com drag | 9 faixas: 1.21-1.4, 1.41-1.7, ..., 9.01-16 |
+| Faixa de Odds Visitante | Multi-select com drag | Mesmas 9 faixas |
+| Mando | Toggle casa/fora/ambos | Filtra por mando de campo |
 
 ## Ingestão de Dados (Admin)
-- Botão "Importar CSV" na área administrativa (`/cms/ligas/importar` — restrito a ADMIN)
-- Upload de arquivo CSV no padrão football-data.co.uk
-- Parser converte em upsert de Teams + Matches com log de importação
-- MVP é 100% manual (sem cron)
+- **Sync via API:** Botão "Sincronizar Liga" na área administrativa (`/cms/ligas/sync` — restrito a ADMIN). Executa sync incremental com rate limiting.
+- **Upload CSV:** Botão "Importar CSV" na área administrativa (`/cms/ligas/importar` — restrito a ADMIN). Parser de CSV football-data.co.uk como fallback.
+- **Dashboard de Quota:** Exibe requests consumidos no mês vs limite de 100k.
+- **Log de importações:** Histórico de cada sync/import com contadores.
+
+## Navegação — Renomeação
+- O item "Planilhas" na sidebar/navegação passa a se chamar **"Análises"** (nome provisório)
+- Dentro de "Análises", as funcionalidades serão organizadas em abas
+- Fase 2 entrega apenas placeholder com a estrutura de abas preparada
 
 ## Critérios de Aceite Fase 2
-- [ ] Schema Prisma com League, Team, Match aplicado sem afetar tabelas legadas
-- [ ] Upload de CSV do Brasileirão A funciona e popula o banco
-- [ ] Tela única `/dashboard/ligas/brasileirao-serie-a` renderiza todos os painéis
-- [ ] 4 modelos estatísticos calculam corretamente e podem ser alternados
-- [ ] Cálculos validados contra a planilha BRA1DASHv261.xlsx (ground truth)
-- [ ] Performance: tela carrega em < 2s com dados do Brasileirão completo
-- [ ] Acesso liberado para qualquer usuário autenticado (MEMBRO+)
+- [x] Schema Prisma Normalizado (Competition, Season, Match, Stats, Odds, PlayerStats, Shot) aplicado sem afetar tabelas legadas
+- [x] Dados legados da Fase 1 integralmente migrados para o novo Schema Normalizado
+- [x] Client TheStatsAPI refatorado com rate limiting funcional (30 req/min)
+- [x] Sync granular de partidas, estatísticas, odds, jogadores e chutes do Brasileirão A funciona e popula o banco
+- [x] Upload de CSV do Brasileirão A refatorado e funcional como fallback com suporte à transação de MatchOdds
+- [x] Validação cruzada: dados da API vs CSV com divergência documentada e testada
+- [x] Tela única `/dashboard/ligas/brasileirao-serie-a` renderiza todos os painéis
+- [x] 4 modelos estatísticos calculam corretamente em modo AUTO e MANUAL
+- [x] Modo AUTO seleciona via AIC e exibe badge de modelo + confiança
+- [x] Filtros funcionais: rodada, mês, faixa de odds, mando
+- [x] Cálculos validados contra a planilha BRA1DASHv261.xlsx (ground truth)
+- [x] Performance: tela carrega em < 2s com dados do Brasileirão completo
+- [x] Acesso liberado para qualquer usuário autenticado (MEMBRO+)
+- [x] Quota de API não excede 100k req/mês com 1 liga ativa
+- [x] Placeholder "Análises" visível na navegação
 
 ---
 
@@ -194,6 +246,8 @@ Fase 6: Automações
 # PRD — Fase 4: Multi-Liga + Pagamentos (Stripe + Hubla Legacy)
 
 **Objetivo:** Liberar as 25+ ligas adicionais para usuários do plano Básico, mantendo acesso vitalício para assinantes legados do Hubla.
+
+*Nota: A expansão para 60+ ligas reutiliza a infraestrutura de ingestão da Fase 2 (TheStatsAPI). O custo de requests para 60 ligas é estimado em ~24.000 req/mês (carga completa), cabendo no plano Starter de 100k/mês.*
 
 ## Estratégia Híbrida de Acesso
 - Brasileirão A → FREE (todos os autenticados)

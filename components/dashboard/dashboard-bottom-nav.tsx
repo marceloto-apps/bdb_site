@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, BookOpen, Star, Menu } from 'lucide-react'
+import { LayoutDashboard, BookOpen, Star, Menu, Trophy } from 'lucide-react'
 import {
   Sheet,
   SheetContent,
@@ -35,6 +35,11 @@ export function DashboardBottomNav({ user }: DashboardBottomNavProps) {
       icon: BookOpen,
     },
     {
+      name: 'Ligas',
+      href: '/dashboard/ligas',
+      icon: Trophy,
+    },
+    {
       name: 'Favoritos',
       href: '/dashboard/favoritos',
       icon: Star,
@@ -43,7 +48,7 @@ export function DashboardBottomNav({ user }: DashboardBottomNavProps) {
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 border-t border-border bg-background">
-      <div className="grid h-full grid-cols-4 items-center justify-items-center">
+      <div className="grid h-full grid-cols-5 items-center justify-items-center">
         {navItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon

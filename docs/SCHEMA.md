@@ -2,7 +2,7 @@
 
 # SCHEMA.md — Big Data Bet
 
-> **Versão:** 2.1 | **Atualizado:** 02/05/2026
+> **Versão:** 2.2 | **Atualizado:** 03/05/2026
 **Banco:** MySQL (Hostgator) | **ORM:** Prisma
 **Regra:** Nunca usar SQL raw, exceto em casos de performance crítica documentados aqui.
 > 
@@ -18,6 +18,7 @@ User ──────────────< Article         (como autor)
 User ──────────────< ArticleRevision (como editor/revisor)
 User ──────────────< Favorite        (artigos favoritados)
 User ──────────────< ReadHistory     (histórico de leitura)
+User ──────────────< MatchImport     (auditoria de imports/syncs)
 
 Article ───────────< ArticleRevision
 Article ───────────< ArticleTag >─── Tag
@@ -410,7 +411,7 @@ const admin = {
 
 | Fase | Modelos novos |
 | --- | --- |
-| Fase 2 | League, Team, Match, MatchImport |
+| Fase 2 | Competition, Season, Team (expandido), Match, MatchStats, MatchOdds, PlayerMatchStats, Shot, TeamAlias, TeamSeason, Bookmaker, Market, Player, MatchImport, ApiQuotaLog |
 | Fase 3 | (sem modelos novos — ferramentas client-side) |
 | Fase 4 | LegacyAccess, Plan, Subscription, StripeWebhookEvent |
 | Fase 5 | Backtest, BacktestResult, Course, Lesson, LessonProgress |
@@ -423,14 +424,25 @@ const admin = {
 
 ---
 
-## Modelos da Fase 2 (Dashboards de Liga)
+## Modelos da Fase 2 (Schema Normalizado)
 
 ### Enums
 
 ```prisma
-enum LeagueTier {
+enum CompetitionTier {
   FREE      // Brasileirão A (MVP)
   VIP       // demais 25+ ligas
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  IN_PLAY
+  PAUSED
+  FINISHED
+  POSTPONED
+  SUSPENDED
+  CANCELED
 }
 
 enum MatchResult {
@@ -438,95 +450,389 @@ enum MatchResult {
   D   // Draw
   A   // Away win
 }
-```
 
-### `League`
+enum DataSource {
+  THESTATSAPI     // dados ingeridos via API
+  FOOTBALL_DATA   // dados importados via CSV football-data.co.uk
+  MANUAL          // dados inseridos manualmente
+}
 
-Liga esportiva. MVP popula somente Brasileirão Série A.
+enum OddsType {
+  PREMATCH_OPENING
+  PREMATCH_CLOSING
+  LIVE
+}
 
-```prisma
-model League {
-  id        String      @id @default(cuid())
-  name      String
-  country   String
-  slug      String      @unique
-  season    String      // "2026"
-  tier      LeagueTier  @default(FREE)
-  active    Boolean     @default(true)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+enum PlayerPosition {
+  G
+  D
+  M
+  A
+}
 
-  teams     Team[]
-  matches   Match[]
-  imports   MatchImport[]
+enum ShotResult {
+  GOAL
+  SAVED
+  POST
+  MISSED
+  BLOCKED
+}
+
+enum ShotSituation {
+  OPEN_PLAY
+  SET_PIECE
+  CORNER
+  FREE_KICK
+  PENALTY
+}
+
+enum ShotBodyPart {
+  RIGHT_FOOT
+  LEFT_FOOT
+  HEAD
+  OTHER
 }
 ```
 
-**Regras de negócio:**
-- `slug` usado nas rotas: `/dashboard/ligas/[slug]`
-- `tier: FREE` é acessível a qualquer autenticado; `VIP` exige plano Básico+ ou LegacyAccess (Fase 4)
-- `season` permite múltiplas temporadas no futuro
+### `Competition` & `Season`
 
-### `Team`
+```prisma
+model Competition {
+  id         String          @id @default(cuid())
+  externalId String          @unique // ex: "comp_4795"
+  name       String
+  country    String?
+  slug       String          @unique
+  tier       CompetitionTier @default(FREE)
+  active     Boolean         @default(true)
+  logoUrl    String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
 
-Time vinculado a uma liga e temporada.
+  seasons    Season[]
+  imports    MatchImport[]
+
+  @@index([country])
+}
+
+model Season {
+  id            String   @id @default(cuid())
+  competitionId String
+  externalId    String   @unique // ex: "season_2026_4795"
+  year          String   // ex: "2026", "2026/2027"
+  startDate     DateTime?
+  endDate       DateTime?
+  isCurrent     Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  competition   Competition  @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  matches       Match[]
+  teamSeasons   TeamSeason[]
+
+  @@unique([competitionId, year])
+}
+```
+
+### `Team`, `TeamAlias` & `TeamSeason`
 
 ```prisma
 model Team {
-  id        String  @id @default(cuid())
-  name      String
-  shortName String?
-  leagueId  String
+  id              String       @id @default(cuid())
+  externalId      String       @unique
+  name            String
+  shortName       String?
+  country         String?
+  stadiumName     String?
+  stadiumCity     String?
+  stadiumCapacity Int?
+  logoUrl         String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  league      League  @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  homeMatches Match[] @relation("HomeTeam")
-  awayMatches Match[] @relation("AwayTeam")
+  aliases         TeamAlias[]
+  teamSeasons     TeamSeason[]
+  homeMatches     Match[]      @relation("HomeTeam")
+  awayMatches     Match[]      @relation("AwayTeam")
 
-  @@unique([name, leagueId])
-  @@index([leagueId])
+  @@index([country])
+}
+
+model TeamAlias {
+  id        String   @id @default(cuid())
+  teamId    String
+  alias     String   @unique
+  createdAt DateTime @default(now())
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+}
+
+model TeamSeason {
+  id        String   @id @default(cuid())
+  teamId    String
+  seasonId  String
+  createdAt DateTime @default(now())
+
+  team      Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season    Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, seasonId])
 }
 ```
 
-### `Match`
-
-Partida com resultado e odds. Origem: football-data.co.uk.
+### `Match`, `MatchStats` & `MatchOdds`
 
 ```prisma
 model Match {
-  id         String      @id @default(cuid())
-  leagueId   String
-  date       DateTime
-  round      Int?
-  homeTeamId String
-  awayTeamId String
+  id              String       @id @default(cuid())
+  externalId      String       @unique // ID da TheStatsAPI
+  seasonId        String
+  homeTeamId      String
+  awayTeamId      String
+  round           Int?
+  status          MatchStatus  @default(SCHEDULED)
+  utcDate         DateTime
+  fthg            Int?
+  ftag            Int?
+  ftr             MatchResult?
 
-  // Resultado
-  fthg       Int?
-  ftag       Int?
-  ftr        MatchResult?
+  venueName       String?
+  venueCity       String?
+  refereeName     String?
 
-  // Odds (Pinnacle/Bet365 conforme football-data)
-  oddHome    Float?
-  oddDraw    Float?
-  oddAway    Float?
-  oddOver25  Float?
-  oddUnder25 Float?
-  oddBttsYes Float?
-  oddBttsNo  Float?
+  xgAvailable     Boolean      @default(false)
+  oddsAvailable   Boolean      @default(false)
 
-  // Rastreabilidade da importação
-  sourceFile  String?   // nome do CSV de origem (ex: "BRA-2024.csv")
-  importedAt  DateTime  @default(now())
+  dataSource      DataSource   @default(THESTATSAPI)
+  sourceFile      String?
+  syncedAt        DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  league   League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  homeTeam Team   @relation("HomeTeam", fields: [homeTeamId], references: [id])
-  awayTeam Team   @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  season          Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  homeTeam        Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam        Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  
+  stats           MatchStats?
+  odds            MatchOdds[]
+  playerStats     PlayerMatchStats[]
+  shots           Shot[]
 
-  @@index([leagueId, date])
+  @@index([seasonId, utcDate])
   @@index([homeTeamId])
   @@index([awayTeamId])
-  @@index([date])
-  @@index([sourceFile])
+  @@index([utcDate])
+  @@index([dataSource])
+}
+
+model MatchStats {
+  id                  String   @id @default(cuid())
+  matchId             String   @unique
+
+  homeXg              Float?
+  awayXg              Float?
+  
+  homePossession      Float?
+  awayPossession      Float?
+  
+  homeShotsTotal      Int?
+  awayShotsTotal      Int?
+  homeShotsOnTarget   Int?
+  awayShotsOnTarget   Int?
+  homeShotsOffTarget  Int?
+  awayShotsOffTarget  Int?
+  homeShotsBlocked    Int?
+  awayShotsBlocked    Int?
+
+  homeCorners         Int?
+  awayCorners         Int?
+  homeCrosses         Int?
+  awayCrosses         Int?
+  homeDribbles        Int?
+  awayDribbles        Int?
+
+  homePassesTotal     Int?
+  awayPassesTotal     Int?
+  homePassesAccurate  Int?
+  awayPassesAccurate  Int?
+
+  homeDuelsTotal      Int?
+  awayDuelsTotal      Int?
+  homeDuelsWon        Int?
+  awayDuelsWon        Int?
+
+  homeClearances      Int?
+  awayClearances      Int?
+  homeInterceptions   Int?
+  awayInterceptions   Int?
+  homeTackles         Int?
+  awayTackles         Int?
+
+  homeSaves           Int?
+  awaySaves           Int?
+
+  homeFouls           Int?
+  awayFouls           Int?
+  homeYellowCards     Int?
+  awayYellowCards     Int?
+  homeRedCards        Int?
+  awayRedCards        Int?
+  homeOffsides        Int?
+  awayOffsides        Int?
+
+  syncedAt            DateTime?
+  createdAt           DateTime @default(now())
+
+  match               Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}
+
+model Bookmaker {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  slug      String  @unique
+  isSharp   Boolean @default(false)
+  active    Boolean @default(true)
+
+  odds      MatchOdds[]
+}
+
+model Market {
+  id        String  @id @default(cuid())
+  key       String  @unique
+  name      String
+  category  String
+
+  odds      MatchOdds[]
+}
+
+model MatchOdds {
+  id            String    @id @default(cuid())
+  matchId       String
+  bookmakerId   String
+  marketId      String
+  selection     String
+  line          Float?
+  oddsType      OddsType  @default(PREMATCH_CLOSING)
+  odds          Float
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  match         Match     @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  bookmaker     Bookmaker @relation(fields: [bookmakerId], references: [id], onDelete: Cascade)
+  market        Market    @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, bookmakerId, marketId, selection, line, oddsType], name: "match_odd_unique")
+  @@index([matchId])
+  @@index([bookmakerId])
+  @@index([marketId])
+  @@index([matchId, bookmakerId])
+  @@index([matchId, marketId])
+}
+```
+
+### `Player`, `PlayerMatchStats` & `Shot`
+
+```prisma
+model Player {
+  id            String          @id @default(cuid())
+  externalId    String          @unique
+  name          String
+  firstName     String?
+  lastName      String?
+  position      PlayerPosition?
+  dateOfBirth   String?
+  age           Int?
+  nationality   String?
+  heightCm      Int?
+  currentTeamId String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  matchStats      PlayerMatchStats[]
+  shots           Shot[]
+
+  @@index([currentTeamId])
+  @@index([nationality])
+  @@index([position])
+}
+
+model PlayerMatchStats {
+  id                  String   @id @default(cuid())
+  matchId             String
+  teamId              String
+  playerId            String
+
+  rating              Float?
+  minutesPlayed       Int?
+  started             Boolean  @default(false)
+  played              Boolean  @default(false)
+
+  passesTotal         Int?
+  passesAccurate      Int?
+  keyPasses           Int?
+
+  shotsTotal          Int?
+  shotsOnTarget       Int?
+  goals               Int?
+  expectedGoals       Float?
+
+  duelsTotal          Int?
+  duelsWon            Int?
+
+  tackles             Int?
+  interceptions       Int?
+  clearances          Int?
+
+  dribblesAttempted   Int?
+  dribblesSucceeded   Int?
+  foulsDrawn          Int?
+  foulsCommitted      Int?
+  yellowCards         Int?
+  redCards            Int?
+
+  createdAt           DateTime @default(now())
+
+  match               Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player              Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, playerId])
+  @@index([matchId])
+  @@index([playerId])
+  @@index([teamId])
+}
+
+model Shot {
+  id                String         @id @default(cuid())
+  externalId        String         @unique
+  matchId           String
+  teamId            String
+  playerId          String
+
+  x                 Float
+  y                 Float
+  minute            Int
+  result            ShotResult
+  expectedGoals     Float?
+  situation         ShotSituation?
+  bodyPart          ShotBodyPart?
+
+  isGoal            Boolean        @default(false)
+  isOnTarget        Boolean        @default(false)
+  isHeaded          Boolean        @default(false)
+  isOutsideBox      Boolean        @default(false)
+  isPenalty         Boolean        @default(false)
+  
+  goalMouthLocation String?
+
+  createdAt         DateTime       @default(now())
+
+  match             Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  player            Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([matchId])
+  @@index([playerId])
+  @@index([teamId])
 }
 ```
 
@@ -537,7 +843,7 @@ Auditoria de importações de CSV pelo admin.
 ```prisma
 model MatchImport {
   id            String   @id @default(cuid())
-  leagueId      String
+  competitionId String
   importedById  String
   fileName      String
   rowsProcessed Int
@@ -547,10 +853,10 @@ model MatchImport {
   notes         String?  @db.Text
   createdAt     DateTime @default(now())
 
-  league       League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  competition  Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   importedBy   User   @relation(fields: [importedById], references: [id])
 
-  @@index([leagueId])
+  @@index([competitionId])
   @@index([importedById])
 }
 ```
@@ -559,6 +865,34 @@ model MatchImport {
 - Registro imutável (auditoria)
 - Apenas usuários com role ADMIN podem disparar importação
 - `rowsProcessed = created + updated + skipped`
+
+---
+
+### `ApiQuotaLog`
+
+Controle de consumo da quota mensal da TheStatsAPI.
+
+```prisma
+model ApiQuotaLog {
+  id           String   @id @default(cuid())
+  endpoint     String   // ex: "/matches", "/matches/{id}/odds"
+  competitionId String? // ex: "comp_4795"
+  requestCount Int      @default(1)
+  responseStatus Int?   // HTTP status code
+  month        String   // "2026-05" — partition por mês
+  createdAt    DateTime @default(now())
+
+  @@index([month])
+  @@index([endpoint, month])
+}
+```
+
+**Regras de negócio:**
+- Registro imutável (auditoria de consumo)
+- `month` formatado como "YYYY-MM" para facilitar agregação
+- Dashboard admin exibe: total do mês / 100.000 limite
+- Se quota atingir 90% (90.000), exibir alerta no admin
+- Se quota atingir 100%, bloquear novas chamadas à API (usar apenas banco)
 
 ---
 

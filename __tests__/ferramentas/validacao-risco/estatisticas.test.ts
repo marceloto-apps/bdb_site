@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest'
+
 import { cumulativeNormal, calcularPValue, calcularVolumeValidador } from '@/lib/ferramentas/validacao-risco/estatisticas'
 
 describe('cumulativeNormal', () => {

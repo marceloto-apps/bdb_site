@@ -7,8 +7,9 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider          = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
 // ===========================================
@@ -61,28 +62,25 @@ enum SubscriptionStatus {
 
 // Usuário principal do sistema
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  role          Role      @default(MEMBRO)
-  plan          Plan      @default(FREE)
-  password      String?
-  newsletterOptIn Boolean @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relacionamentos NextAuth
-  accounts Account[]
-  sessions Session[]
-
-  // Relacionamentos do sistema
-  subscription Subscription?
-  articles     Article[]         @relation("ArticleAuthor")
-  revisions    ArticleRevision[]
-  favorites    Favorite[]
-  readHistory  ReadHistory[]
+  id              String            @id @default(cuid())
+  name            String?
+  email           String?           @unique
+  emailVerified   DateTime?
+  image           String?
+  role            Role              @default(MEMBRO)
+  plan            Plan              @default(FREE)
+  password        String?
+  newsletterOptIn Boolean           @default(false)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  accounts        Account[]
+  revisions       ArticleRevision[]
+  articles        Article[]         @relation("ArticleAuthor")
+  favorites       Favorite[]
+  matchImports    MatchImport[]
+  readHistory     ReadHistory[]
+  sessions        Session[]
+  subscription    Subscription?
 
   @@map("users")
 }
@@ -101,10 +99,10 @@ model Account {
   scope             String?
   id_token          String? @db.Text
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@index([userId], map: "accounts_userId_fkey")
   @@map("accounts")
 }
 
@@ -114,9 +112,9 @@ model Session {
   sessionToken String   @unique
   userId       String
   expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
+  @@index([userId], map: "sessions_userId_fkey")
   @@map("sessions")
 }
 
@@ -147,8 +145,7 @@ model Subscription {
   cancelAtPeriodEnd    Boolean            @default(false)
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
@@ -159,27 +156,24 @@ model Subscription {
 
 // Artigo do CMS com workflow de publicação
 model Article {
-  id          String        @id @default(cuid())
+  id          String            @id @default(cuid())
   title       String
-  slug        String        @unique
-  excerpt     String?       @db.Text
-  content     String        @db.LongText
+  slug        String            @unique
+  excerpt     String?           @db.Text
+  content     String            @db.LongText
   thumbnail   String?
   type        ArticleType
-  status      ArticleStatus @default(RASCUNHO)
+  status      ArticleStatus     @default(RASCUNHO)
   authorId    String
   categoryId  String?
   publishedAt DateTime?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  // Plano mínimo para acessar o artigo (controle de acesso)
-  minPlan Plan @default(FREE)
-
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  minPlan     Plan              @default(FREE)
+  revisions   ArticleRevision[]
+  tags        ArticleTag[]
   author      User              @relation("ArticleAuthor", fields: [authorId], references: [id])
   category    Category?         @relation(fields: [categoryId], references: [id])
-  tags        ArticleTag[]
-  revisions   ArticleRevision[]
   favorites   Favorite[]
   readHistory ReadHistory[]
 
@@ -192,24 +186,22 @@ model Article {
 
 // Categoria de artigos (ex: Futebol, Basquete, Estratégias)
 model Category {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  slug      String   @unique
-  createdAt DateTime @default(now())
-
-  articles Article[]
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  articles  Article[]
 
   @@map("categories")
 }
 
 // Tag para artigos (relação many-to-many implícita)
 model Tag {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  slug      String   @unique
-  createdAt DateTime @default(now())
-
-  articles ArticleTag[]
+  id        String       @id @default(cuid())
+  name      String       @unique
+  slug      String       @unique
+  createdAt DateTime     @default(now())
+  articles  ArticleTag[]
 
   @@map("tags")
 }
@@ -218,11 +210,11 @@ model Tag {
 model ArticleTag {
   articleId String
   tagId     String
-
-  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([articleId, tagId])
+  @@index([tagId], map: "article_tags_tagId_fkey")
   @@map("article_tags")
 }
 
@@ -235,9 +227,8 @@ model ArticleRevision {
   toStatus   ArticleStatus
   note       String?       @db.Text
   createdAt  DateTime      @default(now())
-
-  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  editor  User    @relation(fields: [editorId], references: [id])
+  article    Article       @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  editor     User          @relation(fields: [editorId], references: [id])
 
   @@index([articleId])
   @@index([editorId])
@@ -250,11 +241,11 @@ model Favorite {
   userId    String
   articleId String
   createdAt DateTime @default(now())
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, articleId])
+  @@index([articleId], map: "favorites_articleId_fkey")
   @@map("favorites")
 }
 
@@ -264,30 +255,530 @@ model ReadHistory {
   userId    String
   articleId String
   readAt    DateTime @default(now())
-
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, articleId])
   @@index([userId, readAt])
+  @@index([articleId], map: "read_history_articleId_fkey")
   @@map("read_history")
 }
 
 // Planilhas para download/compra
 model Spreadsheet {
   id          String   @id @default(cuid())
-  name        String          // Ex: "Premier League 2025/26"
+  name        String
   description String?  @db.Text
-  league      String          // Nome do campeonato
-  country     String?         // País/região
-  fileUrl     String          // Caminho do arquivo em public/ ou URL externa
-  fileName    String          // Nome do arquivo para download
-  fileSize    String?         // Ex: "2.4 MB"
-  isPremium   Boolean  @default(false) // false = grátis, true = paga
+  league      String
+  country     String?
+  fileUrl     String
+  fileName    String
+  fileSize    String?
+  isPremium   Boolean  @default(false)
   downloads   Int      @default(0)
-  order       Int      @default(0)     // Ordenação manual
+  order       Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@map("spreadsheets")
+}
+
+model Competition {
+  id              String          @id @default(cuid())
+  externalId      String          @unique
+  name            String
+  country         String
+  countryCode     String?
+  type            CompetitionType @default(LEAGUE)
+  tier            LeagueTier      @default(FREE)
+  active          Boolean         @default(true)
+  slug            String          @unique
+  hasTeamStats    Boolean         @default(false)
+  hasPlayerStats  Boolean         @default(false)
+  xgAvailable     Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  seasons         Season[]
+  imports         MatchImport[]
+
+  @@index([country])
+  @@index([type])
+}
+
+model Season {
+  id              String       @id @default(cuid())
+  externalId      String       @unique
+  competitionId   String
+  year            String
+  isCurrent       Boolean      @default(false)
+  startDate       DateTime?
+  endDate         DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  competition     Competition  @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+
+  teamSeasons     TeamSeason[]
+  matches         Match[]
+  syncLogs        SyncLog[]
+
+  @@unique([competitionId, year])
+  @@index([competitionId])
+  @@index([isCurrent])
+}
+
+
+
+model Team {
+  id              String    @id @default(cuid())
+  externalId      String    @unique
+  name            String
+  shortName       String?
+  country         String?
+  stadiumName     String?
+  stadiumCity     String?
+  stadiumCapacity Int?
+  logoUrl         String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  aliases         TeamAlias[]
+  teamSeasons     TeamSeason[]
+
+  homeMatches     Match[]     @relation("HomeTeam")
+  awayMatches     Match[]     @relation("AwayTeam")
+  playerStats     PlayerMatchStats[]
+  shots           Shot[]
+
+  @@index([country])
+  @@map("teams")
+}
+
+model TeamAlias {
+  id          String     @id @default(cuid())
+  teamId      String
+  alias       String
+  source      DataSource
+
+  team        Team       @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([alias, source])
+  @@index([teamId])
+  @@index([alias])
+}
+
+model TeamSeason {
+  id              String   @id @default(cuid())
+  teamId          String
+  seasonId        String
+
+  matchesPlayed   Int?
+  wins            Int?
+  draws           Int?
+  losses          Int?
+  points          Int?
+  position        Int?
+  goalsFor        Int?
+  goalsAgainst    Int?
+  goalDifference  Int?
+  form            String?
+
+  syncedAt        DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  team            Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  season          Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, seasonId])
+  @@index([seasonId])
+  @@index([teamId])
+  @@index([position])
+}
+
+
+
+model MatchImport {
+  id              String      @id @default(cuid())
+  competitionId   String
+  seasonId        String?
+  importedById    String
+  fileName        String?
+  syncMode        String?
+  rowsProcessed   Int
+  rowsCreated     Int
+  rowsUpdated     Int
+  rowsSkipped     Int
+  requestsUsed    Int         @default(0)
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now())
+
+  competition     Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  importedBy      User        @relation(fields: [importedById], references: [id])
+
+  @@index([competitionId])
+  @@index([importedById])
+  @@index([createdAt])
+  @@map("match_imports")
+}
+
+model ApiQuotaLog {
+  id             String   @id @default(cuid())
+  endpoint       String
+  competitionId  String?
+  requestCount   Int      @default(1)
+  responseStatus Int?
+  month          String
+  createdAt      DateTime @default(now())
+
+  @@index([month])
+  @@index([endpoint, month])
+  @@map("api_quota_logs")
+}
+
+model Match {
+  id              String       @id @default(cuid())
+  externalId      String       @unique
+  seasonId        String
+  homeTeamId      String
+  awayTeamId      String
+  round           Int?
+  status          MatchStatus  @default(SCHEDULED)
+  utcDate         DateTime
+  fthg            Int?
+  ftag            Int?
+  ftr             MatchResult?
+
+  venueName       String?
+  venueCity       String?
+  refereeName     String?
+
+  xgAvailable     Boolean      @default(false)
+  oddsAvailable   Boolean      @default(false)
+
+  dataSource      DataSource   @default(THESTATSAPI)
+  sourceFile      String?
+  syncedAt        DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  season          Season       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  homeTeam        Team         @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam        Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  stats           MatchStats?
+  odds            MatchOdds[]
+  playerStats     PlayerMatchStats[]
+  shots           Shot[]
+
+  @@index([seasonId, utcDate])
+  @@index([seasonId, round])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+  @@index([utcDate])
+  @@index([status])
+  @@index([dataSource])
+  @@map("matches")
+}
+
+model MatchStats {
+  id                  String   @id @default(cuid())
+  matchId             String   @unique
+
+  homeXg              Float?
+  awayXg              Float?
+  homeXgFirstHalf     Float?
+  awayXgFirstHalf     Float?
+  homeXgSecondHalf    Float?
+  awayXgSecondHalf    Float?
+
+  homePossession      Float?
+  awayPossession      Float?
+
+  homeShots           Int?
+  awayShots           Int?
+  homeShotsOnTarget   Int?
+  awayShotsOnTarget   Int?
+  homeShotsOffTarget  Int?
+  awayShotsOffTarget  Int?
+  homeShotsBlocked    Int?
+  awayShotsBlocked    Int?
+
+  homeCorners         Int?
+  awayCorners         Int?
+  homeCrosses         Int?
+  awayCrosses         Int?
+  homeDribbles        Int?
+  awayDribbles        Int?
+
+  homePassesTotal     Int?
+  awayPassesTotal     Int?
+  homePassesAccurate  Int?
+  awayPassesAccurate  Int?
+
+  homeDuelsTotal      Int?
+  awayDuelsTotal      Int?
+  homeDuelsWon        Int?
+  awayDuelsWon        Int?
+
+  homeClearances      Int?
+  awayClearances      Int?
+  homeInterceptions   Int?
+  awayInterceptions   Int?
+  homeTackles         Int?
+  awayTackles         Int?
+
+  homeSaves           Int?
+  awaySaves           Int?
+
+  homeFouls           Int?
+  awayFouls           Int?
+  homeYellowCards     Int?
+  awayYellowCards     Int?
+  homeRedCards        Int?
+  awayRedCards        Int?
+  homeOffsides        Int?
+  awayOffsides        Int?
+
+  syncedAt            DateTime?
+  createdAt           DateTime @default(now())
+
+  match               Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+}
+
+model MatchOdds {
+  id            String    @id @default(cuid())
+  matchId       String
+  bookmakerId   String
+  marketId      String
+  selection     String
+  line          Float?
+  oddsType      OddsType
+  odds          Float
+
+  createdAt     DateTime  @default(now())
+
+  match         Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  bookmaker     Bookmaker @relation(fields: [bookmakerId], references: [id])
+  market        Market    @relation(fields: [marketId], references: [id])
+
+  @@unique([matchId, bookmakerId, marketId, selection, line, oddsType])
+  @@index([matchId])
+  @@index([bookmakerId])
+  @@index([marketId])
+  @@index([matchId, bookmakerId])
+  @@index([matchId, marketId])
+}
+
+model Bookmaker {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  slug      String  @unique
+  isSharp   Boolean @default(false)
+  active    Boolean @default(true)
+
+  // Relação será adicionada no Bloco 4 quando MatchOdds for criado
+  odds      MatchOdds[]
+}
+
+model Market {
+  id        String  @id @default(cuid())
+  key       String  @unique
+  name      String
+  category  String
+
+  // Relação será adicionada no Bloco 4 quando MatchOdds for criado
+  odds      MatchOdds[]
+}
+
+model Player {
+  id            String          @id @default(cuid())
+  externalId    String          @unique
+  name          String
+  firstName     String?
+  lastName      String?
+  position      PlayerPosition?
+  dateOfBirth   String?
+  age           Int?
+  nationality   String?
+  heightCm      Int?
+  currentTeamId String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relações serão adicionadas no Bloco 5
+  matchStats      PlayerMatchStats[]
+  shots           Shot[]
+
+  @@index([currentTeamId])
+  @@index([nationality])
+  @@index([position])
+}
+
+model PlayerMatchStats {
+  id                  String   @id @default(cuid())
+  matchId             String
+  teamId              String
+  playerId            String
+
+  rating              Float?
+  minutesPlayed       Int?
+  started             Boolean  @default(false)
+  played              Boolean  @default(false)
+
+  passesTotal         Int?
+  passesAccurate      Int?
+  keyPasses           Int?
+
+  shotsTotal          Int?
+  shotsOnTarget       Int?
+  goals               Int?
+  expectedGoals       Float?
+
+  duelsTotal          Int?
+  duelsWon            Int?
+
+  tackles             Int?
+  interceptions       Int?
+  clearances          Int?
+
+  dribblesAttempted   Int?
+  dribblesSucceeded   Int?
+  foulsDrawn          Int?
+  foulsCommitted      Int?
+  yellowCards         Int?
+  redCards            Int?
+
+  createdAt           DateTime @default(now())
+
+  match               Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team                Team     @relation(fields: [teamId], references: [id])
+  player              Player   @relation(fields: [playerId], references: [id])
+
+  @@unique([matchId, playerId])
+  @@index([matchId])
+  @@index([playerId])
+  @@index([teamId])
+}
+
+model Shot {
+  id                  String        @id @default(cuid())
+  externalId          String        @unique
+  matchId             String
+  teamId              String
+  playerId            String
+
+  x                   Float
+  y                   Float
+  minute              Int
+  result              ShotResult
+  expectedGoals       Float?
+  situation           ShotSituation?
+  bodyPart            ShotBodyPart?
+  isGoal              Boolean       @default(false)
+  isOnTarget          Boolean       @default(false)
+  isHeaded            Boolean       @default(false)
+  isOutsideBox        Boolean       @default(false)
+  isPenalty           Boolean       @default(false)
+  goalMouthLocation   String?
+
+  createdAt           DateTime      @default(now())
+
+  match               Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team                Team          @relation(fields: [teamId], references: [id])
+  player              Player        @relation(fields: [playerId], references: [id])
+
+  @@index([matchId])
+  @@index([teamId])
+  @@index([playerId])
+}
+
+enum LeagueTier {
+  FREE
+  VIP
+}
+
+enum MatchResult {
+  H
+  D
+  A
+}
+
+enum DataSource {
+  THESTATSAPI
+  FOOTBALL_DATA
+  MANUAL
+}
+
+enum CompetitionType {
+  LEAGUE
+  CUP
+  TOURNAMENT
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  FINISHED
+  POSTPONED
+  CANCELLED
+}
+
+enum OddsType {
+  PREMATCH_OPENING
+  PREMATCH_CLOSING
+}
+
+enum PlayerPosition {
+  FORWARD
+  MIDFIELDER
+  DEFENDER
+  GOALKEEPER
+}
+
+enum ShotResult {
+  GOAL
+  SAVED
+  MISS
+  BLOCK
+  POST
+}
+
+enum ShotSituation {
+  REGULAR
+  SET_PIECE
+  FAST_BREAK
+}
+
+enum ShotBodyPart {
+  RIGHT_FOOT
+  LEFT_FOOT
+  HEAD
+}
+
+model ApiQuota {
+  id        String   @id @default(cuid())
+  date      DateTime @db.Date
+  used      Int
+  limit     Int
+  remaining Int
+  updatedAt DateTime @updatedAt
+
+  @@unique([date])
+  @@map("api_quotas")
+}
+
+model SyncLog {
+  id        String   @id @default(cuid())
+  seasonId  String
+  season    Season   @relation(fields: [seasonId], references: [id])
+  type      String                // 'PARTIDAS' | 'ODDS'
+  status    String                // 'RUNNING' | 'COMPLETED' | 'FAILED'
+  result    Json?                 // SyncResult serializado
+  error     String?   @db.Text
+  duration  Int?                  // ms
+  createdAt DateTime @default(now())
+
+  @@index([seasonId, createdAt])
+  @@map("sync_logs")
 }

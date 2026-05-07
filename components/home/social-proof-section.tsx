@@ -48,10 +48,10 @@ export function SocialProofSection() {
             <div className="text-sm md:text-base text-muted-foreground">seguidores no Instagram</div>
           </a>
 
-          {/* Desde 2022 */}
+          {/* Desde 2019 */}
           <div className="text-center p-6 bg-surface/30 rounded-xl border border-border flex flex-col items-center gap-3">
-            <Image src="/images/desde_2022.png" alt="Desde 2022" width={48} height={48} className="object-contain" />
-            <div className="text-3xl md:text-4xl font-extrabold text-text-primary">Desde 2022</div>
+            <Image src="/images/desde_2022.png" alt="Desde 2019" width={48} height={48} className="object-contain" />
+            <div className="text-3xl md:text-4xl font-extrabold text-text-primary">Desde 2019</div>
             <div className="text-sm md:text-base text-muted-foreground">construindo com a comunidade</div>
           </div>
         </div>

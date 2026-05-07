@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest'
+
 import { calcularProbUnderLinha, encontrarLambdaBisection } from '@/lib/ferramentas/over-under-linhas/poisson-linhas'
 
 describe('calcularProbUnderLinha', () => {

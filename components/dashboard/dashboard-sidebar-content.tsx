@@ -25,7 +25,10 @@ import {
   Trophy, 
   FileText, 
   FileEdit, 
-  Tags
+  Tags,
+  LineChart,
+  RefreshCw,
+  Gauge
 } from 'lucide-react'
 
 interface DashboardSidebarContentProps {
@@ -62,44 +65,24 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
       </SidebarGroup>
 
       <SidebarGroup>
-        <SidebarGroupLabel>CONTEÚDO</SidebarGroupLabel>
+        <SidebarGroupLabel>ANÁLISE ESPORTIVA</SidebarGroupLabel>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/planilhas'} tooltip="Planilhas">
-              <Link href="/dashboard/planilhas">
-                <FileSpreadsheet />
-                <span>Planilhas</span>
+            <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/ligas')} tooltip="Ligas">
+              <Link href="/dashboard/ligas">
+                <Trophy />
+                <span>Ligas</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/grupos-de-tips'} tooltip="Grupos de Tips">
-              <Link href="/dashboard/grupos-de-tips">
-                <MessageCircle />
-                <span>Grupos de Tips</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-        </SidebarMenu>
-      </SidebarGroup>
-
-      <SidebarGroup>
-        <SidebarGroupLabel>GESTÃO</SidebarGroupLabel>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/banca'} tooltip="Banca">
-              <Link href="/dashboard/banca">
-                <Wallet />
-                <span>Banca</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/metodos'} tooltip="Métodos">
-              <Link href="/dashboard/metodos">
-                <Calculator />
-                <span>Métodos</span>
+            <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/analises')} tooltip="Análises">
+              <Link href="/dashboard/analises" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <LineChart />
+                  <span>Análises</span>
+                </div>
+                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Em breve</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -146,6 +129,28 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
               <Link href="/dashboard/ferramentas/distribuicao">
                 <TrendingUp />
                 <span>Simulador de Distribuição</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarGroup>
+
+      <SidebarGroup>
+        <SidebarGroupLabel>GESTÃO</SidebarGroupLabel>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === '/dashboard/banca'} tooltip="Banca">
+              <Link href="/dashboard/banca">
+                <Wallet />
+                <span>Banca</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === '/dashboard/metodos'} tooltip="Métodos">
+              <Link href="/dashboard/metodos">
+                <Calculator />
+                <span>Métodos</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -208,6 +213,30 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
                 </SidebarMenuButton>
               </SidebarMenuItem>
             )}
+          </SidebarMenu>
+        </SidebarGroup>
+      )}
+
+      {isAdmin && (
+        <SidebarGroup>
+          <SidebarGroupLabel>ADMINISTRAÇÃO</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/sync')} tooltip="Sync Dados">
+                <Link href="/dashboard/admin/sync">
+                  <RefreshCw />
+                  <span>Sync Dados</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/quota')} tooltip="Quota API">
+                <Link href="/dashboard/admin/quota">
+                  <Gauge />
+                  <span>Quota API</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
       )}

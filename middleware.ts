@@ -45,6 +45,16 @@ export default auth((req) => {
     }
   }
 
+  // --- APIs protegidas da Fase 2 ---
+  if (pathname.startsWith('/api/ligas') || pathname.startsWith('/api/admin')) {
+    if (!session) {
+      return NextResponse.json(
+        { error: 'UNAUTHORIZED', message: 'Autenticação necessária' },
+        { status: 401 }
+      )
+    }
+  }
+
   return NextResponse.next()
 })
 
@@ -53,5 +63,7 @@ export const config = {
     '/dashboard/:path*',
     '/cms/:path*',
     '/api/artigos/:path*',
+    '/api/ligas/:path*',
+    '/api/admin/:path*',
   ],
 }

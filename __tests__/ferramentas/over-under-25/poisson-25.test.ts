@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest'
+
 import { probUnder25, encontrarLambdaIterativo } from '@/lib/ferramentas/over-under-25/poisson-25'
 
 describe('probUnder25', () => {

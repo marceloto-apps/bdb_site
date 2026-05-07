@@ -2,8 +2,8 @@
 
 # SPECS.md — Big Data Bet
 
-> **Versão:** 2.2 | **Atualizado:** 02/05/2026
-> **Referências:** PRD v1.4 · SCHEMA.md v2.1
+> **Versão:** 2.3 | **Atualizado:** 03/05/2026
+> **Referências:** PRD v1.5 · SCHEMA.md v2.2
 > **Escopo:** Fase 1 concluída, Fase 2 mapeada, Fase 3 especificada — especificações técnicas por item para implementação pelo agente
 > 
 
@@ -161,6 +161,12 @@ NEXT_PUBLIC_POSTHOG_HOST="<https://app.posthog.com>"
 
 # Seed
 SEED_ADMIN_PASSWORD=""
+
+# TheStatsAPI
+THESTATSAPI_KEY=""
+THESTATSAPI_BASE_URL="https://api.thestatsapi.com/api/football"
+THESTATSAPI_RATE_LIMIT="30"           # requests por minuto
+THESTATSAPI_MONTHLY_QUOTA="100000"    # requests por mês
 ```
 
 ### Checklist de Validação do Setup
@@ -1363,81 +1369,328 @@ function calcularPrevisao(
 ): Promise<PrevisaoConfronto>
 ```
 
-## 2B — Importação de Dados (Admin)
+## 2B — Ingestão de Dados (Híbrida: API + CSV)
 
-### Rota
+### Estratégia
+
+A TheStatsAPI é a fonte primária de dados. Todo dado buscado na API é imediatamente persistido no MySQL. Requisições subsequentes lêem exclusivamente do banco. O CSV do football-data.co.uk é mantido como fallback para importação offline e validação cruzada.
+
+### Estrutura de pastas
+
+```
+lib/ingest/
+├── thestatsapi/
+│   ├── client.ts          # Client HTTP com auth e rate limiting
+│   ├── rate-limiter.ts    # Controle de 30 req/min + quota mensal
+│   ├── types.ts           # Tipos das respostas da API
+│   ├── mappers.ts         # Conversão API response → Prisma models
+│   └── endpoints.ts       # Funções por endpoint (matches, odds, competitions)
+├── football-data/
+│   ├── csv-parser.ts      # Parser CSV (mantido do spec anterior)
+│   └── column-map.ts      # Mapeamento de colunas por tier
+├── sync-engine.ts         # Orquestrador de sincronização
+├── team-normalizer.ts     # Normalização de nomes entre fontes
+└── index.ts               # API pública
+```
+
+### Client TheStatsAPI — `lib/ingest/thestatsapi/client.ts`
+
+```typescript
+interface TheStatsApiConfig {
+  apiKey: string
+  baseUrl: string
+  rateLimit: number      // req/min (default: 30)
+  monthlyQuota: number   // req/mês (default: 100000)
+}
+
+interface ApiResponse<T> {
+  data: T
+  meta?: { page: number; per_page: number; total: number }
+}
+
+/**
+ * Client HTTP singleton para TheStatsAPI.
+ * - Bearer token via env
+ * - Rate limiting automático (30 req/min)
+ * - Tracking de quota mensal via ApiQuotaLog
+ * - Paginação automática
+ * - Retry com backoff em 429
+ */
+class TheStatsApiClient {
+  private queue: Array<() => Promise<void>> = []
+  private processing = false
+  private requestsThisMinute = 0
+
+  async get<T>(path: string, params?: Record<string, string>): Promise<ApiResponse<T>>
+  async getAllPages<T>(path: string, params?: Record<string, string>): Promise<T[]>
+  async getQuotaUsage(month?: string): Promise<{ used: number; limit: number; percent: number }>
+
+  private async throttle(): Promise<void>     // espera se 30 req/min atingido
+  private async checkQuota(): Promise<void>   // bloqueia se 100k/mês atingido
+  private async logRequest(endpoint: string, status: number): Promise<void>
+}
+```
+
+### Rate Limiter — `lib/ingest/thestatsapi/rate-limiter.ts`
+
+```typescript
+/**
+ * Token bucket rate limiter.
+ * Capacidade: 30 tokens, reposição: 1 token a cada 2 segundos.
+ * Se bucket vazio, aguarda até próximo token disponível.
+ */
+class RateLimiter {
+  constructor(private maxTokens: number = 30, private refillRateMs: number = 2000)
+  async acquire(): Promise<void>
+  getAvailableTokens(): number
+}
+```
+
+### Endpoints — `lib/ingest/thestatsapi/endpoints.ts`
+
+```typescript
+// Endpoints disponíveis e utilizados:
+
+// 1. Listar competições
+GET /competitions
+// Retorna lista de competições disponíveis
+
+// 2. Buscar partidas de uma competição
+GET /matches?competition_id={comp_id}&status=finished&limit=20&page={page}
+// Retorna partidas finalizadas com paginação
+
+// 3. Buscar fixtures (próximos jogos)
+GET /matches?competition_id={comp_id}&status=scheduled&limit=20
+// Retorna jogos agendados
+
+// 4. Buscar odds de uma partida
+GET /matches/{match_id}/odds
+// Retorna odds de 4 bookmakers × múltiplos mercados
+
+// 5. Buscar estatísticas de uma partida
+GET /matches/{match_id}
+// Retorna detalhes incluindo stats, xG, eventos
+```
+
+### Mappers — `lib/ingest/thestatsapi/mappers.ts`
+
+```typescript
+/**
+ * Interface exata do Payload recebido da TheStatsAPI
+ */
+export interface ApiMatch {
+  id: string
+  utc_date: string      // a API usa utc_date e não date
+  home_team: {          // aninhado, não na raiz
+    id: string
+    name: string
+  }
+  away_team: {
+    id: string
+    name: string
+  }
+  score?: {
+    home: number
+    away: number
+  }
+}
+
+/**
+ * Converte resposta da API para formato Prisma.
+ * Assegura o uso da chave composta externalId_leagueId para Teams
+ * e os mapeamentos homeXg/awayXg corretos.
+ */
+function mapApiMatchToPrisma(apiMatch: ApiMatch, leagueId: string): Prisma.MatchCreateInput
+
+/**
+ * Extrai odds de um array de bookmakers.
+ * Prioridade: Pinnacle > Bet365 > Betfair > Kambi
+ * Preenche campos legados (oddHome, oddDraw, oddAway) com Pinnacle.
+ */
+function extractOdds(bookmakers: ApiBookmaker[]): OddsFields
+
+/**
+ * Converte nome de time da API para nome normalizado.
+ * Exemplo: "Athletico Paranaense" → "Athletico-PR"
+ */
+function normalizeTeamName(apiName: string, leagueSlug: string): string
+```
+
+### Sync Engine — `lib/ingest/sync-engine.ts`
+
+```typescript
+interface SyncOptions {
+  leagueSlug: string
+  competitionId: string     // ex: "comp_4795"
+  mode: 'full' | 'incremental'
+  includeOdds: boolean
+  includeFuture: boolean    // buscar fixtures agendados
+}
+
+interface SyncResult {
+  matchesProcessed: number
+  matchesCreated: number
+  matchesUpdated: number
+  matchesSkipped: number
+  oddsUpdated: number
+  requestsUsed: number
+  errors: string[]
+}
+
+/**
+ * Orquestra a sincronização de uma liga.
+ *
+ * Modo FULL:
+ * 1. Busca TODAS as partidas da competição (com paginação)
+ * 2. Upsert de Teams por externalId
+ * 3. Upsert de Matches por externalId
+ * 4. Para cada match com odds_available, busca odds
+ * 5. Registra MatchImport com estatísticas
+ *
+ * Modo INCREMENTAL:
+ * 1. Busca partidas com data > último syncedAt da liga
+ * 2. Upsert apenas novos
+ * 3. Busca odds apenas de jogos sem odds no banco
+ * 4. Registra MatchImport
+ *
+ * Estimativa de requests por sync:
+ * - Full (380 jogos): ~20 (partidas) + ~380 (odds) = ~400 req
+ * - Incremental (10 jogos): ~2 (partidas) + ~10 (odds) = ~12 req
+ */
+async function syncLeague(options: SyncOptions): Promise<SyncResult>
+```
+
+### Rota de API — Sync
+
+```
+POST /api/admin/ligas/[slug]/sync
+Body: { mode: 'full' | 'incremental', includeOdds: boolean }
+Restrição: role ADMIN
+Response: SyncResult
+```
+
+### Rota de API — Upload CSV (mantida)
+
 ```
 POST /api/admin/ligas/[slug]/importar
 Body: FormData com arquivo CSV
 Restrição: role ADMIN
+Response: ImportResult
 ```
 
-### Fluxo
-1. Validar role ADMIN via requireAuth
-2. Parsear CSV com biblioteca `papaparse` (justificativa: padrão de mercado, leve)
-3. Validar colunas obrigatórias do football-data: Date, HomeTeam, AwayTeam, FTHG, FTAG, FTR, B365H/D/A
-4. Upsert de Teams (criar se não existir)
-5. Upsert de Matches por chave composta (date, homeTeamId, awayTeamId)
-6. Criar registro em MatchImport com estatísticas
-7. Retornar { rowsProcessed, rowsCreated, rowsUpdated, rowsSkipped }
+Mapeamento de colunas mantido conforme spec anterior (seção 2B original).
 
-### Mapeamento de Colunas por Tier
+### Rota de API — Quota
 
-O football-data.co.uk publica CSVs com estruturas diferentes por tier de liga. O parser deve lidar com ambos lendo apenas o **subset comum**, ignorando silenciosamente colunas extras do Tier 1.
+```
+GET /api/admin/quota
+Restrição: role ADMIN
+Response: { month: string, used: number, limit: number, percent: number, byEndpoint: Record<string, number> }
+```
 
-#### Colunas Obrigatórias (presentes em todos os tiers)
-| Coluna CSV | Campo Prisma | Tipo |
-| --- | --- | --- |
-| `Date` | `date` | DateTime (formato DD/MM/YYYY ou DD/MM/YY) |
-| `HomeTeam` | (lookup → Team.name) | String |
-| `AwayTeam` | (lookup → Team.name) | String |
-| `FTHG` | `fthg` | Int |
-| `FTAG` | `ftag` | Int |
-| `FTR` | `ftr` | MatchResult (H/D/A) |
+### Normalização de Nomes de Time
 
-#### Colunas Desejáveis (presentes na maioria dos tiers)
-| Coluna CSV | Campo Prisma | Observação |
-| --- | --- | --- |
-| `B365H` | `oddHome` | Odd Bet365 vitória mandante |
-| `B365D` | `oddDraw` | Odd Bet365 empate |
-| `B365A` | `oddAway` | Odd Bet365 vitória visitante |
-| `B365>2.5` | `oddOver25` | Odd Over 2.5 gols |
-| `B365<2.5` | `oddUnder25` | Odd Under 2.5 gols |
+```typescript
+// lib/ingest/team-normalizer.ts
 
-#### Colunas Ignoradas no MVP
-- HTHG, HTAG, HTR (resultado HT) — pode ser adicionado em fase futura
-- HS, AS, HST, AST, HC, AC, HF, AF, HY, AY, HR, AR (estatísticas Tier 1) — fora do escopo
-- Odds BTTS (B365BB, B365BNB) — raras, fora do escopo MVP
-- Odds Asian Handicap (B365AHH, B365AHA, AHh) — fora do escopo MVP
-- Odds de outras casas (BWH, IWH, PSCH, WHH, VCH, etc) — fora do escopo MVP
+/**
+ * Mapa de aliases para normalizar nomes entre fontes.
+ * Chave: nome exato que vem da API ou CSV.
+ * Valor: nome canônico usado no banco.
+ *
+ * Exemplos para Brasileirão:
+ * "Athletico Paranaense" → "Athletico-PR"
+ * "Atletico Mineiro" → "Atletico-MG"
+ * "Red Bull Bragantino" → "Bragantino"
+ *
+ * Esta tabela é carregada do banco (futuramente editável pelo admin).
+ * No MVP, hardcoded para o Brasileirão.
+ */
+const TEAM_ALIASES: Record<string, string> = { ... }
 
-#### Comportamento do Parser
-1. Detectar colunas presentes no header do CSV
-2. Validar que todas as **obrigatórias** existem → erro 400 se faltar
-3. Para **desejáveis** ausentes, salvar campo como `null` no banco
-4. Para **outras colunas** presentes (Tier 1), ignorar silenciosamente
-5. Registrar em `MatchImport.notes`: lista de colunas ignoradas e desejáveis ausentes
+function normalizeTeamName(rawName: string): string
+```
+
+### Validação Cruzada (API vs CSV)
+
+Procedimento manual pelo admin após importar dados de ambas as fontes:
+
+1. Importar Brasileirão A 2026 via API (sync full)
+2. Importar mesmo período via CSV do football-data
+3. Query de comparação: `SELECT * FROM Match WHERE leagueId = X GROUP BY date, homeTeamId` para detectar duplicatas e divergências
+4. Documentar diferenças encontradas (nomes de time, odds, datas)
+5. Ajustar tabela de aliases conforme necessário
 
 ## 2C — Telas e Componentes
 
-### Rota Principal
+### Rotas
 ```
 /dashboard/ligas                       → grid de ligas (MVP: só Brasileirão A)
 /dashboard/ligas/[slug]                → dashboard único da liga
-/cms/ligas/importar                    → tela de upload (ADMIN)
+/dashboard/analises                    → placeholder "Análises" (nome provisório) com abas preparadas
+/cms/ligas/sync                        → tela de sync via API (ADMIN)
+/cms/ligas/importar                    → tela de upload CSV (ADMIN, fallback)
+/cms/ligas/quota                       → dashboard de quota da API (ADMIN)
 ```
 
 ### Componentes
 | Componente | Localização | Responsabilidade |
-| --- | --- | --- |
-| `SeletorConfronto` | `components/ligas/SeletorConfronto.tsx` | Dropdown casa/visitante + filtros |
-| `SeletorModelo` | `components/ligas/SeletorModelo.tsx` | Toggle Poisson/ZIP/NB/DC |
+|---|---|---|
+| `SeletorConfronto` | `components/ligas/SeletorConfronto.tsx` | Dropdown casa/visitante + filtros expandidos |
+| `FiltroMes` | `components/ligas/FiltroMes.tsx` | Multi-select meses (JAN..DEZ) |
+| `FiltroFaixaOdds` | `components/ligas/FiltroFaixaOdds.tsx` | Seleção por faixa de odds com drag |
+| `FiltroRodadas` | `components/ligas/FiltroRodadas.tsx` | Range slider de rodadas |
+| `SeletorModelo` | `components/ligas/SeletorModelo.tsx` | Toggle AUTO/MANUAL + seletor de 4 modelos |
+| `BadgeModeloAuto` | `components/ligas/BadgeModeloAuto.tsx` | Badge com modelo selecionado + confiança (AIC) |
 | `PainelMedias` | `components/ligas/PainelMedias.tsx` | Replicação aba DASH |
 | `PainelMatrizPlacares` | `components/ligas/PainelMatrizPlacares.tsx` | Grid 11x11 |
 | `PainelMercados` | `components/ligas/PainelMercados.tsx` | 1X2, BTTS, O/U, AH |
 | `PainelMapaValor` | `components/ligas/PainelMapaValor.tsx` | ROI por faixa |
 | `PainelEvolucao` | `components/ligas/PainelEvolucao.tsx` | Gráfico Recharts |
-| `BotaoImportarCSV` | `components/ligas/BotaoImportarCSV.tsx` | Upload (ADMIN) |
+| `BotaoImportarCSV` | `components/ligas/BotaoImportarCSV.tsx` | Upload CSV (ADMIN) |
+| `SyncButton` | `components/ligas/SyncButton.tsx` | Botão de sync com loading + resultado |
+| `QuotaDashboard` | `components/ligas/QuotaDashboard.tsx` | Barra de progresso de quota mensal |
+
+## 2C.1 — Seleção Automática de Modelo (AIC)
+
+### Contrato
+
+```typescript
+interface ModeloRanking {
+  modelo: ModeloEstatistico
+  aic: number
+  logLikelihood: number
+  parametros: number
+  confianca: 'ALTA' | 'MEDIA' | 'BAIXA'
+}
+
+/**
+ * Calcula AIC para cada modelo e retorna ranking ordenado.
+ * AIC = -2 × logLikelihood + 2 × k (número de parâmetros)
+ *
+ * Parâmetros por modelo:
+ * - Poisson: k=2 (λH, λA)
+ * - ZIP: k=4 (λH, λA, πH, πA)
+ * - NB: k=4 (rH, pH, rA, pA)
+ * - Dixon-Coles: k=3 (λH, λA, ρ)
+ *
+ * Confiança:
+ * - ALTA: delta AIC entre 1° e 2° > 4
+ * - MEDIA: delta AIC entre 1° e 2° entre 2 e 4
+ * - BAIXA: delta AIC < 2 (modelos muito próximos)
+ */
+function rankearModelos(
+  jogos: Match[],
+  medias: MediasLigaCalculadas
+): ModeloRanking[]
+```
+
+### Critérios de seleção automática (do protótipo Brasil1)
+
+Além do AIC puro, considerar heurísticas validadas:
+- Var/Média > 1.15 **E** freq 0-0 > 8% → Dixon-Coles
+- Var/Média > 1.15 **E** freq 0-0 ≤ 8% → Binomial Negativa
+- Var/Média ≈ 1.0 → Poisson
 
 ## 2D — Validação contra Ground Truth
 
@@ -1450,9 +1703,9 @@ Criar arquivo `__tests__/analytics/poisson.test.ts` com casos de teste extraído
 Justificativas obrigatórias antes de incluir:
 
 | Lib | Uso | Justificativa |
-| --- | --- | --- |
+|---|---|---|
 | `papaparse` | Parsing CSV | Padrão de mercado, leve, sem deps |
-| (não há outras libs novas para Fase 2 — todos os cálculos estatísticos são implementados manualmente em TypeScript puro) | | |
+| *(nenhuma lib nova para a API)* | Client HTTP usa `fetch` nativo do Node 18+ | Sem dependência extra |
 
 ---
 

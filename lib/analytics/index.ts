@@ -1,1 +1,13 @@
-export { fatorial, poissonPmf, poissonCdf } from './poisson'
+export * from './medias'
+export * from './forca-time'
+export * from './poisson'
+export * from './zero-inflated'
+export * from './negative-binomial'
+export * from './dixon-coles'
+export * from './ev-calculator'
+export * from './model-selector'
+export * from './mapa-valor'
+export * from './types'
+export * from './lambda-calculators'
+
+// Módulo unificado para a Engine de Cálculo Estatístico

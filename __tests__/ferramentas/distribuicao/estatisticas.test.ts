@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest'
+
 import { normalPdf, gramCharlierPdf, gerarCurvasDistribuicao } from '@/lib/ferramentas/distribuicao/estatisticas'
 
 describe('normalPdf', () => {

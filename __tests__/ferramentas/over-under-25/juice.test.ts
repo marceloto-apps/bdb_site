@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest'
+
 import { extrairJuice25, calcularLinhas25 } from '@/lib/ferramentas/over-under-25/juice'
 
 describe('extrairJuice25', () => {

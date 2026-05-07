@@ -106,7 +106,7 @@ export async function GET(
       }
     }
 
-    for (const odd of latestOdds.values()) {
+    for (const odd of Array.from(latestOdds.values())) {
       const value = odd.odds >= 1.01 ? odd.odds : null
       
       if (odd.market.key === "1x2") {

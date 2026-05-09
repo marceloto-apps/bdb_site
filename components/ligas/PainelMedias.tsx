@@ -73,18 +73,18 @@ export function PainelMedias({
         {/* Linha de Gols */}
         <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
           <span className="font-bold uppercase text-[11px] tracking-widest text-muted-foreground/70 min-w-[140px] md:text-right">── Média Liga GOLS</span>
-          <span>Mandante: <span className="font-mono text-foreground font-semibold">{medias.liga.muH.toFixed(2)}</span></span>
+          <span>Mandante: <span className="font-mono text-foreground font-semibold">{medias.liga.muH.toFixed(2)}</span> <span className="text-[0.9em] text-muted-foreground/60">(Var: {medias.liga.varH.toFixed(2)})</span></span>
           <span className="hidden md:inline text-border">|</span>
-          <span>Visitante: <span className="font-mono text-foreground font-semibold">{medias.liga.muA.toFixed(2)}</span></span>
+          <span>Visitante: <span className="font-mono text-foreground font-semibold">{medias.liga.muA.toFixed(2)}</span> <span className="text-[0.9em] text-muted-foreground/60">(Var: {medias.liga.varA.toFixed(2)})</span></span>
         </div>
         
         {/* Linha de xG */}
         {xgDisponivel && ligaMediasXG && (
           <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
             <span className="font-bold uppercase text-[11px] tracking-widest text-muted-foreground/70 min-w-[140px] md:text-right">── Média Liga xG</span>
-            <span>Mandante: <span className="font-mono text-foreground font-semibold">{ligaMediasXG.muH.toFixed(2)}</span></span>
+            <span>Mandante: <span className="font-mono text-foreground font-semibold">{ligaMediasXG.muH.toFixed(2)}</span> <span className="text-[0.9em] text-muted-foreground/60">(Var: {ligaMediasXG.varH.toFixed(2)})</span></span>
             <span className="hidden md:inline text-border">|</span>
-            <span>Visitante: <span className="font-mono text-foreground font-semibold">{ligaMediasXG.muA.toFixed(2)}</span></span>
+            <span>Visitante: <span className="font-mono text-foreground font-semibold">{ligaMediasXG.muA.toFixed(2)}</span> <span className="text-[0.9em] text-muted-foreground/60">(Var: {ligaMediasXG.varA.toFixed(2)})</span></span>
           </div>
         )}
       </div>
@@ -236,7 +236,7 @@ export function PainelMedias({
               </div>
             </div>
             
-            <div className="bg-muted/10 px-4 py-2 border-t text-xs text-muted-foreground text-center">
+            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground">
               {medias.home.jogosCasa} jogos em casa
             </div>
           </Card>
@@ -385,7 +385,7 @@ export function PainelMedias({
               </div>
             </div>
             
-            <div className="bg-muted/10 px-4 py-2 border-t text-xs text-muted-foreground text-center">
+            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground">
               {medias.away.jogosFora} jogos fora
             </div>
           </Card>

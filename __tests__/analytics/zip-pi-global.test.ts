@@ -6,7 +6,7 @@ describe('ZIP Pi Global', () => {
     // muH = 2.0 (Poisson prob zero = exp(-2.0) = 0.135)
     // Se tivermos 0 placares zerados:
     const jogos = Array(10).fill({ fthg: 1, ftag: 1 }) as Match[]
-    const medias = { muH: 2.0, muA: 1.5, totalJogos: 10 }
+    const medias = { muH: 2.0, muA: 1.5, varH: 1.0, varA: 1.0, totalJogos: 10 }
     
     const { piH, piA } = estimarPiLiga(jogos, medias)
     expect(piH).toBe(0)
@@ -26,7 +26,7 @@ describe('ZIP Pi Global', () => {
     // Supondo médias de 1.0 gol (Poisson prob zero = exp(-1.0) ≈ 0.367)
     // pi = freq_observada - prob_teórica = 0.5 - 0.367 = 0.132...
     
-    const medias = { muH: 1.0, muA: 1.0, totalJogos: 10 }
+    const medias = { muH: 1.0, muA: 1.0, varH: 1.0, varA: 1.0, totalJogos: 10 }
     
     const { piH, piA } = estimarPiLiga(jogos, medias)
     expect(piH).toBeCloseTo(0.5 - Math.exp(-1.0), 3)

@@ -5,14 +5,12 @@ import { AlertCircle, AlertTriangle, Info } from 'lucide-react'
 interface BannerModeloWarningProps {
   nbWarning: 'FALLBACK_PARCIAL_HOME' | 'FALLBACK_PARCIAL_AWAY' | 'FALLBACK_TOTAL' | null
   rhoClamped: boolean
-  modeloAutoConfianca?: 'ALTA' | 'MEDIA' | 'BAIXA' | null
   modeloSelecionado: string
 }
 
 export function BannerModeloWarning({
   nbWarning,
   rhoClamped,
-  modeloAutoConfianca,
   modeloSelecionado
 }: BannerModeloWarningProps) {
   const alerts = []
@@ -56,18 +54,6 @@ export function BannerModeloWarning({
     )
   }
 
-  // 3. Confiança do AUTO
-  if (modeloAutoConfianca === 'BAIXA') {
-    alerts.push(
-      <Alert key="auto-baixa" variant="default" className="bg-blue-50 border-blue-200 text-blue-900">
-        <Info className="h-4 w-4 stroke-blue-600" />
-        <AlertTitle className="text-blue-800">Baixa Confiança Estatística</AlertTitle>
-        <AlertDescription>
-          Os modelos estão muito próximos em precisão (Delta AIC &lt; 2). Considere avaliar outros modelos manualmente para este confronto específico.
-        </AlertDescription>
-      </Alert>
-    )
-  }
 
   if (alerts.length === 0) return null
 

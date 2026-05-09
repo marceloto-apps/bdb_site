@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { useLeagueFilters } from '@/lib/hooks/useLeagueFilters'
 import { SeletorConfronto } from '@/components/ligas/SeletorConfronto'
+import { FiltrosAvancados } from '@/components/ligas/FiltrosAvancados'
 import { SeletorModelo } from '@/components/ligas/SeletorModelo'
 import { SeletorLambda } from '@/components/ligas/SeletorLambda'
 import { PainelMedias } from '@/components/ligas/PainelMedias'
@@ -32,7 +33,7 @@ interface PartidaSerializada {
 interface DashboardLigaClientProps {
   liga: { id: string; name: string; slug: string; country: string | null; logoUrl: string | null; temporada: string }
   times: TimeOption[]
-  mediasLiga: { muH: number; muA: number; totalJogos: number } | null
+  mediasLiga: { muH: number; muA: number; varH: number; varA: number; totalJogos: number } | null
   maxRodada: number
   totalJogos: number
   partidasIniciais: PartidaSerializada[]
@@ -151,12 +152,19 @@ export function DashboardLigaClient({
 
       {/* Seletor de Confronto */}
       <SeletorConfronto
+        slug={liga.slug}
         times={times}
+        onConfrontoDefinido={(mandanteId, visitanteId, fixtureId) => {
+          handleFiltrosChange({ homeTeamId: mandanteId, awayTeamId: visitanteId })
+        }}
+        onCalcular={handleCalcular}
+        isCalculando={isCalculating}
+      />
+
+      <FiltrosAvancados 
         filtros={filtros}
         maxRodada={maxRodada}
         onFiltrosChange={handleFiltrosChange}
-        onCalcular={handleCalcular}
-        isCalculating={isCalculating}
       />
 
       {/* Mensagem de erro */}
@@ -173,7 +181,6 @@ export function DashboardLigaClient({
           <BannerModeloWarning 
             nbWarning={previsao.nbWarning}
             rhoClamped={previsao.rhoClamped}
-            modeloAutoConfianca={previsao.modeloAuto?.confianca}
             modeloSelecionado={previsao.modelo}
           />
 
@@ -190,19 +197,18 @@ export function DashboardLigaClient({
             xgDisponivel={previsao.xgDisponivel}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-stretch">
-            {/* Modelos — 3 de 5 colunas = 60% — ESQUERDA */}
-            <div className="lg:col-span-3">
+          <div className="grid grid-cols-1 lg:grid-cols-7 gap-4 items-stretch">
+            {/* Modelos — 4 de 7 colunas = ~57% — ESQUERDA */}
+            <div className="lg:col-span-4">
               <SeletorModelo
                 modo={modelo}
-                modeloAutoResult={previsao.modeloAuto}
                 onChange={handleModeloChange}
                 warnings={previsao.warnings}
               />
             </div>
 
-            {/* Lambdas — 2 de 5 colunas = 40% — DIREITA */}
-            <div className="lg:col-span-2">
+            {/* Lambdas — 3 de 7 colunas = ~43% — DIREITA */}
+            <div className="lg:col-span-3">
               <SeletorLambda
                 todosLambdas={previsao.todosLambdas}
                 composicao={previsao.composicao}

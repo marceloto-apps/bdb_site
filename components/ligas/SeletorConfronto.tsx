@@ -1,201 +1,198 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
-import { FiltrosLiga, TimeOption } from '@/types/liga'
+import React, { useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { FiltroRodadas } from './FiltroRodadas'
-import { FiltroMes } from './FiltroMes'
-import { FiltroFaixaOdds } from './FiltroFaixaOdds'
-import { Swords, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Swords, Loader2, Calendar } from 'lucide-react'
+import { useProximasPartidas } from '@/lib/hooks/useProximasPartidas'
 
-interface SeletorConfrontoProps {
-  times: TimeOption[]
-  filtros: FiltrosLiga
-  maxRodada: number
-  onFiltrosChange: (filtros: Partial<FiltrosLiga>) => void
+export interface SeletorConfrontoProps {
+  slug: string
+  times: Array<{ id: string; name: string; shortName: string | null; logo: string | null }>
+  onConfrontoDefinido: (mandanteId: string, visitanteId: string, fixtureId?: string) => void
   onCalcular: () => void
-  isCalculating: boolean
-  seletorModelo?: React.ReactNode
+  isCalculando: boolean
 }
 
 export function SeletorConfronto({
+  slug,
   times,
-  filtros,
-  maxRodada,
-  onFiltrosChange,
+  onConfrontoDefinido,
   onCalcular,
-  isCalculating,
-  seletorModelo,
+  isCalculando
 }: SeletorConfrontoProps) {
-  const [isOpen, setIsOpen] = useState(false)
+  const { partidas, loading, error } = useProximasPartidas(slug, 2)
+  
+  const [mandanteId, setMandanteId] = useState<string | null>(null)
+  const [visitanteId, setVisitanteId] = useState<string | null>(null)
+  const [fixtureId, setFixtureId] = useState<string | undefined>(undefined)
 
-  const podeCalcular = filtros.homeTeamId !== null && filtros.awayTeamId !== null
+  const handleSelectMandante = (id: string) => {
+    setMandanteId(id)
+    setFixtureId(undefined) // Limpa fixtureId pois é seleção manual
+    if (visitanteId) {
+      onConfrontoDefinido(id, visitanteId, undefined)
+    }
+  }
 
-  const activeFiltersCount = useMemo(() => {
-    let count = 0
-    if (filtros.roundFrom !== null || filtros.roundTo !== null) count++
-    if (filtros.months.length > 0 && filtros.months.length < 12) count++
-    
-    const oddsCasaChanged = filtros.oddsCasa.some(f => !f.selected)
-    if (oddsCasaChanged) count++
-    
-    const oddsVisChanged = filtros.oddsVisitante.some(f => !f.selected)
-    if (oddsVisChanged) count++
-    
-    return count
-  }, [filtros])
+  const handleSelectVisitante = (id: string) => {
+    setVisitanteId(id)
+    setFixtureId(undefined) // Limpa fixtureId pois é seleção manual
+    if (mandanteId) {
+      onConfrontoDefinido(mandanteId, id, undefined)
+    }
+  }
 
-  const timesOptionsCasa = times.filter(t => t.id !== filtros.awayTeamId)
-  const timesOptionsVisitante = times.filter(t => t.id !== filtros.homeTeamId)
+  const handleCliqueFutura = (partida: any) => {
+    setMandanteId(partida.homeTeam.id)
+    setVisitanteId(partida.awayTeam.id)
+    setFixtureId(partida.id)
+    onConfrontoDefinido(partida.homeTeam.id, partida.awayTeam.id, partida.id)
+  }
+
+  const podeCalcular = mandanteId !== null && visitanteId !== null
+
+  const timesOptionsCasa = times.filter(t => t.id !== visitanteId)
+  const timesOptionsVisitante = times.filter(t => t.id !== mandanteId)
 
   return (
-    <div className="flex flex-col gap-3 p-4 md:p-5 bg-card border rounded-lg shadow-sm">
-      {/* Barra principal — tudo em 1 linha no desktop */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-        
-        {/* Grupo: seletores de times */}
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="flex-1 min-w-0">
-            <Select 
-              value={filtros.homeTeamId || undefined} 
-              onValueChange={(val) => onFiltrosChange({ homeTeamId: val })}
-            >
-              <SelectTrigger className="w-full h-10 text-sm md:text-base">
-                <SelectValue placeholder="Selecione o mandante" />
-              </SelectTrigger>
-              <SelectContent>
-                {timesOptionsCasa.map(t => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-full bg-muted">
-            <Swords className="w-4 h-4 text-muted-foreground" />
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <Select 
-              value={filtros.awayTeamId || undefined} 
-              onValueChange={(val) => onFiltrosChange({ awayTeamId: val })}
-            >
-              <SelectTrigger className="w-full h-10 text-sm md:text-base">
-                <SelectValue placeholder="Selecione o visitante" />
-              </SelectTrigger>
-              <SelectContent>
-                {timesOptionsVisitante.map(t => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {seletorModelo && (
-          <>
-            {/* Separador vertical (só desktop) */}
-            <div className="hidden lg:block w-px h-8 bg-border shrink-0" />
-            
-            {/* Grupo modelo + botão */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between lg:justify-start w-full lg:w-auto">
-              <div className="shrink-0 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
-                {seletorModelo}
-              </div>
-              <Button 
-                size="default" 
-                variant="default" 
-                className="shrink-0 whitespace-nowrap h-10"
-                disabled={!podeCalcular || isCalculating}
-                onClick={onCalcular}
-              >
-                {isCalculating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Calculando...
-                  </>
-                ) : (
-                  'Calcular Previsão'
-                )}
-              </Button>
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-4">
+      {/* Coluna Esquerda: Próximas Partidas */}
+      <Card className="flex flex-col shadow-sm">
+        <CardHeader className="pb-3 border-b bg-muted/20">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Calendar className="w-4 h-4" />
+            Próximas Partidas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 flex-1 overflow-y-auto max-h-[260px]">
+          {loading ? (
+            <div className="p-4 space-y-4">
+              {[1, 2, 3].map(i => (
+                <Skeleton key={i} className="h-16 w-full rounded-md" />
+              ))}
             </div>
-          </>
-        )}
+          ) : error ? (
+            <div className="p-6 text-center text-sm text-destructive">{error}</div>
+          ) : partidas.length === 0 ? (
+            <div className="p-8 text-center text-sm text-muted-foreground flex flex-col items-center justify-center h-full">
+              <Calendar className="w-8 h-8 mb-3 opacity-20" />
+              <p>Nenhuma partida agendada encontrada.</p>
+              <p className="text-xs mt-1">Utilize a seleção manual ao lado.</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {partidas.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => handleCliqueFutura(p)}
+                  className={`w-full p-4 flex flex-col hover:bg-muted/50 transition-colors text-left ${fixtureId === p.id ? 'bg-muted border-l-4 border-l-primary' : ''}`}
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <Badge variant="outline" className="text-[10px] uppercase font-semibold">Rodada {p.round}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(p.date).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {p.homeTeam.logo ? (
+                        <img src={p.homeTeam.logo} alt={p.homeTeam.name} className="w-5 h-5 object-contain shrink-0" />
+                      ) : <div className="w-5 h-5 bg-muted rounded-full shrink-0" />}
+                      <span className="text-sm font-medium truncate">{p.homeTeam.shortName || p.homeTeam.name}</span>
+                    </div>
+                    <span className="text-[10px] font-medium text-muted-foreground px-1 uppercase">vs</span>
+                    <div className="flex items-center justify-end gap-2 flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate text-right">{p.awayTeam.shortName || p.awayTeam.name}</span>
+                      {p.awayTeam.logo ? (
+                        <img src={p.awayTeam.logo} alt={p.awayTeam.name} className="w-5 h-5 object-contain shrink-0" />
+                      ) : <div className="w-5 h-5 bg-muted rounded-full shrink-0" />}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {!seletorModelo && (
+      {/* Coluna Direita: Escolha Manual */}
+      <Card className="flex flex-col shadow-sm">
+        <CardHeader className="pb-3 border-b bg-muted/20">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Swords className="w-4 h-4" />
+            Escolha de Confronto
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-5 flex-1 flex flex-col justify-between gap-6">
+          <div className="space-y-6">
+            {/* Selects */}
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Mandante</label>
+                <Select value={mandanteId || undefined} onValueChange={handleSelectMandante}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o mandante" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timesOptionsCasa.map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center justify-center shrink-0 w-8 h-8 rounded-full bg-muted mt-5">
+                <span className="text-xs font-semibold text-muted-foreground">VS</span>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Visitante</label>
+                <Select value={visitanteId || undefined} onValueChange={handleSelectVisitante}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o visitante" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timesOptionsVisitante.map(t => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Resumo */}
+            {podeCalcular && (
+              <div className="bg-muted/30 rounded-lg p-4 border border-dashed flex flex-col items-center justify-center gap-3">
+                <div className="flex items-center justify-center gap-4 text-center">
+                  <span className="font-semibold">{times.find(t => t.id === mandanteId)?.name}</span>
+                  <span className="text-muted-foreground font-light text-sm">x</span>
+                  <span className="font-semibold">{times.find(t => t.id === visitanteId)?.name}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <Button 
-            size="default" 
-            variant="default" 
-            className="shrink-0 whitespace-nowrap mt-2 lg:mt-0 h-10 w-full lg:w-auto"
-            disabled={!podeCalcular || isCalculating}
+            size="lg" 
+            className="w-full mt-auto"
+            disabled={!podeCalcular || isCalculando}
             onClick={onCalcular}
           >
-            {isCalculating ? (
+            {isCalculando ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Calculando...
+                Calculando Previsão...
               </>
             ) : (
               'Calcular Previsão'
             )}
           </Button>
-        )}
-      </div>
-
-      {/* Filtros Avançados */}
-      <Collapsible open={isOpen} onOpenChange={setIsOpen} className="w-full">
-        <CollapsibleTrigger asChild>
-          <Button variant="ghost" className="w-fit p-0 h-auto hover:bg-transparent text-muted-foreground hover:text-foreground">
-            <span className="flex items-center gap-2 font-medium text-sm">
-              Filtros Avançados
-              {activeFiltersCount > 0 && (
-                <Badge variant="secondary" className="px-1.5 py-0 min-w-5 h-5 flex items-center justify-center">
-                  {activeFiltersCount}
-                </Badge>
-              )}
-              {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </span>
-          </Button>
-        </CollapsibleTrigger>
-        
-        <CollapsibleContent className="pt-4 pb-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="flex flex-col gap-6">
-              <FiltroRodadas 
-                min={1} 
-                max={maxRodada} 
-                valueFrom={filtros.roundFrom} 
-                valueTo={filtros.roundTo} 
-                onChange={(from, to) => onFiltrosChange({ roundFrom: from, roundTo: to })} 
-              />
-              <FiltroMes 
-                selectedMonths={filtros.months} 
-                onChange={(months) => onFiltrosChange({ months })} 
-              />
-            </div>
-            
-            <div className="flex flex-col gap-6">
-              <FiltroFaixaOdds 
-                label="Odds Casa (Pinnacle)" 
-                faixas={filtros.oddsCasa} 
-                onChange={(faixas) => onFiltrosChange({ oddsCasa: faixas })} 
-              />
-              <FiltroFaixaOdds 
-                label="Odds Visitante (Pinnacle)" 
-                faixas={filtros.oddsVisitante} 
-                onChange={(faixas) => onFiltrosChange({ oddsVisitante: faixas })} 
-              />
-            </div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
+        </CardContent>
+      </Card>
     </div>
   )
 }

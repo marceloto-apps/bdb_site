@@ -4,21 +4,18 @@ import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { BadgeModeloAuto } from './BadgeModeloAuto'
-import { ModoModelo, ModeloRankingUI } from '@/types/liga'
+import { ModoModelo } from '@/types/liga'
 import { Info, AlertTriangle } from 'lucide-react'
 
 interface SeletorModeloProps {
   modo: ModoModelo
-  modeloAutoResult: ModeloRankingUI | null
   onChange: (modo: ModoModelo) => void
   warnings?: string[]
 }
 
-export function SeletorModelo({ modo, modeloAutoResult, onChange, warnings = [] }: SeletorModeloProps) {
+export function SeletorModelo({ modo, onChange, warnings = [] }: SeletorModeloProps) {
   
   const models = [
-    { key: 'AUTO' as ModoModelo, label: 'AUTO (AIC)', desc: 'Avalia qual modelo estatístico melhor explica o cenário recente da liga baseado em métricas de probabilidade máxima (AIC).' },
     { key: 'POISSON' as ModoModelo, label: 'Poisson Simples', desc: 'Modelo clássico — médias puras da liga (compatível com a planilha)' },
     { key: 'DIXON_COLES' as ModoModelo, label: 'Dixon-Coles', desc: 'Aplica decaimento temporal e corrige placares baixos correlacionados (ex: 1x0, 0x0)' },
     { key: 'ZIP' as ModoModelo, label: 'ZIP', desc: 'Corrige excesso de jogos 0×0 em ligas com perfil defensivo' },
@@ -47,7 +44,7 @@ export function SeletorModelo({ modo, modeloAutoResult, onChange, warnings = [] 
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
-        <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-3 flex-1">
+        <div className="grid grid-cols-2 xl:grid-cols-4 2xl:grid-cols-4 gap-3 flex-1">
           {models.map((m) => {
             const isAtivo = modo === m.key
             return (
@@ -60,11 +57,6 @@ export function SeletorModelo({ modo, modeloAutoResult, onChange, warnings = [] 
                     <span className="text-sm font-semibold leading-tight pr-1">
                       {m.label}
                     </span>
-                    {m.key === 'AUTO' && modeloAutoResult && isAtivo && (
-                      <div className="mt-1">
-                        <BadgeModeloAuto modelo={modeloAutoResult.modelo} confianca={modeloAutoResult.confianca} size="sm" />
-                      </div>
-                    )}
                   </div>
                   <TooltipProvider>
                     <Tooltip>

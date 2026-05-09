@@ -205,6 +205,24 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
     ? "h-8 text-center bg-muted/50 border-transparent text-muted-foreground focus-visible:ring-0 cursor-not-allowed" 
     : "h-8 text-center"
 
+  const getJuice = (odds: (number | null | undefined)[]) => {
+    if (odds.some(o => !o || o <= 1)) return null;
+    const sum = odds.reduce((acc, val) => acc + (1 / val!), 0);
+    return ((sum - 1) * 100).toFixed(1) + '%';
+  }
+
+  const renderJuice = (odds: (number | null | undefined)[]) => {
+    const juice = getJuice(odds);
+    if (!juice) {
+      return <div className="h-8 flex items-center justify-center text-muted-foreground/30 text-xs">-</div>;
+    }
+    return (
+      <div className="h-8 flex items-center justify-center text-sm font-bold text-amber-500 bg-amber-500/10 rounded w-full">
+        {juice}
+      </div>
+    );
+  }
+
   return (
     <Card className="flex flex-col h-full bg-card shadow-sm">
       <CardHeader className="pb-3 border-b flex flex-row items-center justify-between space-y-0 p-4 md:p-6">
@@ -255,36 +273,43 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
             <Label className="text-xs font-bold text-muted-foreground">RESULTADO (1X2)</Label>
             {isReadOnly && <Lock className="w-3 h-3 text-muted-foreground" />}
           </div>
-          <div className="grid grid-cols-3 gap-2">
-            <div>
-              <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Casa</Label>
-              <Input 
-                type="number" step="0.01" min="1.01" 
-                className={inputClass} readOnly={isReadOnly}
-                value={getInputValue('x1x2', 'home', '', localOdds.x1x2.home)}
-                onChange={(e) => handleOddChange('x1x2', 'home', '', e.target.value)}
-                onBlur={() => handleBlur('x1x2', 'home', '')}
-              />
+          <div className="grid grid-cols-[1fr_60px] gap-2 items-end">
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Casa</Label>
+                <Input 
+                  type="number" step="0.01" min="1.01" 
+                  className={inputClass} readOnly={isReadOnly}
+                  value={getInputValue('x1x2', 'home', '', localOdds.x1x2.home)}
+                  onChange={(e) => handleOddChange('x1x2', 'home', '', e.target.value)}
+                  onBlur={() => handleBlur('x1x2', 'home', '')}
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Empate</Label>
+                <Input 
+                  type="number" step="0.01" min="1.01" 
+                  className={inputClass} readOnly={isReadOnly}
+                  value={getInputValue('x1x2', 'draw', '', localOdds.x1x2.draw)}
+                  onChange={(e) => handleOddChange('x1x2', 'draw', '', e.target.value)}
+                  onBlur={() => handleBlur('x1x2', 'draw', '')}
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Visitante</Label>
+                <Input 
+                  type="number" step="0.01" min="1.01" 
+                  className={inputClass} readOnly={isReadOnly}
+                  value={getInputValue('x1x2', 'away', '', localOdds.x1x2.away)}
+                  onChange={(e) => handleOddChange('x1x2', 'away', '', e.target.value)}
+                  onBlur={() => handleBlur('x1x2', 'away', '')}
+                />
+              </div>
             </div>
+            
             <div>
-              <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Empate</Label>
-              <Input 
-                type="number" step="0.01" min="1.01" 
-                className={inputClass} readOnly={isReadOnly}
-                value={getInputValue('x1x2', 'draw', '', localOdds.x1x2.draw)}
-                onChange={(e) => handleOddChange('x1x2', 'draw', '', e.target.value)}
-                onBlur={() => handleBlur('x1x2', 'draw', '')}
-              />
-            </div>
-            <div>
-              <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Visitante</Label>
-              <Input 
-                type="number" step="0.01" min="1.01" 
-                className={inputClass} readOnly={isReadOnly}
-                value={getInputValue('x1x2', 'away', '', localOdds.x1x2.away)}
-                onChange={(e) => handleOddChange('x1x2', 'away', '', e.target.value)}
-                onBlur={() => handleBlur('x1x2', 'away', '')}
-              />
+              <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Juice</Label>
+              {renderJuice([localOdds.x1x2.home, localOdds.x1x2.draw, localOdds.x1x2.away])}
             </div>
           </div>
         </div>
@@ -295,26 +320,33 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
             <Label className="text-xs font-bold text-muted-foreground">AMBAS MARCAM (BTTS)</Label>
             {isReadOnly && <Lock className="w-3 h-3 text-muted-foreground" />}
           </div>
-          <div className="grid grid-cols-2 gap-2 max-w-[200px]">
-            <div>
-              <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Sim</Label>
-              <Input 
-                type="number" step="0.01" min="1.01" 
-                className={inputClass} readOnly={isReadOnly}
-                value={getInputValue('btts', 'yes', '', localOdds.btts.yes)}
-                onChange={(e) => handleOddChange('btts', 'yes', '', e.target.value)}
-                onBlur={() => handleBlur('btts', 'yes', '')}
-              />
+          <div className="grid grid-cols-[1fr_60px] gap-2 items-end">
+            <div className="grid grid-cols-2 gap-2 max-w-[200px]">
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Sim</Label>
+                <Input 
+                  type="number" step="0.01" min="1.01" 
+                  className={inputClass} readOnly={isReadOnly}
+                  value={getInputValue('btts', 'yes', '', localOdds.btts.yes)}
+                  onChange={(e) => handleOddChange('btts', 'yes', '', e.target.value)}
+                  onBlur={() => handleBlur('btts', 'yes', '')}
+                />
+              </div>
+              <div>
+                <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Não</Label>
+                <Input 
+                  type="number" step="0.01" min="1.01" 
+                  className={inputClass} readOnly={isReadOnly}
+                  value={getInputValue('btts', 'no', '', localOdds.btts.no)}
+                  onChange={(e) => handleOddChange('btts', 'no', '', e.target.value)}
+                  onBlur={() => handleBlur('btts', 'no', '')}
+                />
+              </div>
             </div>
+            
             <div>
-              <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Não</Label>
-              <Input 
-                type="number" step="0.01" min="1.01" 
-                className={inputClass} readOnly={isReadOnly}
-                value={getInputValue('btts', 'no', '', localOdds.btts.no)}
-                onChange={(e) => handleOddChange('btts', 'no', '', e.target.value)}
-                onBlur={() => handleBlur('btts', 'no', '')}
-              />
+              <Label className="text-[10px] uppercase text-muted-foreground mb-1 block text-center">Juice</Label>
+              {renderJuice([localOdds.btts.yes, localOdds.btts.no])}
             </div>
           </div>
         </div>
@@ -326,16 +358,18 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
             {isReadOnly && <Lock className="w-3 h-3 text-muted-foreground" />}
           </div>
           
-          <div className="grid grid-cols-[50px_1fr_1fr] gap-2 mb-1">
+          <div className="grid grid-cols-[50px_1fr_1fr_60px] gap-2 mb-1">
             <div className="text-[10px] uppercase text-muted-foreground text-center font-semibold">Linha</div>
             <div className="text-[10px] uppercase text-muted-foreground text-center font-semibold">Over</div>
             <div className="text-[10px] uppercase text-muted-foreground text-center font-semibold">Under</div>
+            <div className="text-[10px] uppercase text-muted-foreground text-center font-semibold">Juice</div>
           </div>
           
           <div className="space-y-2">
-            {linhasOU.map((linha) => (
-              <div key={linha} className="grid grid-cols-[50px_1fr_1fr] gap-2 items-center">
-                <div className="text-sm font-bold text-center bg-muted/30 py-1.5 rounded">{linha}</div>
+            {linhasOU.map((linha) => {
+              return (
+              <div key={linha} className="grid grid-cols-[50px_1fr_1fr_60px] gap-2 items-center">
+                <div className="text-sm font-bold text-center bg-muted/30 h-8 flex items-center justify-center rounded">{linha}</div>
                 <Input 
                   type="number" step="0.01" min="1.01" 
                   className={inputClass} readOnly={isReadOnly}
@@ -350,8 +384,9 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
                   onChange={(e) => handleOddChange('overUnder', linha, 'under', e.target.value)}
                   onBlur={() => handleBlur('overUnder', linha, 'under')}
                 />
+                {renderJuice([localOdds.overUnder[linha]?.over, localOdds.overUnder[linha]?.under])}
               </div>
-            ))}
+            )})}
           </div>
         </div>
 

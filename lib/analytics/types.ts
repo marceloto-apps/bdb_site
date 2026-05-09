@@ -21,6 +21,8 @@ export interface MediasTimeXG {
 export interface MediasLigaXG {
   muH: number       // média de xG do mandante na liga
   muA: number       // média de xG do visitante na liga
+  varH: number
+  varA: number
   totalJogos: number
 }
 
@@ -71,7 +73,7 @@ export interface LambdaCalculationParams {
 
 export interface PrevisaoConfig {
   lambdaMethod: LambdaMethod
-  modelo: ModeloEstatistico | 'AUTO'
+  modelo: ModeloEstatistico
   homeTeamId: string
   awayTeamId: string
   filtros?: {

@@ -71,18 +71,44 @@ export async function GET(
       )
     }
 
-    // 4. Buscar MatchOdds
-    const odds = await prisma.matchOdds.findMany({
+    // 4. Buscar Odds
+    // Primeiro tenta buscar do histórico em tempo real (OddsMovement) que é onde ficam as atualizações recentes
+    const oddsMovements = await prisma.oddsMovement.findMany({
       where: {
         matchId: match.id,
         bookmakerId: bookmaker.id,
       },
-      include: {
+      select: {
+        id: true,
+        selection: true,
+        line: true,
+        odds: true,
         market: true,
+      },
+      orderBy: {
+        capturedAt: "desc",
       },
     })
 
-    if (odds.length === 0) {
+    let oddsToProcess: any[] = []
+
+    if (oddsMovements.length > 0) {
+      oddsToProcess = oddsMovements
+    } else {
+      // Fallback para MatchOdds
+      const odds = await prisma.matchOdds.findMany({
+        where: {
+          matchId: match.id,
+          bookmakerId: bookmaker.id,
+        },
+        include: {
+          market: true,
+        },
+      })
+      oddsToProcess = odds
+    }
+
+    if (oddsToProcess.length === 0) {
       return NextResponse.json(
         { data: null, message: "Nenhuma odd encontrada para este confronto neste bookmaker" },
         { status: 200 }
@@ -94,14 +120,17 @@ export async function GET(
     const btts = { yes: null as number | null, no: null as number | null }
     const overUnder: Record<string, { over: number | null, under: number | null }> = {}
 
-    // Pegar apenas PREMATCH_CLOSING preferencialmente, se não PREMATCH_OPENING
-    // Vamos agrupar por market.key + selection
-    const latestOdds = new Map<string, typeof odds[0]>()
+    const latestOdds = new Map<string, any>()
     
-    for (const odd of odds) {
+    for (const odd of oddsToProcess) {
       const key = `${odd.market.key}-${odd.selection}-${odd.line || ''}`
       const existing = latestOdds.get(key)
-      if (!existing || (existing.oddsType === 'PREMATCH_OPENING' && odd.oddsType === 'PREMATCH_CLOSING')) {
+      
+      // Se for OddsMovement, a ordenação DESC por capturedAt garante que o primeiro é o mais recente.
+      if (!existing) {
+        latestOdds.set(key, odd)
+      } else if (existing.oddsType === 'PREMATCH_OPENING' && odd.oddsType === 'PREMATCH_CLOSING') {
+        // Fallback apenas útil para MatchOdds
         latestOdds.set(key, odd)
       }
     }
@@ -109,19 +138,22 @@ export async function GET(
     for (const odd of Array.from(latestOdds.values())) {
       const value = odd.odds >= 1.01 ? odd.odds : null
       
-      if (odd.market.key === "1x2") {
-        if (odd.selection === "Home") x1x2.home = value
-        if (odd.selection === "Draw") x1x2.draw = value
-        if (odd.selection === "Away") x1x2.away = value
-      } else if (odd.market.key === "btts") {
-        if (odd.selection === "Yes") btts.yes = value
-        if (odd.selection === "No") btts.no = value
-      } else if (odd.market.key === "over_under") {
+      const marketKey = odd.market?.key?.toLowerCase()
+      const sel = odd.selection?.toLowerCase()
+      
+      if (marketKey === "1x2" || marketKey === "match_odds") {
+        if (sel === "home") x1x2.home = value
+        if (sel === "draw") x1x2.draw = value
+        if (sel === "away") x1x2.away = value
+      } else if (marketKey === "btts") {
+        if (sel === "yes") btts.yes = value
+        if (sel === "no") btts.no = value
+      } else if (marketKey === "over_under" || marketKey === "total_goals") {
         const line = odd.line?.toString()
         if (line) {
           if (!overUnder[line]) overUnder[line] = { over: null, under: null }
-          if (odd.selection === "Over") overUnder[line].over = value
-          if (odd.selection === "Under") overUnder[line].under = value
+          if (sel === "over") overUnder[line].over = value
+          if (sel === "under") overUnder[line].under = value
         }
       }
     }
@@ -153,8 +185,8 @@ export async function GET(
       }
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("[ODDS_MERCADO_GET]", error)
-    return NextResponse.json({ message: "Erro interno do servidor" }, { status: 500 })
+    return NextResponse.json({ message: "Erro interno do servidor", details: error?.message, stack: error?.stack }, { status: 500 })
   }
 }

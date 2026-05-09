@@ -27,13 +27,7 @@ export interface FaixaOddsSelection {
 }
 
 export type ModeloEstatistico = 'POISSON' | 'ZIP' | 'NB' | 'DIXON_COLES'
-export type ModoModelo = 'AUTO' | ModeloEstatistico
-
-export interface ModeloRankingUI {
-  modelo: ModeloEstatistico
-  aic: number
-  confianca: 'ALTA' | 'MEDIA' | 'BAIXA'
-}
+export type ModoModelo = ModeloEstatistico
 
 export const FAIXAS_ODDS_PADRAO: FaixaOddsSelection[] = [
   { label: '1.21-1.40', min: 1.21, max: 1.40, selected: true },
@@ -71,7 +65,6 @@ export interface MercadosModel {
 
 export interface PrevisaoResponse {
   modelo: ModeloEstatistico
-  modeloAuto: ModeloRankingUI | null
   medias: {
     home: MediasTime
     away: MediasTime

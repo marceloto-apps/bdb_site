@@ -6,6 +6,8 @@ import { getDispersao } from './forca-time'
 export interface MediasLigaCalculadas {
   muH: number   // \mu_h^liga (Média de FTHG)
   muA: number   // \mu_a^liga (Média de FTAG)
+  varH: number
+  varA: number
   totalJogos: number
 }
 
@@ -24,7 +26,10 @@ export function calcularMediasLiga(jogos: Match[]): MediasLigaCalculadas {
   const muH = jogosConcluidos.reduce((s, j) => s + (j.fthg as number), 0) / totalJogos
   const muA = jogosConcluidos.reduce((s, j) => s + (j.ftag as number), 0) / totalJogos
 
-  return { muH, muA, totalJogos }
+  const varH = jogosConcluidos.reduce((s, j) => s + Math.pow((j.fthg as number) - muH, 2), 0) / totalJogos
+  const varA = jogosConcluidos.reduce((s, j) => s + Math.pow((j.ftag as number) - muA, 2), 0) / totalJogos
+
+  return { muH, muA, varH, varA, totalJogos }
 }
 
 /**
@@ -69,7 +74,15 @@ export function calcularMediasLigaXG(
     (s, j) => s + j.stats!.awayXg!, 0
   ) / jogosComXG.length
 
-  return { muH, muA, totalJogos: jogosComXG.length }
+  const varH = jogosComXG.reduce(
+    (s, j) => s + Math.pow(j.stats!.homeXg! - muH, 2), 0
+  ) / jogosComXG.length
+
+  const varA = jogosComXG.reduce(
+    (s, j) => s + Math.pow(j.stats!.awayXg! - muA, 2), 0
+  ) / jogosComXG.length
+
+  return { muH, muA, varH, varA, totalJogos: jogosComXG.length }
 }
 
 /**

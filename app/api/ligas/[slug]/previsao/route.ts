@@ -8,8 +8,6 @@ import {
   calcularMediasTime,
   calcularMediasTimeComDecay,
   calcularForcasTime,
-
-  rankearModelos,
   matrizPlacaresPoisson,
   matrizPlacaresZIP,
   matrizPlacaresNB,
@@ -292,37 +290,7 @@ export async function GET(
       varA: varianciaLiga.varFora,
       rho: rhoLiga,
     }
-
-    let modeloSelecionado = query.modelo
-    let modeloAutoData = null
-
-    if (query.modelo === 'AUTO') {
-      const rankings = rankearModelos(
-        jogosTypeSafe as any,
-        lambdaH!, // lambdas com decay são usados para a simulação/ranking do AUTO
-        lambdaA!,
-        mediasLiga,
-        parametrosExtras
-      )
-      modeloSelecionado = rankings[0].modelo
-      modeloAutoData = {
-        ranking: rankings.map(r => ({ ...r, confianca: r.confianca as "ALTA"|"MEDIA"|"BAIXA" })),
-        confianca: rankings[0].confianca,
-      }
-      
-      // Se o AUTO selecionou POISSON, voltamos para as médias simples sem decay
-      if (modeloSelecionado === 'POISSON') {
-        mediasHome = mediasHomePoisson; mediasAway = mediasAwayPoisson
-        forcasHome = forcasHomePoisson; forcasAway = forcasAwayPoisson
-        mediasHomeXG = mediasHomeXGPoisson; mediasAwayXG = mediasAwayXGPoisson
-        forcasHomeXG = forcasHomeXGPoisson; forcasAwayXG = forcasAwayXGPoisson
-        lambdaH = lambdaHPoisson; lambdaA = lambdaAPoisson
-        lambdaFallback = lambdaFallbackPoisson
-        todosLambdas = todosLambdasPoisson
-        composicao = composicaoPoisson
-      }
-    }
-
+    const modeloSelecionado = query.modelo
     let matriz: number[][] = []
     let rhoClamped = false
     let nbWarning = null
@@ -378,7 +346,6 @@ export async function GET(
     return NextResponse.json({
       data: {
         modelo: modeloSelecionado,
-        modeloAuto: modeloAutoData,
         medias: {
           home: mediasHome,
           away: mediasAway,

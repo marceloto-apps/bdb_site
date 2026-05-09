@@ -301,6 +301,7 @@ model Competition {
 
   seasons         Season[]
   imports         MatchImport[]
+  ingestJobs      IngestJob[]
 
   @@index([country])
   @@index([type])
@@ -314,6 +315,8 @@ model Season {
   isCurrent       Boolean      @default(false)
   startDate       DateTime?
   endDate         DateTime?
+  lastSyncedAt    DateTime?    @map("lastSyncedAt")
+  syncStatus      String?      @map("syncStatus") @db.VarChar(50)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -321,7 +324,7 @@ model Season {
 
   teamSeasons     TeamSeason[]
   matches         Match[]
-  syncLogs        SyncLog[]
+  ingestJobs      IngestJob[]
 
   @@unique([competitionId, year])
   @@index([competitionId])
@@ -429,6 +432,7 @@ model ApiQuotaLog {
   competitionId  String?
   requestCount   Int      @default(1)
   responseStatus Int?
+  source         String   @default("SITE") @db.VarChar(20)
   month          String
   createdAt      DateTime @default(now())
 
@@ -468,6 +472,7 @@ model Match {
   awayTeam        Team         @relation("AwayTeam", fields: [awayTeamId], references: [id])
   stats           MatchStats?
   odds            MatchOdds[]
+  oddsMovements   OddsMovement[]
   playerStats     PlayerMatchStats[]
   shots           Shot[]
 
@@ -577,8 +582,8 @@ model Bookmaker {
   isSharp   Boolean @default(false)
   active    Boolean @default(true)
 
-  // Relação será adicionada no Bloco 4 quando MatchOdds for criado
-  odds      MatchOdds[]
+  odds           MatchOdds[]
+  oddsMovements  OddsMovement[]
 }
 
 model Market {
@@ -587,8 +592,8 @@ model Market {
   name      String
   category  String
 
-  // Relação será adicionada no Bloco 4 quando MatchOdds for criado
-  odds      MatchOdds[]
+  odds           MatchOdds[]
+  oddsMovements  OddsMovement[]
 }
 
 model Player {
@@ -756,29 +761,49 @@ enum ShotBodyPart {
   HEAD
 }
 
-model ApiQuota {
-  id        String   @id @default(cuid())
-  date      DateTime @db.Date
-  used      Int
-  limit     Int
-  remaining Int
-  updatedAt DateTime @updatedAt
+// ============================================
+// Fase S — Tabelas para o serviço bdb-ingest
+// ============================================
 
-  @@unique([date])
-  @@map("api_quotas")
+/// Histórico de movimentação de odds
+model OddsMovement {
+  id           String    @id @default(cuid())
+  matchId      String
+  match        Match     @relation(fields: [matchId], references: [id])
+  bookmakerId  String
+  bookmaker    Bookmaker @relation(fields: [bookmakerId], references: [id])
+  marketId     String
+  market       Market    @relation(fields: [marketId], references: [id])
+  selection    String
+  line         Float?
+  odds         Float
+  oddsType     OddsType
+  capturedAt   DateTime
+  createdAt    DateTime  @default(now())
+
+  @@index([matchId, bookmakerId, marketId, selection])
+  @@index([matchId, capturedAt])
+  @@map("odds_movements")
 }
 
-model SyncLog {
-  id        String   @id @default(cuid())
-  seasonId  String
-  season    Season   @relation(fields: [seasonId], references: [id])
-  type      String                // 'PARTIDAS' | 'ODDS'
-  status    String                // 'RUNNING' | 'COMPLETED' | 'FAILED'
-  result    Json?                 // SyncResult serializado
-  error     String?   @db.Text
-  duration  Int?                  // ms
-  createdAt DateTime @default(now())
+/// Registro de cada job de ingestão executado
+model IngestJob {
+  id               String       @id @default(cuid())
+  jobType          String       @db.VarChar(50)   // MATCHES | ODDS | STATS | PLAYERS
+  competitionId    String?
+  competition      Competition? @relation(fields: [competitionId], references: [id])
+  seasonId         String?
+  season           Season?      @relation(fields: [seasonId], references: [id])
+  status           String       @db.VarChar(30)   // PENDING | RUNNING | COMPLETED | FAILED
+  matchesProcessed Int          @default(0)
+  requestsUsed     Int          @default(0)
+  error            String?      @db.Text
+  checkpoint       Json?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime     @default(now())
 
-  @@index([seasonId, createdAt])
-  @@map("sync_logs")
+  @@index([jobType, status])
+  @@index([competitionId, seasonId])
+  @@map("ingest_jobs")
 }

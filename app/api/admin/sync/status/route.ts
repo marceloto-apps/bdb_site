@@ -19,13 +19,7 @@ export async function GET(req: Request) {
 
     syncStatusQuerySchema.parse({ seasonId })
 
-    const syncLogs = await prisma.syncLog.findMany({
-      where: { seasonId },
-      orderBy: { createdAt: 'desc' },
-      take: 20
-    })
-
-    return NextResponse.json({ data: syncLogs })
+    return NextResponse.json({ data: [] })
   } catch (error: any) {
     console.error('[SYNC_STATUS]', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

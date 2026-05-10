@@ -10,45 +10,22 @@ export async function GET() {
       return NextResponse.json({ error: 'UNAUTHORIZED' }, { status: 403 })
     }
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    let quota = await prisma.apiQuota.findFirst({
-      where: { date: today },
-      orderBy: { updatedAt: 'desc' }
-    })
-
-    if (!quota) {
-      // Buscar status atual da API
-      const apiStatus = await fetchQuotaStatus()
-      if (apiStatus && apiStatus.response) {
-        const { current, limit_day } = (apiStatus.response as any).requests
-        const remaining = limit_day - current
-        
-        quota = await prisma.apiQuota.create({
-          data: {
-            date: today,
-            used: current,
-            limit: limit_day,
-            remaining: remaining
-          }
-        })
-      }
-    }
-
-    if (!quota) {
+    const apiStatus = await fetchQuotaStatus()
+    if (!apiStatus || !apiStatus.response) {
       return NextResponse.json({ error: 'QUOTA_NOT_FOUND' }, { status: 404 })
     }
 
-    const percentage = quota.limit > 0 ? (quota.used / quota.limit) * 100 : 0
+    const { current, limit_day } = (apiStatus.response as any).requests
+    const remaining = limit_day - current
+    const percentage = limit_day > 0 ? (current / limit_day) * 100 : 0
 
     return NextResponse.json({
       data: {
-        used: quota.used,
-        limit: quota.limit,
-        remaining: quota.remaining,
+        used: current,
+        limit: limit_day,
+        remaining: remaining,
         percentage,
-        lastUpdated: quota.updatedAt.toISOString()
+        lastUpdated: new Date().toISOString()
       }
     })
   } catch (error: any) {

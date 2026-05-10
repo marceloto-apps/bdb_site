@@ -92,8 +92,8 @@ describe('Medias e Forças xG', () => {
     })
 
     it('lida graciosamente com ligas onde a média de xG foi 0', () => {
-      const medias = { xgFC: 1, xgSC: 1, xgFV: 1, xgSV: 1, jogosCasa: 1, jogosFora: 1 }
-      const ligaMediasZeros = { muH: 0, muA: 0, totalJogos: 20 }
+      const medias = { xgFC: 1, xgSC: 1, xgFV: 1, xgSV: 1, jogosCasa: 1, jogosFora: 1, dispersaoCasa: { dp: 0.5, cv: 0.3, nivel: 'ALTA' as const }, dispersaoFora: { dp: 0.5, cv: 0.3, nivel: 'ALTA' as const } }
+      const ligaMediasZeros = { muH: 0, muA: 0, totalJogos: 20, varH: 0, varA: 0 }
       
       // O código real provavelmente não cai nesse edge case se min 20 jogos é exigido
       // mas vamos garantir testando a divisão segura.

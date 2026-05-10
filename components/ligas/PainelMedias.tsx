@@ -236,8 +236,25 @@ export function PainelMedias({
               </div>
             </div>
             
-            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground">
-              {medias.home.jogosCasa} jogos em casa
+            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground flex items-center justify-center gap-2">
+              <span>{medias.home.jogosCasa} jogos em casa</span>
+              {medias.home.formaCasa && medias.home.formaCasa.length > 0 && (
+                <>
+                  <span className="text-muted-foreground/30">|</span>
+                  <span className="font-normal text-muted-foreground flex items-center gap-1">
+                    Forma Casa:
+                    {medias.home.formaCasa.map((resultado, i) => (
+                      <React.Fragment key={i}>
+                        <span className={cn(
+                          "font-bold",
+                          resultado === 'V' ? "text-green-500" : resultado === 'E' ? "text-yellow-500" : "text-red-500"
+                        )}>{resultado}</span>
+                        {i < medias.home.formaCasa!.length - 1 && <span className="text-muted-foreground/50">-</span>}
+                      </React.Fragment>
+                    ))}
+                  </span>
+                </>
+              )}
             </div>
           </Card>
 
@@ -385,8 +402,25 @@ export function PainelMedias({
               </div>
             </div>
             
-            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground">
-              {medias.away.jogosFora} jogos fora
+            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground flex items-center justify-center gap-2">
+              <span>{medias.away.jogosFora} jogos fora</span>
+              {medias.away.formaFora && medias.away.formaFora.length > 0 && (
+                <>
+                  <span className="text-muted-foreground/30">|</span>
+                  <span className="font-normal text-muted-foreground flex items-center gap-1">
+                    Forma Fora:
+                    {medias.away.formaFora.map((resultado, i) => (
+                      <React.Fragment key={i}>
+                        <span className={cn(
+                          "font-bold",
+                          resultado === 'V' ? "text-green-500" : resultado === 'E' ? "text-yellow-500" : "text-red-500"
+                        )}>{resultado}</span>
+                        {i < medias.away.formaFora!.length - 1 && <span className="text-muted-foreground/50">-</span>}
+                      </React.Fragment>
+                    ))}
+                  </span>
+                </>
+              )}
             </div>
           </Card>
           

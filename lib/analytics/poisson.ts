@@ -87,8 +87,8 @@ export function calcularMercados(matriz: number[][]): MercadosDerivados {
       if (totalGols > 3.5) over35 += p
       if (totalGols > 4.5) over45 += p
 
-      if (h >= 4 && (h - a) >= 3) goleadaCasa += p
-      if (a >= 4 && (a - h) >= 3) goleadaVis += p
+      if (h >= 4 && h > a) goleadaCasa += p
+      if (a >= 4 && a > h) goleadaVis += p
     }
   }
 

@@ -40,7 +40,7 @@ describe('Poisson — Athletico-PR vs Athletico-PR (CS padrão da planilha)', ()
     expect(mercados.over15).toBeCloseTo(0.7372, 2)    // 73,72%
     expect(mercados.over25).toBeCloseTo(0.4876, 2)    // 48,76%
     expect(mercados.over35).toBeCloseTo(0.2692, 2)    // 26,92%
-    expect(mercados.goleadaCasa).toBeCloseTo(0.0583, 2)  //  5,83% (corrigido do doc original)
-    expect(mercados.goleadaVis).toBeCloseTo(0.0131, 2)   //  1,31% (corrigido do doc original)
+    expect(mercados.goleadaCasa).toBeCloseTo(0.0735, 2)  //  7,35% (corrigido do doc original para nova regra: marcar 4+ e vencer)
+    expect(mercados.goleadaVis).toBeCloseTo(0.0208, 2)   //  2,08% (corrigido do doc original para nova regra: marcar 4+ e vencer)
   })
 })

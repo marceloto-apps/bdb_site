@@ -29,6 +29,8 @@ export interface MediasTime {
   dispersaoFora: DispersaoTime
   freqCasa: FrequenciasObservadas
   freqFora: FrequenciasObservadas
+  formaCasa?: ('V' | 'E' | 'D')[]
+  formaFora?: ('V' | 'E' | 'D')[]
 }
 
 export interface ForcasTime {
@@ -57,6 +59,24 @@ export function getDispersao(gols: number[]): DispersaoTime {
   return { dp, cv, nivel }
 }
 
+export function getForma(jogos: Match[], isHome: boolean): ('V' | 'E' | 'D')[] {
+  const sorted = [...jogos].sort((a, b) => new Date(a.utcDate).getTime() - new Date(b.utcDate).getTime())
+  const last5 = sorted.slice(-5)
+  return last5.map(j => {
+    const fthg = j.fthg as number
+    const ftag = j.ftag as number
+    if (isHome) {
+      if (fthg > ftag) return 'V'
+      if (fthg === ftag) return 'E'
+      return 'D'
+    } else {
+      if (ftag > fthg) return 'V'
+      if (ftag === fthg) return 'E'
+      return 'D'
+    }
+  })
+}
+
 function getFrequencias(jogos: Match[]): FrequenciasObservadas {
   const n = jogos.length
   if (n === 0) return { over05: 0, over15: 0, over25: 0, over35: 0, btts: 0, goleadaCasa: 0, goleadaVisit: 0 }
@@ -72,8 +92,8 @@ function getFrequencias(jogos: Match[]): FrequenciasObservadas {
     if (total > 2.5) over25++
     if (total > 3.5) over35++
     if (fthg > 0 && ftag > 0) btts++
-    if (fthg >= 3 && fthg - ftag >= 3) goleadaCasa++
-    if (ftag >= 3 && ftag - fthg >= 3) goleadaVisit++
+    if (fthg >= 4 && fthg > ftag) goleadaCasa++
+    if (ftag >= 4 && ftag > fthg) goleadaVisit++
   })
 
   return {
@@ -108,6 +128,8 @@ export function calcularMediasTime(teamId: string, jogos: Match[]): MediasTime {
     dispersaoFora: getDispersao(jogosFora.map(j => j.ftag as number)),
     freqCasa: getFrequencias(jogosCasa),
     freqFora: getFrequencias(jogosFora),
+    formaCasa: getForma(jogosCasa, true),
+    formaFora: getForma(jogosFora, false),
   }
 }
 
@@ -159,6 +181,8 @@ export function calcularMediasTimeComDecay(
     dispersaoFora: getDispersao(jogosFora.map(j => j.ftag as number)),
     freqCasa: getFrequencias(jogosCasa),
     freqFora: getFrequencias(jogosFora),
+    formaCasa: getForma(jogosCasa, true),
+    formaFora: getForma(jogosFora, false),
   }
 }
 

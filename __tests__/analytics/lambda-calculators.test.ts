@@ -14,13 +14,13 @@ describe('Lambda Calculators', () => {
     mediasAway: { mgc: 1.4, mgsc: 0.9, mgv: 1.1, mgsv: 1.2, jogosCasa: 10, jogosFora: 10, dispersaoCasa: { dp: 0.4, cv: 0.3, nivel: 'ALTA' }, freqCasa: {} as any, dispersaoFora: { dp: 0.4, cv: 0.3, nivel: 'ALTA' }, freqFora: {} as any },
     forcasHome: { fcAtC: 1.2, fcDfC: 0.8, fcAtV: 1.0, fcDfV: 1.1 },
     forcasAway: { fcAtC: 1.1, fcDfC: 0.9, fcAtV: 0.9, fcDfV: 1.2 },
-    ligaMedias: { muH: 1.4, muA: 1.2, totalJogos: 100 },
+    ligaMedias: { muH: 1.4, muA: 1.2, totalJogos: 100, varH: 0.5, varA: 0.5 },
     
-    mediasHomeXG: { xgFC: 1.6, xgSC: 0.9, xgFV: 1.1, xgSV: 1.0, jogosCasa: 10, jogosFora: 10 },
-    mediasAwayXG: { xgFC: 1.3, xgSC: 1.0, xgFV: 1.0, xgSV: 1.1, jogosCasa: 10, jogosFora: 10 },
+    mediasHomeXG: { xgFC: 1.6, xgSC: 0.9, xgFV: 1.1, xgSV: 1.0, jogosCasa: 10, jogosFora: 10, dispersaoCasa: { dp: 0.5, cv: 0.3, nivel: 'ALTA' }, dispersaoFora: { dp: 0.5, cv: 0.3, nivel: 'ALTA' } },
+    mediasAwayXG: { xgFC: 1.3, xgSC: 1.0, xgFV: 1.0, xgSV: 1.1, jogosCasa: 10, jogosFora: 10, dispersaoCasa: { dp: 0.4, cv: 0.3, nivel: 'ALTA' }, dispersaoFora: { dp: 0.4, cv: 0.3, nivel: 'ALTA' } },
     forcasHomeXG: { fcAtC: 1.3, fcDfC: 0.8, fcAtV: 1.0, fcDfV: 1.1 },
     forcasAwayXG: { fcAtC: 1.1, fcDfC: 0.9, fcAtV: 0.9, fcDfV: 1.2 },
-    ligaMediasXG: { muH: 1.5, muA: 1.1, totalJogos: 100 }
+    ligaMediasXG: { muH: 1.5, muA: 1.1, totalJogos: 100, varH: 0.4, varA: 0.4 }
   }
 
   describe('MEDIA_SIMPLES', () => {

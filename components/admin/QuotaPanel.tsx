@@ -22,7 +22,7 @@ export function QuotaPanel() {
         const json = await res.json()
         setError(json.error || 'Erro ao carregar quota')
       }
-    } catch (_e) {
+    } catch {
       setError('Falha de conexão')
     } finally {
       setIsLoading(false)

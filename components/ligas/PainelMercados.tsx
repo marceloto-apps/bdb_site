@@ -34,7 +34,7 @@ const calcularEV = (prob: number, oddMercado: number | null): number | null => {
   return (prob * oddMercado - 1) * 100
 }
 
-export function PainelMercados({ mercados, homeTeamName: _homeTeamName, awayTeamName: _awayTeamName, oddsMercado }: PainelMercadosProps) {
+export function PainelMercados({ mercados, oddsMercado }: PainelMercadosProps) {
   const formatProb = (p: number) => `${(p * 100).toFixed(2)}%`
   const formatOdd = (o: number) => o > 0 ? o.toFixed(2) : '—'
   const formatEV = (ev: number | null) => ev !== null ? `${ev > 0 ? '+' : ''}${ev.toFixed(1)}%` : '—'

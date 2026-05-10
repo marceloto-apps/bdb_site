@@ -1,5 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Trophy, Lock } from 'lucide-react'
@@ -22,7 +23,9 @@ export function LigaCard({ nome, slug, pais, logoUrl, temporada, totalJogos, tie
         <div className="flex justify-between items-start">
           <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center shrink-0 border overflow-hidden">
             {logoUrl ? (
-              <img src={logoUrl} alt={`Logo ${nome}`} className="w-full h-full object-cover" />
+              <div className="w-12 h-12 relative">
+                <Image src={logoUrl} alt={`Logo ${nome}`} fill className="object-cover" />
+              </div>
             ) : (
               <Trophy className="w-6 h-6 text-muted-foreground" />
             )}

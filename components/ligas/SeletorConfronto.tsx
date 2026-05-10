@@ -9,9 +9,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Swords, Loader2, Calendar } from 'lucide-react'
 import { useProximasPartidas } from '@/lib/hooks/useProximasPartidas'
 
+import Image from 'next/image'
+
 export interface SeletorConfrontoProps {
   slug: string
-  times: Array<{ id: string; name: string; shortName: string | null; logo: string | null }>
+  times: Array<{ id: string; name: string; shortName: string | null; logoUrl: string | null }>
   onConfrontoDefinido: (mandanteId: string, visitanteId: string, fixtureId?: string) => void
   onCalcular: () => void
   isCalculando: boolean
@@ -100,7 +102,9 @@ export function SeletorConfronto({
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {p.homeTeam.logo ? (
-                        <img src={p.homeTeam.logo} alt={p.homeTeam.name} className="w-5 h-5 object-contain shrink-0" />
+                        <div className="w-5 h-5 relative shrink-0">
+                          <Image src={p.homeTeam.logo} alt={p.homeTeam.name} fill className="object-contain" />
+                        </div>
                       ) : <div className="w-5 h-5 bg-muted rounded-full shrink-0" />}
                       <span className="text-sm font-medium truncate">{p.homeTeam.shortName || p.homeTeam.name}</span>
                     </div>
@@ -108,7 +112,9 @@ export function SeletorConfronto({
                     <div className="flex items-center justify-end gap-2 flex-1 min-w-0">
                       <span className="text-sm font-medium truncate text-right">{p.awayTeam.shortName || p.awayTeam.name}</span>
                       {p.awayTeam.logo ? (
-                        <img src={p.awayTeam.logo} alt={p.awayTeam.name} className="w-5 h-5 object-contain shrink-0" />
+                        <div className="w-5 h-5 relative shrink-0">
+                          <Image src={p.awayTeam.logo} alt={p.awayTeam.name} fill className="object-contain" />
+                        </div>
                       ) : <div className="w-5 h-5 bg-muted rounded-full shrink-0" />}
                     </div>
                   </div>

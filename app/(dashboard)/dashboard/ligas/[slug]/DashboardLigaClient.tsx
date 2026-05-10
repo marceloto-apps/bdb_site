@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react'
 import { useLeagueFilters } from '@/lib/hooks/useLeagueFilters'
 import { SeletorConfronto } from '@/components/ligas/SeletorConfronto'
+import Image from 'next/image'
 import { FiltrosAvancados } from '@/components/ligas/FiltrosAvancados'
 import { SeletorModelo } from '@/components/ligas/SeletorModelo'
 import { SeletorLambda } from '@/components/ligas/SeletorLambda'
@@ -48,7 +49,7 @@ export function DashboardLigaClient({
   partidasIniciais
 }: DashboardLigaClientProps) {
   const filters = useLeagueFilters(maxRodada)
-  const { filtros, modelo, setModelo, lambdaMethod: _lambdaMethod, setLambdaMethod, podeCalcular: _podeCalcular, queryParams, ...setters } = filters
+  const { filtros, modelo, setModelo, setLambdaMethod, queryParams, ...setters } = filters
 
   const [previsao, setPrevisao] = useState<PrevisaoState | null>(null)
   const [mapaValor, setMapaValor] = useState<MapaValorResponse | null>(null)
@@ -104,7 +105,7 @@ export function DashboardLigaClient({
           setMapaValor(jsonMapa.data)
         }
       }
-    } catch (_err) {
+    } catch {
       setError('Erro de conexão ao calcular previsão')
       setPrevisao(null)
     } finally {
@@ -137,8 +138,8 @@ export function DashboardLigaClient({
       {/* Header da liga */}
       <div className="flex items-center gap-4">
         {liga.logoUrl && (
-          <div className="w-12 h-12 bg-white rounded-md flex items-center justify-center overflow-hidden border">
-            <img src={liga.logoUrl} alt={liga.name} className="w-full h-full object-cover" />
+          <div className="w-12 h-12 bg-white rounded-md flex items-center justify-center overflow-hidden border relative">
+            <Image src={liga.logoUrl} alt={liga.name} fill className="object-cover" />
           </div>
         )}
         <div>
@@ -154,18 +155,20 @@ export function DashboardLigaClient({
       <SeletorConfronto
         slug={liga.slug}
         times={times}
-        onConfrontoDefinido={(mandanteId, visitanteId, fixtureId) => {
+        onConfrontoDefinido={(mandanteId, visitanteId) => {
           handleFiltrosChange({ homeTeamId: mandanteId, awayTeamId: visitanteId })
         }}
         onCalcular={handleCalcular}
         isCalculando={isCalculating}
       />
 
+      {/* 
       <FiltrosAvancados 
         filtros={filtros}
         maxRodada={maxRodada}
         onFiltrosChange={handleFiltrosChange}
-      />
+      /> 
+      */}
 
       {/* Mensagem de erro */}
       {error && (

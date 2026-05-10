@@ -16,7 +16,6 @@ interface SeletorLambdaProps {
 
 export function SeletorLambda({
   todosLambdas,
-  composicao: _composicao,
   lambdaAtivo,
   xgDisponivel,
   onChange,

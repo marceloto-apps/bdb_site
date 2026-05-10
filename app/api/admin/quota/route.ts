@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { fetchQuotaStatus } from '@/lib/api-football'
 
-export async function GET(_req: Request) {
+export async function GET() {
   try {
     const session = await auth()
     if (!session?.user || session.user.role !== 'ADMIN') {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+
 import { auth } from '@/auth'
 import { syncStatusQuerySchema } from '@/lib/validations/admin'
 

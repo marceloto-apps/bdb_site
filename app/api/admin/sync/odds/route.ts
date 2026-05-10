@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+
 import { auth } from '@/auth'
 import { sincronizarOdds } from '@/lib/sync/sync-odds'
 import { syncOddsSchema } from '@/lib/validations/admin'

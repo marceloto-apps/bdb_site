@@ -207,7 +207,7 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
 
   const getJuice = (odds: (number | null | undefined)[]) => {
     if (odds.some(o => !o || o <= 1)) return null;
-    const sum = odds.reduce((acc, val) => acc + (1 / val!), 0);
+    const sum = odds.reduce((acc: number, val) => acc + (1 / val!), 0);
     return ((sum - 1) * 100).toFixed(1) + '%';
   }
 

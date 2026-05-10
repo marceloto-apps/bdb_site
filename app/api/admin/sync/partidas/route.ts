@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+
 import { auth } from '@/auth'
 import { sincronizarPartidas } from '@/lib/sync/sync-partidas'
 import { syncPartidasSchema } from '@/lib/validations/admin'

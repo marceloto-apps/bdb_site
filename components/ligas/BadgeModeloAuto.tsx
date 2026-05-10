@@ -3,12 +3,14 @@
 import React from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { ModeloRankingUI } from '@/types/liga'
 import { Sparkles } from 'lucide-react'
 
+export type ModoModelo = 'POISSON' | 'ZIP' | 'NB' | 'DIXON_COLES' | string
+export type NivelConfianca = 'ALTA' | 'MEDIA' | 'BAIXA'
+
 interface BadgeModeloAutoProps {
-  modelo: ModeloRankingUI['modelo']
-  confianca: ModeloRankingUI['confianca']
+  modelo: ModoModelo
+  confianca: NivelConfianca
   size?: 'sm' | 'default'
 }
 

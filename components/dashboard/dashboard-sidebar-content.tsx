@@ -92,9 +92,12 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === '/dashboard/backtest'} tooltip="Backtest">
-              <Link href="/dashboard/backtest">
-                <FlaskConical />
-                <span>Backtest</span>
+              <Link href="/dashboard/backtest" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <FlaskConical />
+                  <span>Backtest</span>
+                </div>
+                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Em breve</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -138,17 +141,23 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === '/dashboard/banca'} tooltip="Banca">
-              <Link href="/dashboard/banca">
-                <Wallet />
-                <span>Banca</span>
+              <Link href="/dashboard/banca" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <Wallet />
+                  <span>Banca</span>
+                </div>
+                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Em breve</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === '/dashboard/metodos'} tooltip="Métodos">
-              <Link href="/dashboard/metodos">
-                <Calculator />
-                <span>Métodos</span>
+              <Link href="/dashboard/metodos" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <Calculator />
+                  <span>Métodos</span>
+                </div>
+                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Em breve</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -160,17 +169,23 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === '/curso'} tooltip="Aulas">
-              <Link href="/curso">
-                <GraduationCap />
-                <span>Aulas</span>
+              <Link href="/curso" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <GraduationCap />
+                  <span>Aulas</span>
+                </div>
+                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Em breve</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === '/dashboard/progresso'} tooltip="Meu Progresso">
-              <Link href="/dashboard/progresso">
-                <Trophy />
-                <span>Meu Progresso</span>
+              <Link href="/dashboard/progresso" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <Trophy />
+                  <span>Meu Progresso</span>
+                </div>
+                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Em breve</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

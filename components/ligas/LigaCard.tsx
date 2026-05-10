@@ -58,8 +58,8 @@ export function LigaCard({ nome, slug, pais, logoUrl, temporada, totalJogos, tie
             <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center mb-1">
               <Lock className="w-5 h-5 text-muted-foreground" />
             </div>
-            <span className="font-semibold text-sm">Disponível no VIP</span>
-            <span className="text-xs text-muted-foreground">Faça upgrade para acessar</span>
+            <span className="font-semibold text-sm">Disponível nos Planos Pagos</span>
+            <span className="text-xs text-muted-foreground">Em breve as opções de planos estarão disponíveis no site</span>
           </div>
         </div>
       )}

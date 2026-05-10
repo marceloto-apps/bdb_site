@@ -19,6 +19,28 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
 
 ---
 
+## ✅ Otimizações Pós-MVP (Fase 2.5) — Concluída em 10/05/2026
+
+> **Objetivo:** Estabilizar o backfill, otimizar consumo da API, refinar filtros e melhorar usabilidade do dashboard.
+
+- [x] **Backfill e API**
+  - [x] Correção do parser de data (`YY/YY`) para focar nas temporadas mais recentes
+  - [x] Detecção de jobs 'stale' no auto-backfill para retomar ingestão automaticamente
+  - [x] Otimização da `maisevplus_webscraping` para alocar cota diária exclusivamente ao histórico
+  - [x] Correção na rota `/proximas-partidas` (uso de `groupBy` para saltar rodadas vazias)
+- [x] **Dashboard de Liga e Filtros**
+  - [x] Correção do loop infinito no recálculo do `FiltroRodadas`
+  - [x] Redução do requisito mínimo de partidas de 5 para 4
+  - [x] Mudança do provedor padrão de odds de Pinnacle para Bet365 (maior cobertura)
+  - [x] Auto-collapse e auto-reset dos filtros avançados ao calcular ou trocar confronto
+  - [x] Resiliência a erros: manter estado visual e exibir motivos exatos da falta de dados (INSUFFICIENT_TEAM_DATA)
+- [x] **Usabilidade e Acessos**
+  - [x] Tags "Em breve" nas ferramentas do menu lateral (Backtest, Banca, Métodos, Aulas, Meu Progresso)
+  - [x] Atualização da mensagem de ligas bloqueadas ("Disponível nos Planos Pagos" / "Em breve as opções de planos estarão disponíveis no site")
+  - [x] Ligas FREE configuradas (Brasileirão, La Liga, Premier League, Serie A)
+
+---
+
 ## Legenda de Status
 
 ```

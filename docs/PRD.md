@@ -10,6 +10,7 @@
 |---|---|---|
 | 1 | Fundação (Site + CMS + Auth + Dashboard) | 🟢 Concluída |
 | **2** | **Dashboards de Liga (MVP Brasileirão A)** | 🟢 Concluída |
+| **2.5**| **Otimizações Pós-MVP e Backfill** | 🟢 Concluída |
 | **3** | **Ferramentas Gratuitas (Migração Gemini)** | 🟢 Concluída |
 | **4** | **Multi-Liga + Pagamentos (Stripe + Hubla Legacy)** | ⚪ Pendente |
 | **5** | **Curso + Backtest Interativo** | ⚪ Pendente |
@@ -184,6 +185,18 @@ Todo dado buscado na API é imediatamente salvo no banco. Buscas subsequentes l�
 - [x] Acesso liberado para qualquer usuário autenticado (MEMBRO+)
 - [x] Quota de API não excede 100k req/mês com 1 liga ativa
 - [x] Placeholder "Análises" visível na navegação
+
+---
+
+# PRD — Fase 2.5: Otimizações Pós-MVP (Maio 2026)
+
+**Objetivo:** Estabilizar o backfill de dados históricos e refinar a experiência do usuário nos dashboards de liga, preparando o sistema para integração de pagamentos e tráfego orgânico.
+
+## Principais Alterações
+- **Backfill Estável:** Parser de data otimizado e auto-healing (`stale jobs`) implementado para recuperação sem intervenção manual.
+- **Filtros e UI:** Mínimo de jogos reduzido de 5 para 4, interface resiliente a dados insuficientes sem corromper estado, auto-collapse no cálculo.
+- **Dados:** Integração massiva Bet365 para cobertura de odds de 100% onde a Pinnacle falhava.
+- **Preparação de Negócios:** Identificação clara de ligas FREE vs VIP ("Disponível nos Planos Pagos") e tags "Em breve" nas features de gestão (Banca, Métodos, Backtest).
 
 ---
 

@@ -440,3 +440,21 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
 - A renderização da seção "Média Simples" ganhou padronização com a arquitetura das outras projeções.
 - As métricas de **Confiança** (CV e DP) para Gols e xG foram colapsadas e alinhadas lado a lado em uma mesma linha (`flex-row justify-between`), poupando altura vital na tela para visualização mobile e reduzindo poluição informacional.
 - A faixa global superior de "Médias da Liga" foi quebrada em dois eixos (MÉDIA LIGA GOLS e MÉDIA LIGA xG), com tipografia monospace em destaque, aprimorando drasticamente a leitura e o escaneamento visual da performance dos mandantes e visitantes dentro do torneio global.
+
+### 26. Otimizações Pós-MVP e Estabilidade do Backfill (Fase 2.5) — 10/05/2026
+
+**Estabilização da Ingestão de Dados:**
+- Correção crítica no parser de datas (`YY/YY`) do auto-backfill para garantir o foco em temporadas recentes em vez de anos históricos isolados.
+- Implementação de um mecanismo robusto de detecção de *stale jobs*, permitindo que processos travados sejam resetados e a ingestão histórica seja retomada autonomamente (auto-healing).
+- Isolamento da quota da API API-Football, direcionando as 100 requisições diárias integralmente para o backfill histórico (`apifootball_backfill`), desativando momentaneamente rotinas não vitais.
+
+**Refinamentos do Dashboard Analítico:**
+- O requisito mínimo de jogos para cálculo preditivo foi reduzido de 5 para 4, aumentando o volume de partidas processáveis na interface sem comprometer a validade estatística.
+- Correção de loop de renderização infinita nos filtros de rodadas (FiltroRodadas).
+- O provedor base de odds mudou de Pinnacle para Bet365, assegurando uma cobertura substancialmente maior nas cotações listadas. A interface foi higienizada removendo os rótulos de provedor ("Odds Casa", "Odds Visitante").
+- **Auto-Collapse nos Filtros:** O painel de Filtros Avançados agora obedece a regras inteligentes, fechando automaticamente sempre que o usuário recalcula a previsão ou seleciona um novo confronto, com função de "Limpar Filtros" implementada nativamente.
+- **Resiliência a Erros:** Erros como `INSUFFICIENT_TEAM_DATA` deixaram de corromper o estado visual da tela. Agora o painel preserva o último estado válido e exibe uma mensagem detalhada com a contagem exata dos jogos encontrados por mando de campo.
+
+**Usabilidade e Monetização Preview:**
+- Atualização visual no menu lateral (Sidebar) integrando tags de "Em breve" nas ferramentas secundárias e futuros módulos educacionais (Aulas, Backtest, Métodos).
+- Acesso segmentado a ligas: O sistema exibe o status de ligas "FREE" no painel principal, enquanto as ligas restritas bloqueiam o acesso do usuário exibindo uma interface padronizada "Disponível nos Planos Pagos", preparando o terreno para a Fase 4 (integração de checkout).

@@ -13,8 +13,11 @@ import { PainelOddsMercado } from '@/components/ligas/PainelOddsMercado'
 import { PainelEvolucao } from '@/components/ligas/PainelEvolucao'
 import { PainelMapaValor } from '@/components/ligas/PainelMapaValor'
 import { BannerModeloWarning } from '@/components/ligas/BannerModeloWarning'
+import { FiltrosAvancados } from '@/components/ligas/FiltrosAvancados'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 import { TimeOption, ModoModelo, PrevisaoState, MapaValorResponse } from '@/types/liga'
 import type { LambdaMethod } from '@/lib/analytics/types'
 import { OddsMercado } from '@/lib/validations/odds-mercado'
@@ -48,13 +51,14 @@ export function DashboardLigaClient({
   partidasIniciais
 }: DashboardLigaClientProps) {
   const filters = useLeagueFilters(maxRodada)
-  const { filtros, modelo, setModelo, setLambdaMethod, queryParams, ...setters } = filters
+  const { filtros, modelo, setModelo, setLambdaMethod, queryParams, resetFiltros, ...setters } = filters
 
   const [previsao, setPrevisao] = useState<PrevisaoState | null>(null)
   const [mapaValor, setMapaValor] = useState<MapaValorResponse | null>(null)
   const [oddsMercado, setOddsMercado] = useState<OddsMercado | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [filtrosAbertos, setFiltrosAbertos] = useState(false)
 
   const nomeTimeCasa = useMemo(() => times.find(t => t.id === filtros.homeTeamId)?.name ?? '', [times, filtros.homeTeamId])
   const nomeTimeVisitante = useMemo(() => times.find(t => t.id === filtros.awayTeamId)?.name ?? '', [times, filtros.awayTeamId])
@@ -92,7 +96,6 @@ export function DashboardLigaClient({
       const json = await res.json()
       if (!res.ok) {
         setError(json.message || json.error || 'Erro desconhecido')
-        setPrevisao(null)
         return
       }
       setPrevisao(json.data)
@@ -106,14 +109,38 @@ export function DashboardLigaClient({
       }
     } catch {
       setError('Erro de conexão ao calcular previsão')
-      setPrevisao(null)
     } finally {
       setIsCalculating(false)
     }
   }
 
-  const handleCalcular = () => {
+  const handleCalcularComFiltros = () => {
+    setFiltrosAbertos(false)
     fetchPrevisao(queryParams)
+  }
+
+  const handleCalcularInicial = () => {
+    resetFiltros()
+    setFiltrosAbertos(false)
+    // Recalcular ignorando filtros avançados
+    const cleanParams: Record<string, string> = {}
+    if (filtros.homeTeamId) cleanParams.homeTeamId = filtros.homeTeamId
+    if (filtros.awayTeamId) cleanParams.awayTeamId = filtros.awayTeamId
+    cleanParams.modelo = 'POISSON'
+    cleanParams.lambdaMethod = 'MEDIA_SIMPLES'
+    fetchPrevisao(cleanParams)
+  }
+
+  const handleLimparFiltros = () => {
+    resetFiltros()
+    setError(null)
+    // Recalcular com filtros limpos (apenas times + modelo + lambda)
+    const cleanParams: Record<string, string> = {}
+    if (filtros.homeTeamId) cleanParams.homeTeamId = filtros.homeTeamId
+    if (filtros.awayTeamId) cleanParams.awayTeamId = filtros.awayTeamId
+    cleanParams.modelo = modelo
+    cleanParams.lambdaMethod = filters.lambdaMethod
+    fetchPrevisao(cleanParams)
   }
 
   const handleModeloChange = (novoModelo: ModoModelo) => {
@@ -136,6 +163,12 @@ export function DashboardLigaClient({
     <div className="space-y-6">
       {/* Header da liga */}
       <div className="flex items-center gap-4">
+        <Button variant="outline" size="icon" asChild className="shrink-0 rounded-full w-10 h-10">
+          <Link href="/dashboard/ligas" aria-label="Voltar para Ligas">
+            <ArrowLeft className="w-5 h-5 text-muted-foreground" />
+          </Link>
+        </Button>
+
         {liga.logoUrl && (
           <div className="w-12 h-12 bg-white rounded-md flex items-center justify-center overflow-hidden border relative">
             <Image src={liga.logoUrl} alt={liga.name} fill className="object-cover" />
@@ -156,26 +189,13 @@ export function DashboardLigaClient({
         times={times}
         onConfrontoDefinido={(mandanteId, visitanteId) => {
           handleFiltrosChange({ homeTeamId: mandanteId, awayTeamId: visitanteId })
+          resetFiltros()
+          setFiltrosAbertos(false)
         }}
-        onCalcular={handleCalcular}
+        onCalcular={handleCalcularInicial}
         isCalculando={isCalculating}
       />
 
-      {/* 
-      <FiltrosAvancados 
-        filtros={filtros}
-        maxRodada={maxRodada}
-        onFiltrosChange={handleFiltrosChange}
-      /> 
-      */}
-
-      {/* Mensagem de erro */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Conteúdo */}
       {previsao ? (
@@ -185,6 +205,27 @@ export function DashboardLigaClient({
             rhoClamped={previsao.rhoClamped}
             modeloSelecionado={previsao.modelo}
           />
+
+          <FiltrosAvancados
+            filtros={filtros}
+            maxRodada={maxRodada}
+            onFiltrosChange={handleFiltrosChange}
+            onAplicar={handleCalcularComFiltros}
+            onLimpar={handleLimparFiltros}
+            isCalculando={isCalculating}
+            isOpen={filtrosAbertos}
+            onOpenChange={setFiltrosAbertos}
+            availableOddsCasa={previsao.oddsFaixasDisponiveisCasa}
+            availableOddsVisitante={previsao.oddsFaixasDisponiveisVisitante}
+          />
+
+          {/* Mensagem de erro (abaixo dos filtros) */}
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
 
           <PainelMedias
             medias={previsao.medias}

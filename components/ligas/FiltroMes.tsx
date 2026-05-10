@@ -47,19 +47,9 @@ export function FiltroMes({ selectedMonths, onChange }: FiltroMesProps) {
   }
 
   const handleSelectAll = () => onChange([])
-  // Vamos definir que se length===12 é todos, se length===0 é todos (default).
-  // Se quiser enviar vazio real, precisaria de uma flag extra no useLeagueFilters.
-  // Vamos assumir que length === 0 significa TODOS (sem filtro).
-  // Se "nenhum" for clicado, é impossível calcular, mas a UI não impede.
-  // Apenas limpa a seleção
-  const handleClear = () => {
-    // Para desmarcar todos, precisamos de um array vazio? Mas vazio é "todos".
-    // Vamos usar um array com número inválido momentâneo ou não permitir 0 selecionados.
-    // Melhor approach: onChange([99]) temporário, ou impedir desmarcar todos.
-    // Vamos apenas usar [0] ou algo assim, mas como `months` aceita [], vou usar onChange([13]) como "nenhum".
-    // Mas a request vai enviar `months: '13'` e retornar vazio, que é o correto.
-    onChange([-1]) 
-  }
+  
+  // Limpar = nenhum selecionado = sem filtro (= todos)
+  const handleClear = () => onChange([])
 
   const handleTurno1 = () => onChange([4, 5, 6, 7, 8, 9])
   const handleTurno2 = () => onChange([10, 11, 12, 1, 2, 3])
@@ -102,7 +92,7 @@ export function FiltroMes({ selectedMonths, onChange }: FiltroMesProps) {
               Todos
             </Button>
             <Button variant="secondary" size="sm" onClick={handleClear} className="flex-1 text-xs">
-              Nenhum
+              Limpar
             </Button>
             <Button variant="secondary" size="sm" onClick={handleTurno1} className="flex-1 text-xs">
               1° turno

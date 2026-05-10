@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo, useCallback, useRef } from 'react'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
@@ -19,21 +19,34 @@ export function FiltroRodadas({ min, max, valueFrom, valueTo, onChange }: Filtro
 
   const isAllRounds = currentFrom === min && currentTo === max
 
-  // shadcn Slider suporta múltiplos valores se passarmos um array de 2 itens
-  const handleSliderChange = (vals: number[]) => {
+  // Ref para guardar valores anteriores e evitar chamadas redundantes
+  const prevRef = useRef({ from: valueFrom, to: valueTo })
+
+  // Memoizar o array do slider para evitar re-renders desnecessários
+  const sliderValue = useMemo(() => [currentFrom, currentTo], [currentFrom, currentTo])
+
+  const handleSliderChange = useCallback((vals: number[]) => {
     if (vals.length === 2) {
-      const newFrom = vals[0]
-      const newTo = vals[1]
-      onChange(newFrom === min ? null : newFrom, newTo === max ? null : newTo)
+      const newFrom = vals[0] === min ? null : vals[0]
+      const newTo = vals[1] === max ? null : vals[1]
+      // Só dispara se realmente mudou
+      if (newFrom !== prevRef.current.from || newTo !== prevRef.current.to) {
+        prevRef.current = { from: newFrom, to: newTo }
+        onChange(newFrom, newTo)
+      }
     }
-  }
+  }, [min, max, onChange])
 
   const handleInputFromChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let val = parseInt(e.target.value)
     if (isNaN(val)) return
     if (val < min) val = min
     if (val > currentTo) val = currentTo
-    onChange(val === min ? null : val, valueTo)
+    const newFrom = val === min ? null : val
+    if (newFrom !== valueFrom) {
+      prevRef.current = { from: newFrom, to: valueTo }
+      onChange(newFrom, valueTo)
+    }
   }
 
   const handleInputToChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -41,7 +54,11 @@ export function FiltroRodadas({ min, max, valueFrom, valueTo, onChange }: Filtro
     if (isNaN(val)) return
     if (val > max) val = max
     if (val < currentFrom) val = currentFrom
-    onChange(valueFrom, val === max ? null : val)
+    const newTo = val === max ? null : val
+    if (newTo !== valueTo) {
+      prevRef.current = { from: valueFrom, to: newTo }
+      onChange(valueFrom, newTo)
+    }
   }
 
   return (
@@ -58,7 +75,7 @@ export function FiltroRodadas({ min, max, valueFrom, valueTo, onChange }: Filtro
           min={min}
           max={max}
           step={1}
-          value={[currentFrom, currentTo]}
+          value={sliderValue}
           onValueChange={handleSliderChange}
           className="flex-1"
         />

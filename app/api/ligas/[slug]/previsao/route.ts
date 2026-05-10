@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { previsaoQuerySchema } from '@/lib/validations/liga'
+import { FAIXAS_ODDS_PADRAO } from '@/types/liga'
 import { getSeasonDateFilter } from '@/lib/utils/season-filter'
 import {
   calcularMediasLiga,
@@ -81,7 +82,7 @@ export async function GET(
       include: {
         odds: {
           where: {
-            bookmaker: { name: 'Pinnacle' },
+            bookmaker: { name: 'bet365' },
             market: { key: 'match_odds' },
           },
         },
@@ -104,7 +105,7 @@ export async function GET(
       include: {
         odds: {
           where: {
-            bookmaker: { name: 'Pinnacle' },
+            bookmaker: { name: 'bet365' },
             market: { key: 'match_odds' },
           },
         },
@@ -152,18 +153,48 @@ export async function GET(
       })
     }
 
-    if (query.oddsCasaMin || query.oddsCasaMax || query.oddsVisMin || query.oddsVisMax) {
+    // Filtro de odds - suporte a faixas não-contíguas
+    const parseFaixas = (csv: string) =>
+      csv.split(',').map(f => {
+        const [min, max] = f.split('-').map(Number)
+        return { min, max }
+      })
+
+    const faixasCasa = query.oddsCasaFaixas ? parseFaixas(query.oddsCasaFaixas) : null
+    const faixasVis = query.oddsVisFaixas ? parseFaixas(query.oddsVisFaixas) : null
+
+    if (faixasCasa || faixasVis) {
       jogosFiltrados = jogosFiltrados.filter(j => {
-        const oddCasa = j.odds.find((o: any) => o.selection === 'home')?.odds
-        const oddVis = j.odds.find((o: any) => o.selection === 'away')?.odds
-        if (!oddCasa || !oddVis) return false
-        if (query.oddsCasaMin && oddCasa < query.oddsCasaMin) return false
-        if (query.oddsCasaMax && oddCasa > query.oddsCasaMax) return false
-        if (query.oddsVisMin && oddVis < query.oddsVisMin) return false
-        if (query.oddsVisMax && oddVis > query.oddsVisMax) return false
+        if (faixasCasa) {
+          const oddCasa = j.odds.find((o: any) => o.selection === 'home')?.odds
+          // Sem odd = inclui (não penalizar jogos sem dados de odds)
+          if (oddCasa && !faixasCasa.some(f => oddCasa >= f.min && oddCasa <= f.max)) return false
+        }
+        if (faixasVis) {
+          const oddVis = j.odds.find((o: any) => o.selection === 'away')?.odds
+          if (oddVis && !faixasVis.some(f => oddVis >= f.min && oddVis <= f.max)) return false
+        }
         return true
       })
     }
+
+    // Computar quais faixas de odds têm jogos para os times selecionados
+    const jogosMandante = jogosTypeSafe.filter(j => j.homeTeamId === query.homeTeamId)
+    const jogosVisitante = jogosTypeSafe.filter(j => j.awayTeamId === query.awayTeamId)
+
+    const oddsFaixasDisponiveisCasa = FAIXAS_ODDS_PADRAO.map(faixa =>
+      jogosMandante.some(j => {
+        const odd = j.odds.find((o: any) => o.selection === 'home')?.odds
+        return odd != null && odd >= faixa.min && odd <= faixa.max
+      })
+    )
+
+    const oddsFaixasDisponiveisVisitante = FAIXAS_ODDS_PADRAO.map(faixa =>
+      jogosVisitante.some(j => {
+        const odd = j.odds.find((o: any) => o.selection === 'away')?.odds
+        return odd != null && odd >= faixa.min && odd <= faixa.max
+      })
+    )
 
     let mediasHome, mediasAway, forcasHome, forcasAway, lambdaH, lambdaA
     let mediasHomePoisson, mediasAwayPoisson, forcasHomePoisson, forcasAwayPoisson, lambdaHPoisson, lambdaAPoisson
@@ -273,8 +304,17 @@ export async function GET(
         composicao = composicaoPoisson
       }
     } catch (e: any) {
+      // Contar jogos de cada time no dataset filtrado
+      const homeCasa = jogosFiltrados.filter((j: any) => j.homeTeamId === query.homeTeamId).length
+      const homeFora = jogosFiltrados.filter((j: any) => j.awayTeamId === query.homeTeamId).length
+      const awayCasa = jogosFiltrados.filter((j: any) => j.homeTeamId === query.awayTeamId).length
+      const awayFora = jogosFiltrados.filter((j: any) => j.awayTeamId === query.awayTeamId).length
+      const hasFilters = query.roundFrom || query.roundTo || query.months || query.oddsCasaFaixas || query.oddsVisFaixas
+      const filterMsg = hasFilters
+        ? ` Após filtros — Mandante: ${homeCasa} casa / ${homeFora} fora · Visitante: ${awayCasa} casa / ${awayFora} fora (mín. 4 cada).`
+        : ''
       return NextResponse.json(
-        { error: 'INSUFFICIENT_TEAM_DATA', message: e.message || 'Dados insuficientes do time' },
+        { error: 'INSUFFICIENT_TEAM_DATA', message: `Dados insuficientes para o cálculo.${filterMsg}${hasFilters ? ' Tente relaxar os filtros.' : ''}` },
         { status: 400 }
       )
     }
@@ -374,6 +414,8 @@ export async function GET(
         forcasHomeXG,
         forcasAwayXG,
         ligaMediasXG,
+        oddsFaixasDisponiveisCasa,
+        oddsFaixasDisponiveisVisitante,
       },
     })
   } catch (error) {

@@ -25,13 +25,15 @@ export default async function LigasPage() {
     orderBy: { name: 'asc' }
   })
 
+  // Ligas FREE
+  const freeSlugs = ['brasileirao-serie-a', 'premier-league', 'la-liga', 'serie-a']
+
   // Mapear para o formato esperado pelo LigaCard
   const ligas = competicoes.map(comp => {
     const season = comp.seasons[0]
     const totalJogos = season ? season._count.matches : 0
     // Simular o tier no MVP. Você pode checar o campo 'tier' do prisma se ele existir, ou mockar
-    // Se não existir tier no Prisma, tratamos como FREE por padrao o brasileirao
-    const tier = comp.slug === 'brasileirao-serie-a' ? 'FREE' : 'VIP'
+    const tier = freeSlugs.includes(comp.slug) ? 'FREE' : 'VIP'
     const disponivel = tier === 'FREE'
 
     return {
@@ -45,6 +47,13 @@ export default async function LigasPage() {
       disponivel
     }
   })
+
+  // Ordenar ligas: FREE primeiro, depois ordem alfabética
+  ligas.sort((a, b) => {
+    if (a.tier === 'FREE' && b.tier === 'VIP') return -1;
+    if (a.tier === 'VIP' && b.tier === 'FREE') return 1;
+    return a.nome.localeCompare(b.nome);
+  });
 
   return (
     <div className="space-y-8 p-4 md:p-8 pt-6">

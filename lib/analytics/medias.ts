@@ -107,7 +107,7 @@ export function calcularMediasTimeXG(
   const jogosCasa = jogosComXG.filter(j => j.homeTeamId === teamId)
   const jogosFora = jogosComXG.filter(j => j.awayTeamId === teamId)
 
-  if (jogosCasa.length < 5 || jogosFora.length < 5) {
+  if (jogosCasa.length < 4 || jogosFora.length < 4) {
     throw new Error(
       `Time ${teamId}: poucos jogos com xG (casa: ${jogosCasa.length}, fora: ${jogosFora.length})`
     )
@@ -159,7 +159,7 @@ export function calcularMediasTimeXGComDecay(
   const jogosCasa = jogosComXG.filter(j => j.homeTeamId === teamId)
   const jogosFora = jogosComXG.filter(j => j.awayTeamId === teamId)
 
-  if (jogosCasa.length < 5 || jogosFora.length < 5) {
+  if (jogosCasa.length < 4 || jogosFora.length < 4) {
     throw new Error(`Time ${teamId}: poucos jogos com xG para decay`)
   }
 

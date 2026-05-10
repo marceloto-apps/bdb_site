@@ -94,6 +94,8 @@ export interface PrevisaoResponse {
   forcasHomeXG?: ForcasTimeXG | null
   forcasAwayXG?: ForcasTimeXG | null
   ligaMediasXG?: MediasLigaXG | null
+  oddsFaixasDisponiveisCasa: boolean[]
+  oddsFaixasDisponiveisVisitante: boolean[]
 }
 
 export type PrevisaoState = PrevisaoResponse

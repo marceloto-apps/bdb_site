@@ -113,8 +113,8 @@ export function calcularMediasTime(teamId: string, jogos: Match[]): MediasTime {
   const jogosCasa = jogosConcluidos.filter(j => j.homeTeamId === teamId)
   const jogosFora = jogosConcluidos.filter(j => j.awayTeamId === teamId)
 
-  if (jogosCasa.length < 5 || jogosFora.length < 5) {
-    throw new Error(`INSUFFICIENT_TEAM_DATA: Time ${teamId} requer mínimo 5 jogos casa + 5 fora`)
+  if (jogosCasa.length < 4 || jogosFora.length < 4) {
+    throw new Error(`INSUFFICIENT_TEAM_DATA: Time ${teamId} requer mínimo 4 jogos casa + 4 fora`)
   }
 
   return {
@@ -144,8 +144,8 @@ export function calcularMediasTimeComDecay(
   const jogosCasa = jogosConcluidos.filter(j => j.homeTeamId === teamId)
   const jogosFora = jogosConcluidos.filter(j => j.awayTeamId === teamId)
 
-  if (jogosCasa.length < 5 || jogosFora.length < 5) {
-    throw new Error(`INSUFFICIENT_TEAM_DATA: Time ${teamId} requer mínimo 5 jogos casa + 5 fora`)
+  if (jogosCasa.length < 4 || jogosFora.length < 4) {
+    throw new Error(`INSUFFICIENT_TEAM_DATA: Time ${teamId} requer mínimo 4 jogos casa + 4 fora`)
   }
 
   let somaPesosCasa = 0

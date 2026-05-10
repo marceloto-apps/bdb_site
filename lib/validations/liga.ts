@@ -11,10 +11,8 @@ export const partidasQuerySchema = z.object({
   roundTo: z.coerce.number().int().min(1).optional(),
   months: z.string().optional(),           // csv: "1,2,3" → jan, fev, mar
   mando: z.enum(['casa', 'fora', 'ambos']).default('ambos'),
-  oddsCasaMin: z.coerce.number().min(1.01).optional(),
-  oddsCasaMax: z.coerce.number().optional(),
-  oddsVisMin: z.coerce.number().min(1.01).optional(),
-  oddsVisMax: z.coerce.number().optional(),
+  oddsCasaFaixas: z.string().optional(),   // csv de faixas: "1.21-1.40,3.51-5.00"
+  oddsVisFaixas: z.string().optional(),    // csv de faixas: "1.41-1.70,2.01-2.30"
 })
 
 // GET /api/ligas/[slug]/previsao
@@ -27,10 +25,8 @@ export const previsaoQuerySchema = z.object({
   roundFrom: z.coerce.number().int().min(1).optional(),
   roundTo: z.coerce.number().int().min(1).optional(),
   months: z.string().optional(),
-  oddsCasaMin: z.coerce.number().min(1.01).optional(),
-  oddsCasaMax: z.coerce.number().optional(),
-  oddsVisMin: z.coerce.number().min(1.01).optional(),
-  oddsVisMax: z.coerce.number().optional(),
+  oddsCasaFaixas: z.string().optional(),   // csv de faixas: "1.21-1.40,3.51-5.00"
+  oddsVisFaixas: z.string().optional(),    // csv de faixas: "1.41-1.70,2.01-2.30"
 })
 
 // GET /api/ligas/[slug]/info — sem params obrigatórios

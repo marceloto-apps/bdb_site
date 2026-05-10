@@ -34,8 +34,9 @@ export async function GET(
       return NextResponse.json({ error: 'Liga não encontrada' }, { status: 404 })
     }
 
-    // Encontrar a menor rodada com status SCHEDULED
-    const menorRodada = await prisma.match.findFirst({
+    // Encontrar as próximas N rodadas que possuem partidas SCHEDULED
+    const proximasRodadasAgg = await prisma.match.groupBy({
+      by: ['round'],
       where: {
         season: {
           competition: { slug },
@@ -45,10 +46,10 @@ export async function GET(
         round: { not: null }
       },
       orderBy: { round: 'asc' },
-      select: { round: true }
+      take: rodadas
     })
 
-    if (!menorRodada || menorRodada.round === null) {
+    if (!proximasRodadasAgg || proximasRodadasAgg.length === 0) {
       return NextResponse.json({
         data: {
           partidas: [],
@@ -57,7 +58,9 @@ export async function GET(
       })
     }
 
-    // Buscar as partidas no intervalo de rodadas
+    const rodadasIds = proximasRodadasAgg.map(r => r.round).filter((r): r is number => r !== null)
+
+    // Buscar as partidas que pertencem a essas rodadas
     const partidas = await prisma.match.findMany({
       where: {
         season: {
@@ -65,15 +68,9 @@ export async function GET(
           isCurrent: true
         },
         status: 'SCHEDULED',
-        round: {
-          gte: menorRodada.round,
-          lte: menorRodada.round + (rodadas - 1)
-        }
+        round: { in: rodadasIds }
       },
-      orderBy: [
-        { round: 'asc' },
-        { utcDate: 'asc' }
-      ],
+      orderBy: { utcDate: 'asc' },
       select: {
         id: true,
         round: true,
@@ -109,7 +106,7 @@ export async function GET(
     return NextResponse.json({
       data: {
         partidas: partidasFormatadas,
-        rodadaAtual: menorRodada.round.toString()
+        rodadaAtual: rodadasIds[0].toString()
       }
     })
 

@@ -108,9 +108,9 @@ export async function GET(
         awayTeam: { select: { name: true, shortName: true } },
         odds: {
           where: {
-            // Buscando Pinnacle isSharp=true para usar os odds
+            // Buscando bet365 isSharp=false/true para usar os odds (maior cobertura)
             bookmaker: {
-              name: 'Pinnacle',
+              name: 'bet365',
             },
             market: { key: 'match_odds' },
           },
@@ -131,19 +131,26 @@ export async function GET(
       })
     }
 
-    // Filtro de odds
-    if (query.oddsCasaMin || query.oddsCasaMax || query.oddsVisMin || query.oddsVisMax) {
+    // Filtro de odds - suporte a faixas não-contíguas
+    const parseFaixas = (csv: string) =>
+      csv.split(',').map(f => {
+        const [min, max] = f.split('-').map(Number)
+        return { min, max }
+      })
+
+    const faixasCasa = query.oddsCasaFaixas ? parseFaixas(query.oddsCasaFaixas) : null
+    const faixasVis = query.oddsVisFaixas ? parseFaixas(query.oddsVisFaixas) : null
+
+    if (faixasCasa || faixasVis) {
       filteredMatches = filteredMatches.filter((m) => {
-        const oddCasa = m.odds.find(o => o.selection === 'home')?.odds
-        const oddVis = m.odds.find(o => o.selection === 'away')?.odds
-
-        if (!oddCasa || !oddVis) return false
-
-        if (query.oddsCasaMin && oddCasa < query.oddsCasaMin) return false
-        if (query.oddsCasaMax && oddCasa > query.oddsCasaMax) return false
-        if (query.oddsVisMin && oddVis < query.oddsVisMin) return false
-        if (query.oddsVisMax && oddVis > query.oddsVisMax) return false
-
+        if (faixasCasa) {
+          const oddCasa = m.odds.find(o => o.selection === 'home')?.odds
+          if (oddCasa && !faixasCasa.some(f => oddCasa >= f.min && oddCasa <= f.max)) return false
+        }
+        if (faixasVis) {
+          const oddVis = m.odds.find(o => o.selection === 'away')?.odds
+          if (oddVis && !faixasVis.some(f => oddVis >= f.min && oddVis <= f.max)) return false
+        }
         return true
       })
     }

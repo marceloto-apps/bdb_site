@@ -49,7 +49,7 @@ export async function GET(
       include: {
         odds: {
           where: {
-            bookmaker: { name: 'Pinnacle' }, // ou isSharp: true
+            bookmaker: { name: 'bet365' }, // ou isSharp: false/true
             market: { key: 'match_odds' }
           }
         }

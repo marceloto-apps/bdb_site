@@ -8,20 +8,23 @@ import { FaixaOddsSelection } from '@/types/liga'
 interface FiltroFaixaOddsProps {
   label: string
   faixas: FaixaOddsSelection[]
+  available?: boolean[]
   onChange: (faixas: FaixaOddsSelection[]) => void
 }
 
-export function FiltroFaixaOdds({ label, faixas, onChange }: FiltroFaixaOddsProps) {
-  const isAllSelected = faixas.every(f => f.selected)
+export function FiltroFaixaOdds({ label, faixas, available, onChange }: FiltroFaixaOddsProps) {
+  const hasActiveFilter = faixas.some(f => f.selected) && !faixas.every(f => f.selected)
 
   const handleToggle = (index: number) => {
-    const newFaixas = [...faixas]
-    newFaixas[index].selected = !newFaixas[index].selected
+    if (available && !available[index]) return
+    const newFaixas = faixas.map((f, i) =>
+      i === index ? { ...f, selected: !f.selected } : f
+    )
     onChange(newFaixas)
   }
 
-  const handleSelectAll = () => {
-    const newFaixas = faixas.map(f => ({ ...f, selected: true }))
+  const handleClear = () => {
+    const newFaixas = faixas.map(f => ({ ...f, selected: false }))
     onChange(newFaixas)
   }
 
@@ -29,26 +32,30 @@ export function FiltroFaixaOdds({ label, faixas, onChange }: FiltroFaixaOddsProp
     <div className="flex flex-col gap-2">
       <span className="text-sm font-semibold">{label}</span>
       <div className="flex flex-wrap gap-2">
-        {faixas.map((faixa, i) => (
-          <Toggle
-            key={faixa.label}
-            pressed={faixa.selected}
-            onPressedChange={() => handleToggle(i)}
-            variant="outline"
-            size="sm"
-            className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs px-2 h-8"
-          >
-            {faixa.label}
-          </Toggle>
-        ))}
-        {!isAllSelected && (
+        {faixas.map((faixa, i) => {
+          const isAvailable = available ? available[i] : true
+          return (
+            <Toggle
+              key={faixa.label}
+              pressed={faixa.selected}
+              onPressedChange={() => handleToggle(i)}
+              variant="outline"
+              size="sm"
+              disabled={!isAvailable}
+              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground text-xs px-2 h-8 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              {faixa.label}
+            </Toggle>
+          )
+        })}
+        {hasActiveFilter && (
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleSelectAll}
+            onClick={handleClear}
             className="text-xs h-8 px-2 text-muted-foreground hover:text-foreground"
           >
-            Todas
+            Limpar
           </Button>
         )}
       </div>

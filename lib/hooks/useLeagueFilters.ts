@@ -46,7 +46,10 @@ export function useLeagueFilters(defaultMaxRound: number = 38): UseLeagueFilters
   }, [])
 
   const setRoundRange = useCallback((from: number | null, to: number | null) => {
-    setFiltros(prev => ({ ...prev, roundFrom: from, roundTo: to }))
+    setFiltros(prev => {
+      if (prev.roundFrom === from && prev.roundTo === to) return prev
+      return { ...prev, roundFrom: from, roundTo: to }
+    })
   }, [])
 
   const setMonths = useCallback((months: number[]) => {
@@ -97,18 +100,16 @@ export function useLeagueFilters(defaultMaxRound: number = 38): UseLeagueFilters
       params.months = filtros.months.join(',')
     }
 
-    // Filtro de odds Casa
+    // Filtro de odds Casa (nenhum selecionado = todos = sem filtro)
     const selecionadosCasa = filtros.oddsCasa.filter(f => f.selected)
-    if (selecionadosCasa.length > 0 && selecionadosCasa.length < FAIXAS_ODDS_PADRAO.length) {
-      params.oddsCasaMin = Math.min(...selecionadosCasa.map(f => f.min)).toString()
-      params.oddsCasaMax = Math.max(...selecionadosCasa.map(f => f.max)).toString()
+    if (selecionadosCasa.length > 0 && selecionadosCasa.length < filtros.oddsCasa.length) {
+      params.oddsCasaFaixas = selecionadosCasa.map(f => f.label).join(',')
     }
 
-    // Filtro de odds Visitante
+    // Filtro de odds Visitante (nenhum selecionado = todos = sem filtro)
     const selecionadosVis = filtros.oddsVisitante.filter(f => f.selected)
-    if (selecionadosVis.length > 0 && selecionadosVis.length < FAIXAS_ODDS_PADRAO.length) {
-      params.oddsVisMin = Math.min(...selecionadosVis.map(f => f.min)).toString()
-      params.oddsVisMax = Math.max(...selecionadosVis.map(f => f.max)).toString()
+    if (selecionadosVis.length > 0 && selecionadosVis.length < filtros.oddsVisitante.length) {
+      params.oddsVisFaixas = selecionadosVis.map(f => f.label).join(',')
     }
 
     params.modelo = modelo

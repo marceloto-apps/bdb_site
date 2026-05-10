@@ -1,4 +1,3 @@
-import { prisma } from '@/lib/prisma'
 
 const API_FOOTBALL_BASE = 'https://v3.football.api-sports.io'
 
@@ -39,19 +38,9 @@ async function fetchApiFootball<T>(
   return res.json()
 }
 
+// Registra quota apenas em console — tabela apiQuota removida do schema
 async function registrarQuota(used: number, limit: number, remaining: number): Promise<void> {
-  try {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    
-    await prisma.apiQuota.upsert({
-      where: { date: today },
-      update: { used, limit, remaining },
-      create: { date: today, used, limit, remaining }
-    })
-  } catch (error) {
-    console.error('Falha ao registrar quota:', error)
-  }
+  console.debug(`[API-Football] Quota: ${used}/${limit} (${remaining} restantes)`)
 }
 
 export async function fetchPartidas(leagueId: number, season: number) {

@@ -74,39 +74,57 @@ function encontrarLinhaBase(lambda: number, linhas: number[]): number {
 }
 
 /**
- * Gera tabela de 10 linhas projetadas.
- * Juice mínima na base (equilíbrio), crescendo +0.25% por degrau.
+ * Calcula as linhas de Over/Under 2.5 espelhando o modelo Gemini.
+ * Permite juice negativo (overround < 1.0) e usa incremento absoluto
+ * de +0.25% por degrau a partir da linha base.
+ * Quando uma odd é travada em 1.01 (piso operacional), o juice efetivo
+ * é recalculado a partir das odds finais — espelhando o comportamento Gemini.
  */
 export function calcularLinhas25(
   lambda: number,
   juiceBase: number
 ): LinhaCalculada25[] {
-  const linhas = [1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 3.25, 3.50, 3.75]
-  const linhaBase = encontrarLinhaBase(lambda, linhas)
+  const linhas = [1.50, 1.75, 2.00, 2.25, 2.50, 2.75, 3.00, 3.25, 3.50, 3.75];
+  const linhaBase = encontrarLinhaBase(lambda, linhas);
 
-  // Juice mínima na base: desconta steps entre 2.5 e a base
-  const stepsRef = Math.round(Math.abs(linhaBase - 2.5) / 0.25)
-  const juiceMinima = Math.max(0.5, juiceBase - stepsRef * 0.25)
+  // Juice mínimo na linha base — pode ser negativo (espelho Gemini)
+  const stepsRef = Math.round(Math.abs(linhaBase - 2.5) / 0.25);
+  const juiceMinima = juiceBase - stepsRef * 0.25;
 
   return linhas.map((line) => {
-    let fairProbUnder = calcularFairProbUnder(lambda, line)
-    fairProbUnder = Math.min(0.99, Math.max(0.01, fairProbUnder))
-    const fairProbOver = 1 - fairProbUnder
+    let fairProbUnder = calcularFairProbUnder(lambda, line);
+    
+    // Ajuste empírico de variância para simular overdispersion nas linhas extremas
+    // Desloca -0.9% de probabilidade para cada 1 gol de distância da linha 2.50
+    const distFrom25 = line - 2.50;
+    const adjustment = -0.009 * distFrom25;
+    fairProbUnder += adjustment;
+    
+    fairProbUnder = Math.min(0.999, Math.max(0.001, fairProbUnder));
+    const fairProbOver = 1 - fairProbUnder;
 
-    // Juice cresce +0.25% por cada step de 0.25 a partir da base
-    const steps = Math.round(Math.abs(line - linhaBase) / 0.25)
-    const juiceDinamica = juiceMinima + steps * 0.25
-    const totalJuice = juiceDinamica / 100
+    // Juice teórico cresce +0.25% por degrau a partir da base
+    const steps = Math.round(Math.abs(line - linhaBase) / 0.25);
+    const juiceTeorico = juiceMinima + steps * 0.25;
+    const overround = 1 + juiceTeorico / 100;
 
-    // Odds com overround proporcional
-    const overround = 1 + totalJuice
-    const oddUnder = Math.max(1.01, 1 / (fairProbUnder * overround))
-    const oddOver = Math.max(1.01, 1 / (fairProbOver * overround))
+    // Odds preliminares (método proporcional)
+    let oddUnder = 1 / (fairProbUnder * overround);
+    let oddOver = 1 / (fairProbOver * overround);
 
-    const dist = Math.abs(line - linhaBase)
-    const afastamento = line === linhaBase
-      ? 'BASE'
-      : `+${dist.toFixed(2)}`
+    // Clamp no piso operacional de 1.01
+    const clampUnder = oddUnder < 1.01;
+    const clampOver = oddOver < 1.01;
+    if (clampUnder) oddUnder = 1.01;
+    if (clampOver) oddOver = 1.01;
+
+    // Se houve clamp, recalcular juice efetivo a partir das odds finais
+    const juiceEfetivo = (clampUnder || clampOver)
+      ? (1 / oddUnder + 1 / oddOver - 1) * 100
+      : juiceTeorico;
+
+    const dist = Math.abs(line - linhaBase);
+    const afastamento = line === linhaBase ? 'BASE' : `+${dist.toFixed(2)}`;
 
     return {
       line: line.toFixed(2),
@@ -114,9 +132,9 @@ export function calcularLinhas25(
       over: oddOver.toFixed(2),
       probUnder: (fairProbUnder * 100).toFixed(1),
       probOver: (fairProbOver * 100).toFixed(1),
-      juice: juiceDinamica.toFixed(2),
+      juice: juiceEfetivo.toFixed(2),
       afastamento,
       isBase: line === linhaBase,
-    }
-  })
+    };
+  });
 }

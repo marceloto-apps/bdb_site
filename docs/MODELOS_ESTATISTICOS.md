@@ -1812,3 +1812,21 @@ O modelo com menor AIC vence. A distância (Delta) do vencedor para o segundo co
 - **Alta:** $\Delta AIC > 4.0$ (vencedor destacadamente superior)
 - **Média:** $\Delta AIC > 2.0$ (vencedor marginalmente superior)
 - **Baixa:** $\Delta AIC \leq 2.0$ (empate técnico)
+
+---
+
+## 18. Anexo: Ferramentas Independentes
+
+### 18.1 Over/Under 2.5 (Market Analyzer)
+A ferramenta analítica **Over/Under 2.5** opera de forma modular, recebendo as odds reais da casa de apostas para a linha `2.50` (eixo de referência) e extraindo a probabilidade justa implícita.
+
+**Metodologia:**
+1. **Extração de $\lambda$:** Utiliza o método matemático de **Bisecção** (`encontrarLambdaIterativo`) para encontrar o parâmetro Poisson ($\lambda$) que gera exatamente a proporção Justa de probabilidade na linha de 2.50 gols.
+2. **Projeção Base:** Utiliza as funções PMF e CDF de Poisson puras para calcular as probabilidades *fair* em todas as linhas asiáticas (de 1.50 a 3.75, em degraus de 0.25).
+3. **Overdispersion e Ajuste Empírico:**
+   As casas asiáticas dilatam as probabilidades das "zebras" nos limites marginais da curva para conter riscos de assimetria. Para espelhar este comportamento nativo de *superdispersão* sem migrar a ferramenta para a pesada Binomial Negativa, aplica-se o **Fator Empírico de Achatamento**:
+   $$
+   P_{ajustada}(U) = P_{poisson}(U) + [-0.009 \cdot (\text{Linha} - 2.50)]
+   $$
+   Este ajuste transfere precisamente $0.9\%$ de probabilidade de ocorrência para cada gol de distância da âncora `2.50`.
+4. **Juice (Margem):** O motor extrai o "Overround" da referência 2.50 e aplica *Proportional Distribution*, inflando o *juice* da casa com um delta de $+0.25\%$ estático por cada degrau distante da linha de maior probabilidade (~50/50), suportando inclusive *juice* teórico negativo nas extremidades para possibilitar o *clamping* de odd em `1.01`.

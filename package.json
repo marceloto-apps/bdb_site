@@ -10,6 +10,8 @@
     "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:poisson": "vitest run tests/ferramentas/over-under-25/poisson-25.test.ts",
+    "test:juice": "vitest run tests/ferramentas/over-under-25/juice-25.test.ts",
     "test:ui": "vitest --ui",
     "db:seed:leagues": "tsx prisma/seed-leagues.ts"
   },

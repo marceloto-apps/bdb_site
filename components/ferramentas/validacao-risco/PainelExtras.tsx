@@ -22,8 +22,19 @@ export function PainelExtras({ results, limiteDrawdown, stakeEscolhida }: Painel
     ? results.totalProfit / results.avgMDD
     : 0
 
-  // Barra visual do score (0 a 5 como range razoável)
-  const scoreNormalizado = Math.min(100, (scoreQualidade / 5) * 100)
+  // Barra visual do score (0 a 10 como range razoável)
+  const scoreNormalizado = Math.min(100, (scoreQualidade / 10) * 100)
+
+  let colorClass = 'text-red-500'
+  let bgColorClass = 'bg-red-500'
+
+  if (scoreQualidade > 5) {
+    colorClass = 'text-green-500'
+    bgColorClass = 'bg-green-500'
+  } else if (scoreQualidade > 2) {
+    colorClass = 'text-yellow-500'
+    bgColorClass = 'bg-yellow-500'
+  }
 
   return (
     <div className="space-y-4 mt-6">
@@ -50,7 +61,7 @@ export function PainelExtras({ results, limiteDrawdown, stakeEscolhida }: Painel
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-data-yellow" />
+              <TrendingUp className={`h-4 w-4 ${colorClass}`} />
               <span className="text-xs font-semibold uppercase text-muted-foreground">
                 Score de Qualidade
               </span>
@@ -62,8 +73,8 @@ export function PainelExtras({ results, limiteDrawdown, stakeEscolhida }: Painel
           {/* Barra de progresso */}
           <div className="w-full bg-muted rounded-full h-2">
             <div
-              className="bg-data-yellow h-2 rounded-full transition-all"
-              style={{ width: `${scoreNormalizado}%`, backgroundColor: '#eab308' }}
+              className={`${bgColorClass} h-2 rounded-full transition-all`}
+              style={{ width: `${scoreNormalizado}%` }}
             />
           </div>
           <div className="flex justify-between mt-1">

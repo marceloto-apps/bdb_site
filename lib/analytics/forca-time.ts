@@ -53,8 +53,8 @@ export function getDispersao(gols: number[]): DispersaoTime {
   const cv = media > 0 ? dp / media : (dp > 0 ? 999 : 0)
   
   let nivel: 'ALTA' | 'MEDIA' | 'BAIXA' = 'BAIXA'
-  if (cv < 0.50) nivel = 'ALTA'
-  else if (cv <= 1.00) nivel = 'MEDIA'
+  if (cv < 0.30) nivel = 'ALTA'
+  else if (cv <= 0.70) nivel = 'MEDIA'
   
   return { dp, cv, nivel }
 }

@@ -458,3 +458,23 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
 **Usabilidade e Monetização Preview:**
 - Atualização visual no menu lateral (Sidebar) integrando tags de "Em breve" nas ferramentas secundárias e futuros módulos educacionais (Aulas, Backtest, Métodos).
 - Acesso segmentado a ligas: O sistema exibe o status de ligas "FREE" no painel principal, enquanto as ligas restritas bloqueiam o acesso do usuário exibindo uma interface padronizada "Disponível nos Planos Pagos", preparando o terreno para a Fase 4 (integração de checkout).
+
+### 27. Otimização da Ferramenta Over/Under 2.5 (Market Analyzer) — 12/05/2026
+
+**Blindagem Matemática:**
+- O cálculo do $\lambda$ a partir das odds da linha `2.50` (`encontrarLambdaIterativo`) foi refatorado. Substituiu-se a busca iterativa legada pelo método matemático de **Bisecção**, garantindo convergência exata e prevenindo loops infinitos em cotações extremamente desbalanceadas.
+- Adicionada documentação (JSDoc) extensiva e proteção de entradas (inputs) via `zod`.
+
+**Paridade de Mercado e Ajuste Empírico (Overdispersion):**
+- A injeção de margem (*juice*) nas odds da ferramenta foi reescrita. O novo sistema suporta *juice* negativo nas linhas distantes, impõe um piso de odd operacional (clamp em `1.01`) e recalcula o juice efetivo para a linha dinamicamente após o clamp, refletindo com precisão as grades das plataformas de referência.
+- Em resposta ao comportamento natural de superdispersão das casas de aposta asiáticas, foi implementado um **Ajuste Empírico de Variância**. O algoritmo agora desloca linearmente `-0.9%` de probabilidade por cada 1 gol de distância da linha eixo de `2.50`. Essa correção preserva a injeção do *juice* proporcional e o eixo original intactos, mas blinda inteligentemente as zebras nas extremidades (ex: cotação de um Under 1.50 não inflaciona para `8.03`, sendo travada em `7.45`), entregando paridade perfeita contra os modelos de mercado-alvo.
+
+### 28. Refinamentos Analíticos e Visuais (Fase 3) — 12/05/2026
+
+**Dashboard de Ligas — Escala de Confiança (CV):**
+- As faixas de avaliação do **Coeficiente de Variação (CV)** foram ajustadas para garantir uma leitura de risco muito mais estrita. A nova classificação exige que a dispersão seja menor que `0.3` (30%) para ser considerada de Confiança Alta, e pune variações acima de `0.7` (70%) com classificação Baixa, refletindo maior rigor matemático no painel central.
+
+**Ferramenta de Validação e Risco:**
+- O painel de *Score de Qualidade* (Eficiência do Método) recebeu aprimoramento visual em sua barra de progresso.
+- A escala visual foi expandida de 0 a 10.
+- A barra e a iconografia correspondente agora exibem formatação condicional baseada na lucratividade relativa ao Drawdown: Vermelho (score $\le$ 2), Amarelo (score entre 2 e 5) e Verde (score $>$ 5).

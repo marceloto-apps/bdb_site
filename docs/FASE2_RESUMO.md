@@ -18,6 +18,11 @@ e o dashboard interativo para análise de confrontos.
 - **Seletor de Lambdas**: Três métodos ortogonais adicionados para estimativa de λ (Média Simples, Forças Relativas, xG), com fallback automático em caso de insuficiência de dados de xG (mínimo de 20 jogos na liga e 5 por mando).
 - Proteção contra *division by zero* implementada nas funções de calibração de médias da liga.
 - UI Refatorada para exibição independente do Input (Seletor Lambda) e Distribuição (Seletor Modelo).
+- **Estatísticas Detalhadas da Partida**: Implementado um painel tabulado com métricas agregadas dos últimos jogos das equipes (Mandante e Visitante) incluindo as abas:
+  - **Odds/Profit**: Tracking de P&L, Odds Médias e Win Rate.
+  - **Gols / xG / Fin.**: Comparativo de Finalizações, Gols no FT e no HT, e Expected Goals (xG).
+  - **Escant. / Cartões / Faltas**: Médias disciplinares e de bolas paradas (Corners).
+  - **Over / Under**: Distribuição percentual do mercado de Totais de Gols.
 - **Projeção de Handicaps e Totais**: Motor de cálculo matemático adicionado para traduzir a Matriz de Placares em linhas de Handicap Asiático exatas (Mandante/Visitante) e Over Gols, incluindo probabilidades de *Push/Half* e Odd Justa Baseada em Expected Value (EV).
 
 ---
@@ -62,6 +67,7 @@ API-Football → Sync Admin → MySQL → API Routes → Motor Analítico → Cl
 | `/api/ligas/[slug]/partidas` | GET | Partidas com filtros |
 | `/api/ligas/[slug]/previsao` | GET | Previsão completa de confronto |
 | `/api/ligas/[slug]/mapa-valor` | GET | ROI por faixa de odds |
+| `/api/ligas/[slug]/estatisticas` | GET | Agregação completa de MatchStats para o confronto (Gols, xG, Escanteios, Cartões, Profit) |
 | `/api/admin/sync/partidas` | POST | Sincronizar partidas |
 | `/api/admin/sync/odds` | POST | Sincronizar odds |
 | `/api/admin/sync/status` | GET | Status de sincronizações |
@@ -83,6 +89,10 @@ API-Football → Sync Admin → MySQL → API Routes → Motor Analítico → Cl
 | `PainelMercados` | Client | Tabelas 1X2, BTTS, O/U, AH com EV% |
 | `PainelEvolucao` | Client | Gráfico Recharts de gols por rodada |
 | `PainelMapaValor` | Client | ROI por faixa com tabs por mercado |
+| `TabOddsProfit` | Client | Aba de P&L, Win Rate e Média de Odds |
+| `TabGolsXg` | Client | Aba de Gols FT/HT, Expected Goals e Finalizações |
+| `TabEscanteiosCartoes` | Client | Aba de métricas disciplinares e cantos |
+| `TabOverUnder` | Client | Aba com percentuais de batimento do mercado Over/Under |
 | `LigaCard` | Server | Card clicável no grid de ligas |
 
 ### Componentes Admin (`components/admin/`)

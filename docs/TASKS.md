@@ -788,8 +788,10 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
 - [x] 2D.34 — Ajustar texto da seção Prova Social na Home de "Desde 2022" para "Desde 2019".
 - [x] 2D.35 — Integração completa de Expected Goals (xG) no Painel de Médias (cálculos de dispersão e retorno na API).
 - [x] 2D.36 — Refinamento de UI: seção de Confiança com métricas de Gols e xG lado a lado, e cabeçalho de médias da liga dividido em duas linhas distintas.
-- [x] 2D.37 — Integração de estatísticas de Half-Time (HT): adição de `hthg` e `htag` ao schema e ao motor analítico; inclusão de um quadro "Gols 1H" e totais nas abas estatísticas.
-- [x] 2D.38 — Implementação do `PainelProjecaoHandicaps`: painel visual ao lado da Matriz de Placares com cálculos precisos de Win%, Push% e Odd Justa (EV=0) para as linhas asiáticas de Mandante, Visitante e Over Gols.
+- [x] 2D.37 — Criação da API de Estatísticas (`/api/ligas/[slug]/estatisticas`) e do motor de agregação (`estatisticas-builder.ts`) para compilar MatchStats brutos em resumos por time.
+- [x] 2D.38 — Implementação das novas abas de estatísticas detalhadas no Dashboard da Liga: Odds/Profit, Gols / xG / Fin., Escant. / Cartões / Faltas, e Over / Under.
+- [x] 2D.39 — Integração de estatísticas de Half-Time (HT): adição de `hthg` e `htag` ao schema e ao motor analítico; inclusão de um quadro "Gols 1H" e totais nas abas estatísticas.
+- [x] 2D.40 — Implementação do `PainelProjecaoHandicaps`: painel visual ao lado da Matriz de Placares com cálculos precisos de Win%, Push% e Odd Justa (EV=0) para as linhas asiáticas de Mandante, Visitante e Over Gols.
 
 ## 2E — Seed e Dados Iniciais ⚪
 - [x] 2E.1 — Criar seed da liga Brasileirão A (`prisma/seed-leagues.ts`)

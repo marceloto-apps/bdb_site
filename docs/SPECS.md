@@ -1648,6 +1648,11 @@ Procedimento manual pelo admin após importar dados de ambas as fontes:
 | `PainelMercados` | `components/ligas/PainelMercados.tsx` | 1X2, BTTS, O/U, AH |
 | `PainelMapaValor` | `components/ligas/PainelMapaValor.tsx` | ROI por faixa |
 | `PainelEvolucao` | `components/ligas/PainelEvolucao.tsx` | Gráfico Recharts |
+| `TabOddsProfit` | `components/ligas/partida/TabOddsProfit.tsx` | Aba de P&L, Win Rate e Odds |
+| `TabGolsXg` | `components/ligas/partida/TabGolsXg.tsx` | Aba de Gols FT/HT, xG e Finalizações |
+| `TabEscanteiosCartoes` | `components/ligas/partida/TabEscanteiosCartoes.tsx` | Aba de Escanteios e Cartões |
+| `TabOverUnder` | `components/ligas/partida/TabOverUnder.tsx` | Aba de Over/Under percentual |
+| `StatDisplay` | `components/ligas/partida/StatDisplay.tsx` | Componente reutilizável para métricas numéricas |
 | `BotaoImportarCSV` | `components/ligas/BotaoImportarCSV.tsx` | Upload CSV (ADMIN) |
 | `SyncButton` | `components/ligas/SyncButton.tsx` | Botão de sync com loading + resultado |
 | `QuotaDashboard` | `components/ligas/QuotaDashboard.tsx` | Barra de progresso de quota mensal |

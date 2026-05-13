@@ -1,12 +1,31 @@
-import { EmConstrucao } from '@/components/dashboard/em-construcao'
+import { headers } from 'next/headers'
+import { CategoriaListagem } from '@/components/cms/CategoriaListagem'
 
-export default function CategoriasPage() {
+export const dynamic = 'force-dynamic'
+
+export default async function CategoriasPage() {
+  const host = headers().get('host')
+  const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+  
+  let categorias = []
+  
+  try {
+    const res = await fetch(`${protocol}://${host}/api/categorias`, {
+      cache: 'no-store',
+      headers: { cookie: headers().get('cookie') || '' }
+    })
+    
+    if (res.ok) {
+      const result = await res.json()
+      categorias = result.data || []
+    }
+  } catch (error) {
+    console.error('Erro ao buscar categorias', error)
+  }
+
   return (
     <div className="py-6">
-      <EmConstrucao 
-        titulo="Gestão de Categorias" 
-        descricao="A área para criação e edição das categorias dos artigos será liberada em breve." 
-      />
+      <CategoriaListagem categorias={categorias} />
     </div>
   )
 }

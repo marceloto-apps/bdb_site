@@ -12,7 +12,7 @@ if (!cloudName) {
 
 cloudinary.config({
   cloud_name: cloudName,
-  api_key: process.env.CLOUDINARY_API_KEY,
+  api_key: process.env.CLOUDINARY_API_KEY ?? process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true,
 })

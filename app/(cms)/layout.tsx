@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, PlusCircle, Settings } from 'lucide-react'
+import { FileText, PlusCircle, Settings, FileEdit, Tags } from 'lucide-react'
 
 export default async function CmsLayout({
   children,
@@ -13,6 +13,10 @@ export default async function CmsLayout({
   if (!session?.user) {
     redirect('/login')
   }
+
+  const userRole = session.user.role
+  const isEditorPlus = userRole === 'ADMIN' || userRole === 'EDITOR'
+  const isAdmin = userRole === 'ADMIN'
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -33,6 +37,18 @@ export default async function CmsLayout({
             <PlusCircle size={18} />
             <span>Novo Artigo</span>
           </Link>
+          {isEditorPlus && (
+            <Link href="/cms/revisao" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
+              <FileEdit size={18} />
+              <span>Em Revisão</span>
+            </Link>
+          )}
+          {isAdmin && (
+            <Link href="/cms/categorias" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
+              <Tags size={18} />
+              <span>Categorias</span>
+            </Link>
+          )}
         </nav>
         <div className="p-4 border-t">
           <Link href="/dashboard" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">

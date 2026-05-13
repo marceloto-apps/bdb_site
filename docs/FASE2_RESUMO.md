@@ -14,9 +14,11 @@ e o dashboard interativo para análise de confrontos.
 ## Atualizações Pós-Fase 2
 - Implementado um filtro rigoroso (`getSeasonDateFilter`) em todas as rotas do motor analítico para garantir isolamento da temporada atual.
 - **Integração de Expected Goals (xG)**: Adicionado suporte completo para cálculo de médias e forças usando xG.
+- **Integração de Half-Time (HT)**: Adicionados campos `hthg` e `htag` no schema e no pipeline de ingestão, com aba de Gols HT no Dashboard.
 - **Seletor de Lambdas**: Três métodos ortogonais adicionados para estimativa de λ (Média Simples, Forças Relativas, xG), com fallback automático em caso de insuficiência de dados de xG (mínimo de 20 jogos na liga e 5 por mando).
 - Proteção contra *division by zero* implementada nas funções de calibração de médias da liga.
 - UI Refatorada para exibição independente do Input (Seletor Lambda) e Distribuição (Seletor Modelo).
+- **Projeção de Handicaps e Totais**: Motor de cálculo matemático adicionado para traduzir a Matriz de Placares em linhas de Handicap Asiático exatas (Mandante/Visitante) e Over Gols, incluindo probabilidades de *Push/Half* e Odd Justa Baseada em Expected Value (EV).
 
 ---
 
@@ -77,6 +79,7 @@ API-Football → Sync Admin → MySQL → API Routes → Motor Analítico → Cl
 | `BadgeModeloAuto` | Client | Badge de confiança do modelo automático |
 | `PainelMedias` | Client | Cards de médias, forças relativas e Expected Goals (xG) |
 | `PainelMatrizPlacares` | Client | Grid 11×11 com heatmap |
+| `PainelProjecaoHandicaps` | Client | Projeção avançada de Handicaps e Odds Justas baseadas em Matriz |
 | `PainelMercados` | Client | Tabelas 1X2, BTTS, O/U, AH com EV% |
 | `PainelEvolucao` | Client | Gráfico Recharts de gols por rodada |
 | `PainelMapaValor` | Client | ROI por faixa com tabs por mercado |

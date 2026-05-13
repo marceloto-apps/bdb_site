@@ -27,6 +27,7 @@ export const previsaoQuerySchema = z.object({
   months: z.string().optional(),
   oddsCasaFaixas: z.string().optional(),   // csv de faixas: "1.21-1.40,3.51-5.00"
   oddsVisFaixas: z.string().optional(),    // csv de faixas: "1.41-1.70,2.01-2.30"
+  mandoContext: z.enum(['CASA_VISITANTE', 'GERAL']).default('CASA_VISITANTE').optional(),
 })
 
 // GET /api/ligas/[slug]/info — sem params obrigatórios

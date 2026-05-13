@@ -478,3 +478,14 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
 - O painel de *Score de Qualidade* (Eficiência do Método) recebeu aprimoramento visual em sua barra de progresso.
 - A escala visual foi expandida de 0 a 10.
 - A barra e a iconografia correspondente agora exibem formatação condicional baseada na lucratividade relativa ao Drawdown: Vermelho (score $\le$ 2), Amarelo (score entre 2 e 5) e Verde (score $>$ 5).
+
+### 29. Integração de Gols HT e Projeção de Handicaps (Fase 2) — 12/05/2026
+
+**Estatísticas de Half-Time (HT):**
+- O schema do banco de dados e o motor analítico foram expandidos para capturar e calcular estatísticas focadas exclusivamente no primeiro tempo das partidas (`hthg` e `htag`).
+- As abas "Gols / xG / Fin." e "Over / Under" foram atualizadas para exibir quadros completos de "Gols 1H" e totais combinados do HT.
+
+**Novo Motor de Projeção de Handicaps:**
+- Implementado o `PainelProjecaoHandicaps`, que varre matematicamente a Matriz de Placares do modelo atual (Poisson, ZIP, etc) e gera um quadro completo das linhas de mercado.
+- A UI calcula instantaneamente a chance de Full Win (`%Win`), a chance de Meio-Ganho/Push (`%Push`) e deriva a **Odd Justa** utilizando a fórmula exata de Valor Esperado ($EV=0$) para dezenas de linhas Asiáticas do Mandante, Visitante e Over Gols.
+- O Layout do Dashboard de Liga foi refeito: o Gráfico de Evolução de Gols desceu ocupando toda a largura da tela, dando destaque ao novo quadro de Handicaps que foi fixado ao lado da Matriz de Placares.

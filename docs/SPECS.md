@@ -1644,6 +1644,7 @@ Procedimento manual pelo admin após importar dados de ambas as fontes:
 | `BadgeModeloAuto` | `components/ligas/BadgeModeloAuto.tsx` | Badge com modelo selecionado + confiança (AIC) |
 | `PainelMedias` | `components/ligas/PainelMedias.tsx` | Replicação aba DASH |
 | `PainelMatrizPlacares` | `components/ligas/PainelMatrizPlacares.tsx` | Grid 11x11 |
+| `PainelProjecaoHandicaps` | `components/ligas/PainelProjecaoHandicaps.tsx` | Projeção avançada de Handicaps Asiáticos e Over Gols baseada na Matriz, incluindo Push% e Odd Justa (EV=0) |
 | `PainelMercados` | `components/ligas/PainelMercados.tsx` | 1X2, BTTS, O/U, AH |
 | `PainelMapaValor` | `components/ligas/PainelMapaValor.tsx` | ROI por faixa |
 | `PainelEvolucao` | `components/ligas/PainelEvolucao.tsx` | Gráfico Recharts |

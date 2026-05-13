@@ -453,6 +453,9 @@ model Match {
   fthg            Int?
   ftag            Int?
   ftr             MatchResult?
+  hthg            Int?
+  htag            Int?
+  htr             MatchResult?
 
   venueName       String?
   venueCity       String?
@@ -460,6 +463,7 @@ model Match {
 
   xgAvailable     Boolean      @default(false)
   oddsAvailable   Boolean      @default(false)
+  liveOddsAvailable Boolean      @default(false)
 
   dataSource      DataSource   @default(THESTATSAPI)
   sourceFile      String?
@@ -545,6 +549,152 @@ model MatchStats {
   homeOffsides        Int?
   awayOffsides        Int?
 
+  homeAccurateLongBalls              Int?
+  homeAccurateLongBallsFirstHalf     Int?
+  homeAccurateLongBallsSecondHalf    Int?
+  homeBallRecoveries                 Int?
+  homeBallRecoveriesFirstHalf        Int?
+  homeBallRecoveriesSecondHalf       Int?
+  homeBigChances                     Int?
+  homeBigChancesFirstHalf            Int?
+  homeBigChancesMissed               Int?
+  homeBigChancesMissedFirstHalf      Int?
+  homeBigChancesMissedSecondHalf     Int?
+  homeBigChancesSecondHalf           Int?
+  homeClearancesFirstHalf            Int?
+  homeClearancesSecondHalf           Int?
+  homeCornersFirstHalf               Int?
+  homeCornersSecondHalf              Int?
+  homeCrossesFirstHalf               Int?
+  homeCrossesSecondHalf              Int?
+  homeFinalThirdEntries              Int?
+  homeFinalThirdEntriesFirstHalf     Int?
+  homeFinalThirdEntriesSecondHalf    Int?
+  homeFouledFinalThird               Int?
+  homeFouledFinalThirdFirstHalf      Int?
+  homeFouledFinalThirdSecondHalf     Int?
+  homeFoulsFirstHalf                 Int?
+  homeFoulsSecondHalf                Int?
+  homeFreeKicks                      Int?
+  homeFreeKicksFirstHalf             Int?
+  homeFreeKicksSecondHalf            Int?
+  homeGoalKicks                      Int?
+  homeGoalKicksFirstHalf             Int?
+  homeGoalKicksSecondHalf            Int?
+  homeGoalsPrevented                 Float?
+  homeHitWoodwork                    Int?
+  homeHitWoodworkFirstHalf           Int?
+  homeHitWoodworkSecondHalf          Int?
+  homeInterceptionsFirstHalf         Int?
+  homeInterceptionsSecondHalf        Int?
+  homeOffsidesFirstHalf              Int?
+  homeOffsidesSecondHalf             Int?
+  homePassesAccurateFirstHalf        Int?
+  homePassesAccurateSecondHalf       Int?
+  homePassesTotalFirstHalf           Int?
+  homePassesTotalSecondHalf          Int?
+  homePossessionFirstHalf            Float?
+  homePossessionSecondHalf           Float?
+  homeSavesFirstHalf                 Int?
+  homeSavesSecondHalf                Int?
+  homeShotsBlockedFirstHalf          Int?
+  homeShotsBlockedSecondHalf         Int?
+  homeShotsFirstHalf                 Int?
+  homeShotsInsideBox                 Int?
+  homeShotsInsideBoxFirstHalf        Int?
+  homeShotsInsideBoxSecondHalf       Int?
+  homeShotsOffTargetFirstHalf        Int?
+  homeShotsOffTargetSecondHalf       Int?
+  homeShotsOnTargetFirstHalf         Int?
+  homeShotsOnTargetSecondHalf        Int?
+  homeShotsOutsideBox                Int?
+  homeShotsOutsideBoxFirstHalf       Int?
+  homeShotsOutsideBoxSecondHalf      Int?
+  homeShotsSecondHalf                Int?
+  homeTacklesFirstHalf               Int?
+  homeTacklesSecondHalf              Int?
+  homeThrowIns                       Int?
+  homeThrowInsFirstHalf              Int?
+  homeThrowInsSecondHalf             Int?
+  homeTouchesPenaltyArea             Int?
+  homeTouchesPenaltyAreaFirstHalf    Int?
+  homeTouchesPenaltyAreaSecondHalf   Int?
+  homeYellowCardsFirstHalf           Int?
+  homeYellowCardsSecondHalf          Int?
+
+  awayAccurateLongBalls              Int?
+  awayAccurateLongBallsFirstHalf     Int?
+  awayAccurateLongBallsSecondHalf    Int?
+  awayBallRecoveries                 Int?
+  awayBallRecoveriesFirstHalf        Int?
+  awayBallRecoveriesSecondHalf       Int?
+  awayBigChances                     Int?
+  awayBigChancesFirstHalf            Int?
+  awayBigChancesMissed               Int?
+  awayBigChancesMissedFirstHalf      Int?
+  awayBigChancesMissedSecondHalf     Int?
+  awayBigChancesSecondHalf           Int?
+  awayClearancesFirstHalf            Int?
+  awayClearancesSecondHalf           Int?
+  awayCornersFirstHalf               Int?
+  awayCornersSecondHalf              Int?
+  awayCrossesFirstHalf               Int?
+  awayCrossesSecondHalf              Int?
+  awayFinalThirdEntries              Int?
+  awayFinalThirdEntriesFirstHalf     Int?
+  awayFinalThirdEntriesSecondHalf    Int?
+  awayFouledFinalThird               Int?
+  awayFouledFinalThirdFirstHalf      Int?
+  awayFouledFinalThirdSecondHalf     Int?
+  awayFoulsFirstHalf                 Int?
+  awayFoulsSecondHalf                Int?
+  awayFreeKicks                      Int?
+  awayFreeKicksFirstHalf             Int?
+  awayFreeKicksSecondHalf            Int?
+  awayGoalKicks                      Int?
+  awayGoalKicksFirstHalf             Int?
+  awayGoalKicksSecondHalf            Int?
+  awayGoalsPrevented                 Float?
+  awayHitWoodwork                    Int?
+  awayHitWoodworkFirstHalf           Int?
+  awayHitWoodworkSecondHalf          Int?
+  awayInterceptionsFirstHalf         Int?
+  awayInterceptionsSecondHalf        Int?
+  awayOffsidesFirstHalf              Int?
+  awayOffsidesSecondHalf             Int?
+  awayPassesAccurateFirstHalf        Int?
+  awayPassesAccurateSecondHalf       Int?
+  awayPassesTotalFirstHalf           Int?
+  awayPassesTotalSecondHalf          Int?
+  awayPossessionFirstHalf            Float?
+  awayPossessionSecondHalf           Float?
+  awaySavesFirstHalf                 Int?
+  awaySavesSecondHalf                Int?
+  awayShotsBlockedFirstHalf          Int?
+  awayShotsBlockedSecondHalf         Int?
+  awayShotsFirstHalf                 Int?
+  awayShotsInsideBox                 Int?
+  awayShotsInsideBoxFirstHalf        Int?
+  awayShotsInsideBoxSecondHalf       Int?
+  awayShotsOffTargetFirstHalf        Int?
+  awayShotsOffTargetSecondHalf       Int?
+  awayShotsOnTargetFirstHalf         Int?
+  awayShotsOnTargetSecondHalf        Int?
+  awayShotsOutsideBox                Int?
+  awayShotsOutsideBoxFirstHalf       Int?
+  awayShotsOutsideBoxSecondHalf      Int?
+  awayShotsSecondHalf                Int?
+  awayTacklesFirstHalf               Int?
+  awayTacklesSecondHalf              Int?
+  awayThrowIns                       Int?
+  awayThrowInsFirstHalf              Int?
+  awayThrowInsSecondHalf             Int?
+  awayTouchesPenaltyArea             Int?
+  awayTouchesPenaltyAreaFirstHalf    Int?
+  awayTouchesPenaltyAreaSecondHalf   Int?
+  awayYellowCardsFirstHalf           Int?
+  awayYellowCardsSecondHalf          Int?
+
   syncedAt            DateTime?
   createdAt           DateTime @default(now())
 
@@ -558,7 +708,7 @@ model MatchOdds {
   marketId      String
   selection     String
   line          Float?
-  oddsType      OddsType
+  oddsType      OddsType  @default(PREMATCH_CLOSING)
   odds          Float
 
   createdAt     DateTime  @default(now())
@@ -777,7 +927,7 @@ model OddsMovement {
   selection    String
   line         Float?
   odds         Float
-  oddsType     OddsType
+  oddsType     OddsType  @default(PREMATCH_CLOSING)
   capturedAt   DateTime
   createdAt    DateTime  @default(now())
 

@@ -8,6 +8,7 @@ import { SeletorModelo } from '@/components/ligas/SeletorModelo'
 import { SeletorLambda } from '@/components/ligas/SeletorLambda'
 import { PainelMedias } from '@/components/ligas/PainelMedias'
 import { PainelMatrizPlacares } from '@/components/ligas/PainelMatrizPlacares'
+import { PainelProjecaoHandicaps } from '@/components/ligas/PainelProjecaoHandicaps'
 import { PainelMercados } from '@/components/ligas/PainelMercados'
 import { PainelOddsMercado } from '@/components/ligas/PainelOddsMercado'
 import { PainelEvolucao } from '@/components/ligas/PainelEvolucao'
@@ -17,8 +18,13 @@ import { FiltrosAvancados } from '@/components/ligas/FiltrosAvancados'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
 import { TimeOption, ModoModelo, PrevisaoState, MapaValorResponse } from '@/types/liga'
+import { TabOddsProfit } from '@/components/ligas/partida/TabOddsProfit'
+import { TabGolsXg } from '@/components/ligas/partida/TabGolsXg'
+import { TabEscanteiosCartoes } from '@/components/ligas/partida/TabEscanteiosCartoes'
+import { TabOverUnder } from '@/components/ligas/partida/TabOverUnder'
 import type { LambdaMethod } from '@/lib/analytics/types'
 import { OddsMercado } from '@/lib/validations/odds-mercado'
 
@@ -56,9 +62,12 @@ export function DashboardLigaClient({
   const [previsao, setPrevisao] = useState<PrevisaoState | null>(null)
   const [mapaValor, setMapaValor] = useState<MapaValorResponse | null>(null)
   const [oddsMercado, setOddsMercado] = useState<OddsMercado | null>(null)
+  const [estatisticas, setEstatisticas] = useState<{ homeStats: any, awayStats: any } | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
+  const [activeTab, setActiveTab] = useState('resumo')
+  const [mandoContext, setMandoContext] = useState<'CASA_VISITANTE' | 'GERAL'>('CASA_VISITANTE')
 
   const nomeTimeCasa = useMemo(() => times.find(t => t.id === filtros.homeTeamId)?.name ?? '', [times, filtros.homeTeamId])
   const nomeTimeVisitante = useMemo(() => times.find(t => t.id === filtros.awayTeamId)?.name ?? '', [times, filtros.awayTeamId])
@@ -114,9 +123,24 @@ export function DashboardLigaClient({
     }
   }
 
+  const fetchEstatisticas = async (paramsObj: Record<string, string>, contextStr: 'CASA_VISITANTE' | 'GERAL') => {
+    try {
+      const params = new URLSearchParams(paramsObj)
+      params.set('mandoContext', contextStr)
+      const resEst = await fetch(`/api/ligas/${liga.slug}/estatisticas?${params}`)
+      if (resEst.ok) {
+        const jsonEst = await resEst.json()
+        setEstatisticas(jsonEst.data)
+      }
+    } catch (err) {
+      console.error('Erro ao buscar estatísticas', err)
+    }
+  }
+
   const handleCalcularComFiltros = () => {
     setFiltrosAbertos(false)
     fetchPrevisao(queryParams)
+    fetchEstatisticas(queryParams, mandoContext)
   }
 
   const handleCalcularInicial = () => {
@@ -129,6 +153,7 @@ export function DashboardLigaClient({
     cleanParams.modelo = 'POISSON'
     cleanParams.lambdaMethod = 'MEDIA_SIMPLES'
     fetchPrevisao(cleanParams)
+    fetchEstatisticas(cleanParams, mandoContext)
   }
 
   const handleLimparFiltros = () => {
@@ -141,6 +166,7 @@ export function DashboardLigaClient({
     cleanParams.modelo = modelo
     cleanParams.lambdaMethod = filters.lambdaMethod
     fetchPrevisao(cleanParams)
+    fetchEstatisticas(cleanParams, mandoContext)
   }
 
   const handleModeloChange = (novoModelo: ModoModelo) => {
@@ -227,7 +253,44 @@ export function DashboardLigaClient({
             </Alert>
           )}
 
-          <PainelMedias
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full sm:w-auto grid grid-cols-2 md:grid-cols-5 mb-4 h-auto">
+              <TabsTrigger value="resumo" className="py-2 whitespace-normal h-full">Principal / Projeção</TabsTrigger>
+              <TabsTrigger value="odds" className="py-2 whitespace-normal h-full">Odds / Profit</TabsTrigger>
+              <TabsTrigger value="gols" className="py-2 whitespace-normal h-full">Gols / xG / Fin.</TabsTrigger>
+              <TabsTrigger value="escanteios" className="py-2 whitespace-normal h-full">Escant. / Cartões / Faltas</TabsTrigger>
+              <TabsTrigger value="overunder" className="py-2 whitespace-normal h-full">Over / Under</TabsTrigger>
+            </TabsList>
+
+            {activeTab !== 'resumo' && (
+              <div className="flex justify-end mb-4 gap-2 animate-in fade-in">
+                <Button 
+                  variant={mandoContext === 'CASA_VISITANTE' ? 'default' : 'outline'} 
+                  size="sm" 
+                  onClick={() => {
+                    setMandoContext('CASA_VISITANTE')
+                    fetchEstatisticas(queryParams, 'CASA_VISITANTE')
+                  }}
+                  className="text-xs"
+                >
+                  Contexto: Casa / Visitante
+                </Button>
+                <Button 
+                  variant={mandoContext === 'GERAL' ? 'default' : 'outline'} 
+                  size="sm"
+                  onClick={() => {
+                    setMandoContext('GERAL')
+                    fetchEstatisticas(queryParams, 'GERAL')
+                  }}
+                  className="text-xs"
+                >
+                  Contexto: Geral
+                </Button>
+              </div>
+            )}
+
+            <TabsContent value="resumo" className="outline-none space-y-6">
+              <PainelMedias
             medias={previsao.medias}
             forcas={previsao.forcas}
             homeTeamName={nomeTimeCasa}
@@ -289,9 +352,9 @@ export function DashboardLigaClient({
             </div>
           )}
 
-          {/* SEÇÃO 4: VISUALIZAÇÕES */}
+          {/* SEÇÃO 4: VISUALIZAÇÕES MATRIZ E HANDICAPS */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-6">
+            <div className="lg:col-span-7">
               <PainelMatrizPlacares
                 matrizPlacares={previsao.matrizPlacares}
                 homeTeamName={nomeTimeCasa}
@@ -299,16 +362,39 @@ export function DashboardLigaClient({
                 modelo={previsao.modelo}
               />
             </div>
-            <div className="lg:col-span-6">
-              <PainelEvolucao
-                partidas={partidasParaEvolucao}
-                homeTeamId={filtros.homeTeamId!}
-                awayTeamId={filtros.awayTeamId!}
-                homeTeamName={nomeTimeCasa}
-                awayTeamName={nomeTimeVisitante}
-              />
+            <div className="lg:col-span-5">
+              <PainelProjecaoHandicaps matrizPlacares={previsao.matrizPlacares} />
             </div>
           </div>
+
+          {/* SEÇÃO 5: EVOLUÇÃO DE GOLS */}
+          <div className="w-full">
+            <PainelEvolucao
+              partidas={partidasParaEvolucao}
+              homeTeamId={filtros.homeTeamId!}
+              awayTeamId={filtros.awayTeamId!}
+              homeTeamName={nomeTimeCasa}
+              awayTeamName={nomeTimeVisitante}
+            />
+          </div>
+            </TabsContent>
+
+            <TabsContent value="odds" className="outline-none mt-6">
+              {estatisticas ? <TabOddsProfit homeStats={estatisticas.homeStats} awayStats={estatisticas.awayStats} /> : <div className="text-center p-8 text-muted-foreground animate-pulse">Carregando estatísticas...</div>}
+            </TabsContent>
+
+            <TabsContent value="gols" className="outline-none mt-6">
+              {estatisticas ? <TabGolsXg homeStats={estatisticas.homeStats} awayStats={estatisticas.awayStats} /> : <div className="text-center p-8 text-muted-foreground animate-pulse">Carregando estatísticas...</div>}
+            </TabsContent>
+
+            <TabsContent value="escanteios" className="outline-none mt-6">
+              {estatisticas ? <TabEscanteiosCartoes homeStats={estatisticas.homeStats} awayStats={estatisticas.awayStats} /> : <div className="text-center p-8 text-muted-foreground animate-pulse">Carregando estatísticas...</div>}
+            </TabsContent>
+
+            <TabsContent value="overunder" className="outline-none mt-6">
+              {estatisticas ? <TabOverUnder homeStats={estatisticas.homeStats} awayStats={estatisticas.awayStats} /> : <div className="text-center p-8 text-muted-foreground animate-pulse">Carregando estatísticas...</div>}
+            </TabsContent>
+          </Tabs>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed rounded-lg bg-muted/20">

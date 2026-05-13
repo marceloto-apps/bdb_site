@@ -16,7 +16,7 @@ export default async function CmsLayout({
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
-      <aside className="w-full md:w-64 bg-surface border-r md:min-h-screen flex flex-col">
+      <aside className="w-full md:w-64 bg-surface border-r md:h-screen md:sticky md:top-0 flex flex-col">
         <div className="p-6 border-b">
           <h2 className="text-xl font-display font-bold text-primary">BDB CMS</h2>
           <p className="text-sm text-muted-foreground mt-1">Olá, {session.user.name}</p>

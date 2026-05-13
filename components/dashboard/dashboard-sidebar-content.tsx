@@ -199,8 +199,8 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
           <SidebarGroupLabel>CMS</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/cms/artigos'} tooltip="Meus Artigos">
-                <Link href="/cms/artigos">
+              <SidebarMenuButton asChild isActive={pathname === '/cms'} tooltip="Meus Artigos">
+                <Link href="/cms">
                   <FileText />
                   <span>Meus Artigos</span>
                 </Link>

@@ -75,6 +75,7 @@ export function ImageUpload({ value, onChange, onRemove, buttonText = "Fazer upl
       ) : null}
 
       <CldUploadWidget 
+        signatureEndpoint="/api/upload/signature"
         uploadPreset="bigdatabet_cms"
         options={{
           maxFiles: 1,

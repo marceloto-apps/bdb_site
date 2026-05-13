@@ -4,10 +4,19 @@ import { prisma } from '@/lib/prisma'
 import { trocarSenhaSchema } from '@/lib/validations/usuario'
 import bcrypt from 'bcryptjs'
 import { z } from 'zod'
+import { rateLimit } from '@/lib/rate-limit'
 
 export async function PATCH(req: Request) {
   try {
     const userSession = await requireAuth()
+
+    // Rate Limiting: max 5 tentativas por minuto por usuário
+    const ip = req.headers.get('x-forwarded-for') || '127.0.0.1'
+    const limitResult = rateLimit(`pwd_change_${userSession.id}_${ip}`, { limit: 5, windowMs: 60000 })
+    
+    if (!limitResult.success) {
+      return NextResponse.json({ error: 'Muitas tentativas. Tente novamente mais tarde.' }, { status: 429 })
+    }
 
     const body = await req.json()
     const parsed = trocarSenhaSchema.parse(body)

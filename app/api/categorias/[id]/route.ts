@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { gerarSlug } from '@/lib/utils/slug'
+import { auth } from '@/auth'
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
+    const session = await auth()
+    if (!session?.user || !['ADMIN', 'EDITOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+    }
+
     const body = await req.json()
     const { name } = body
     const id = params.id
@@ -49,6 +55,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
+    const session = await auth()
+    if (!session?.user || !['ADMIN', 'EDITOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+    }
+
     const id = params.id
 
     // Verifica se a categoria possui artigos vinculados

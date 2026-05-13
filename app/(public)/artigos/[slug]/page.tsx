@@ -10,6 +10,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { auth } from '@/auth'
 import { ArticleActions } from '@/components/articles/article-actions'
+import DOMPurify from 'isomorphic-dompurify'
 
 // Confirmação de formato: o campo content do model Article no schema.prisma é 
 // String @db.LongText e os plugins de markdown já estão configurados no package.json.
@@ -164,7 +165,7 @@ export default async function ArtigoPage({ params }: PageProps) {
         prose-table:mx-auto prose-table:w-auto
       ">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>
-          {artigo.content || ''}
+          {DOMPurify.sanitize(artigo.content || '')}
         </ReactMarkdown>
       </div>
 

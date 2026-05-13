@@ -41,6 +41,23 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
 
 ---
 
+## ✅ Auditoria de Segurança (13/05/2026)
+
+> **Objetivo:** Mitigar vulnerabilidades, aplicar Rate Limiting, proteger upload no CMS e adicionar headers de segurança.
+
+- [x] **Proteção de Rotas API**
+  - [x] Adicionar validação de role (`ADMIN`/`EDITOR`) nas rotas POST/PATCH/DELETE de `/api/categorias`
+  - [x] Adicionar validação de role (`ADMIN`) na rota `/api/debug-match`
+- [x] **Upload CMS e Cloudinary**
+  - [x] Migrar `ImageUpload.tsx` do CMS de modo Unsigned para Signed
+  - [x] Adaptar `/api/upload/signature` para responder corretamente ao plugin Next-Cloudinary
+- [x] **Defesas Adicionais**
+  - [x] Implementar e aplicar Rate Limiting em memória nas rotas sensíveis (ex: `/api/perfil/senha`)
+  - [x] Configurar Security Headers HTTP no `next.config.mjs` (X-Frame-Options, HSTS, etc.)
+  - [x] Instalar `isomorphic-dompurify` e sanitizar renderização de Markdown contra XSS
+
+---
+
 ## Legenda de Status
 
 ```

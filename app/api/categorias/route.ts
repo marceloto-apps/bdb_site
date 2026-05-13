@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { gerarSlug } from '@/lib/utils/slug'
+import { auth } from '@/auth'
 
 export async function GET() {
   try {
@@ -21,6 +22,11 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const session = await auth()
+    if (!session?.user || !['ADMIN', 'EDITOR'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+    }
+
     const body = await req.json()
     const { name } = body
 

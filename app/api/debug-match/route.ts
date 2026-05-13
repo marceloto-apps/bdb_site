@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { auth } from '@/auth'
 
 const BASE_URL = process.env.THESTATSAPI_BASE_URL || 'https://api.thestatsapi.com/api/football'
 const API_KEY = process.env.THESTATSAPI_KEY
 
 export async function GET(request: NextRequest) {
+  const session = await auth()
+  if (!session?.user || session.user.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 403 })
+  }
+
   const { searchParams } = new URL(request.url)
   const matchId = searchParams.get('matchId')
 

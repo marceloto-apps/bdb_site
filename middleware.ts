@@ -1,5 +1,8 @@
-import { auth } from '@/auth' // ajustar path se necessário
+import NextAuth from 'next-auth'
+import { authConfig } from '@/auth.config'
 import { NextResponse } from 'next/server'
+
+const { auth } = NextAuth(authConfig)
 
 // Roles com acesso ao CMS
 const ROLES_CMS = ['AUTOR', 'REVISOR', 'EDITOR', 'ADMIN']

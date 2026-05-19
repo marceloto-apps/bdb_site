@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    // Limita concorrência no build para evitar erro de max connections do banco (Prisma)
+    workerThreads: false,
+    cpus: 1,
+  },
   images: {
     remotePatterns: [
       {

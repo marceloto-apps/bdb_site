@@ -49,7 +49,7 @@ export function welcomeEmailTemplate({ name }: WelcomeEmailParams) {
                     <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
                       <tr>
                         <td style="background-color:#16a34a; border-radius:8px;">
-                          <a href="\${process.env.NEXT_PUBLIC_APP_URL ?? 'https://bigdatabet.com.br'}/dashboard"
+                          <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://bigdatabet.com.br'}/dashboard"
                              style="display:inline-block; padding:14px 32px; color:#ffffff; text-decoration:none; font-size:15px; font-weight:bold;">
                             Acessar a plataforma →
                           </a>
@@ -82,7 +82,7 @@ export function welcomeEmailTemplate({ name }: WelcomeEmailParams) {
                 <tr>
                   <td style="padding:24px 32px; border-top:1px solid #333333; text-align:center;">
                     <p style="color:#666666; font-size:12px; margin:0;">
-                      © \${new Date().getFullYear()} Big Data Bet — bigdatabet.com.br
+                      © ${new Date().getFullYear()} Big Data Bet — bigdatabet.com.br
                     </p>
                   </td>
                 </tr>

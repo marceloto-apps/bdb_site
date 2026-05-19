@@ -11,7 +11,7 @@ export function HeroSection() {
         </div>
 
         <h1 className="mx-auto max-w-4xl font-display text-4xl font-extrabold tracking-tight text-text-primary md:text-5xl lg:text-6xl">
-          Os mesmos dados que as casas usam.{' '}
+          Dados avançados para obter vantagem matemática.{' '}
           <span className="text-primary">Agora na sua mão.</span>
         </h1>
 

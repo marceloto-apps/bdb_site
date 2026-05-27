@@ -2,12 +2,16 @@ import { Metadata } from 'next'
 import { prisma } from '@/lib/prisma'
 import { LigaCard } from '@/components/ligas/LigaCard'
 import { BarChart3 } from 'lucide-react'
+import { auth } from '@/auth'
 
 export const metadata: Metadata = {
   title: 'Ligas - BDB',
 }
 
 export default async function LigasPage() {
+  const session = await auth()
+  const isPremium = (session?.user as any)?.plan === 'PREMIUM'
+
   const competicoes = await prisma.competition.findMany({
     where: { active: true },
     include: {
@@ -27,6 +31,8 @@ export default async function LigasPage() {
 
   // Ligas FREE
   const freeSlugs = ['brasileirao-serie-a', 'premier-league', 'la-liga', 'serie-a']
+  // Ligas Finalizadas
+  const finishedSlugs = ['premier-league', 'la-liga', 'serie-a']
 
   // Mapear para o formato esperado pelo LigaCard
   const ligas = competicoes.map(comp => {
@@ -34,7 +40,8 @@ export default async function LigasPage() {
     const totalJogos = season ? season._count.matches : 0
     // Simular o tier no MVP. Você pode checar o campo 'tier' do prisma se ele existir, ou mockar
     const tier = freeSlugs.includes(comp.slug) ? 'FREE' : 'VIP'
-    const disponivel = tier === 'FREE'
+    const disponivel = isPremium || tier === 'FREE'
+    const finalizada = finishedSlugs.includes(comp.slug)
 
     return {
       nome: comp.name,
@@ -44,7 +51,8 @@ export default async function LigasPage() {
       temporada: season ? season.year : 'N/A',
       totalJogos,
       tier: tier as 'FREE' | 'VIP',
-      disponivel
+      disponivel,
+      finalizada
     }
   })
 

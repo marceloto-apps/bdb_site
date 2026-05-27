@@ -14,9 +14,10 @@ interface LigaCardProps {
   totalJogos: number
   tier: 'FREE' | 'VIP'
   disponivel: boolean
+  finalizada?: boolean
 }
 
-export function LigaCard({ nome, slug, pais, logoUrl, temporada, totalJogos, tier, disponivel }: LigaCardProps) {
+export function LigaCard({ nome, slug, pais, logoUrl, temporada, totalJogos, tier, disponivel, finalizada }: LigaCardProps) {
   const content = (
     <Card className="relative overflow-hidden group transition-all duration-200 hover:scale-[1.02] hover:border-primary cursor-pointer h-full">
       <CardContent className="p-6 flex flex-col h-full justify-between gap-4">
@@ -45,10 +46,15 @@ export function LigaCard({ nome, slug, pais, logoUrl, temporada, totalJogos, tie
           </p>
         </div>
 
-        <div className="pt-4 border-t border-border mt-auto">
+        <div className="pt-4 border-t border-border mt-auto flex items-center justify-between">
           <p className="text-sm text-muted-foreground font-medium">
             {totalJogos} jogos processados
           </p>
+          {finalizada && (
+            <Badge variant="outline" className="bg-red-500/10 hover:bg-red-500/10 text-red-400 border-red-500/30 text-[10px] uppercase font-semibold tracking-wider py-0.5 px-2">
+              Finalizada
+            </Badge>
+          )}
         </div>
       </CardContent>
 

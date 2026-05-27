@@ -223,6 +223,14 @@ export function DashboardLigaClient({
       />
 
 
+      {/* Mensagem de erro global */}
+      {error && (
+        <Alert variant="destructive" className="animate-in fade-in duration-300">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Conteúdo */}
       {previsao ? (
         <div className="space-y-6 animate-in fade-in duration-500">
@@ -244,14 +252,6 @@ export function DashboardLigaClient({
             availableOddsCasa={previsao.oddsFaixasDisponiveisCasa}
             availableOddsVisitante={previsao.oddsFaixasDisponiveisVisitante}
           />
-
-          {/* Mensagem de erro (abaixo dos filtros) */}
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full sm:w-auto grid grid-cols-2 md:grid-cols-5 mb-4 h-auto">

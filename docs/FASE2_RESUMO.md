@@ -24,6 +24,11 @@ e o dashboard interativo para análise de confrontos.
   - **Escant. / Cartões / Faltas**: Médias disciplinares e de bolas paradas (Corners).
   - **Over / Under**: Distribuição percentual do mercado de Totais de Gols.
 - **Projeção de Handicaps e Totais**: Motor de cálculo matemático adicionado para traduzir a Matriz de Placares em linhas de Handicap Asiático exatas (Mandante/Visitante) e Over Gols, incluindo probabilidades de *Push/Half* e Odd Justa Baseada em Expected Value (EV).
+- **Ajustes Adicionais (Filtros, Evoluções e Consolidado)**:
+  - **Filtros de Odds Independentes**: Correção nas rotas de previsão e estatísticas para aplicar os limites de odds casa e visitante de forma separada por mando (onde o jogo de casa avalia apenas odds casa, e o de fora avalia apenas odds visitante), evitando erros amostrais críticos.
+  - **Gráfico "Evoluções por Partida" Multivariado**: Expansão do gráfico de linha temporal para incluir xG, Escanteios e Cartões além de Gols, com adição de curvas de Totais (em tons cinza neutros) e um filtro de métricas (Todos / A Favor / Contra / Total) em sobreposição ao filtro de visão de mando.
+  - **P&L Combinado**: Criação de um bloco resumido na aba "Odds / Profit" consolidando a soma dos ganhos e perdas das duas equipes nos mercados compatíveis (Empate, Over/Under 2.5, BTTS).
+  - **Marcação de Ligas Finalizadas**: Indicador visual e filtros de acesso para as ligas concluídas (Premier League, La Liga, Serie A da Itália), sinalizando de forma clara o término das mesmas.
 
 ---
 

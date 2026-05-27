@@ -163,20 +163,29 @@ export async function GET(
     const faixasCasa = query.oddsCasaFaixas ? parseFaixas(query.oddsCasaFaixas) : null
     const faixasVis = query.oddsVisFaixas ? parseFaixas(query.oddsVisFaixas) : null
 
-    if (faixasCasa || faixasVis) {
-      jogosFiltrados = jogosFiltrados.filter(j => {
-        if (faixasCasa) {
+    // Filtrar jogos por odds de forma independente para cada time (mando respectivo)
+    const filtrarJogosPorOdds = (teamId: string, jogos: typeof jogosTypeSafe) => {
+      if (!faixasCasa && !faixasVis) return jogos
+
+      return jogos.filter(j => {
+        const isHome = j.homeTeamId === teamId
+        const isAway = j.awayTeamId === teamId
+
+        if (isHome && faixasCasa) {
           const oddCasa = j.odds.find((o: any) => o.selection === 'home')?.odds
           // Sem odd = inclui (não penalizar jogos sem dados de odds)
           if (oddCasa && !faixasCasa.some(f => oddCasa >= f.min && oddCasa <= f.max)) return false
         }
-        if (faixasVis) {
+        if (isAway && faixasVis) {
           const oddVis = j.odds.find((o: any) => o.selection === 'away')?.odds
           if (oddVis && !faixasVis.some(f => oddVis >= f.min && oddVis <= f.max)) return false
         }
         return true
       })
     }
+
+    const jogosFiltradosHome = filtrarJogosPorOdds(query.homeTeamId, jogosFiltrados)
+    const jogosFiltradosAway = filtrarJogosPorOdds(query.awayTeamId, jogosFiltrados)
 
     // Computar quais faixas de odds têm jogos para os times selecionados
     const jogosMandante = jogosTypeSafe.filter(j => j.homeTeamId === query.homeTeamId)
@@ -224,14 +233,14 @@ export async function GET(
       }
 
       // 2. Poisson Simples nunca usa decay
-      mediasHomePoisson = calcularMediasTime(query.homeTeamId, jogosFiltrados as any)
-      mediasAwayPoisson = calcularMediasTime(query.awayTeamId, jogosFiltrados as any)
+      mediasHomePoisson = calcularMediasTime(query.homeTeamId, jogosFiltradosHome as any)
+      mediasAwayPoisson = calcularMediasTime(query.awayTeamId, jogosFiltradosAway as any)
       forcasHomePoisson = calcularForcasTime(mediasHomePoisson, mediasLiga)
       forcasAwayPoisson = calcularForcasTime(mediasAwayPoisson, mediasLiga)
 
       if (xgDisponivel) {
-        mediasHomeXGPoisson = calcularMediasTimeXG(query.homeTeamId, jogosFiltrados as any)
-        mediasAwayXGPoisson = calcularMediasTimeXG(query.awayTeamId, jogosFiltrados as any)
+        mediasHomeXGPoisson = calcularMediasTimeXG(query.homeTeamId, jogosFiltradosHome as any)
+        mediasAwayXGPoisson = calcularMediasTimeXG(query.awayTeamId, jogosFiltradosAway as any)
         forcasHomeXGPoisson = calcularForcasTimeXG(mediasHomeXGPoisson, ligaMediasXG!)
         forcasAwayXGPoisson = calcularForcasTimeXG(mediasAwayXGPoisson, ligaMediasXG!)
       }
@@ -305,10 +314,10 @@ export async function GET(
       }
     } catch (e: any) {
       // Contar jogos de cada time no dataset filtrado
-      const homeCasa = jogosFiltrados.filter((j: any) => j.homeTeamId === query.homeTeamId).length
-      const homeFora = jogosFiltrados.filter((j: any) => j.awayTeamId === query.homeTeamId).length
-      const awayCasa = jogosFiltrados.filter((j: any) => j.homeTeamId === query.awayTeamId).length
-      const awayFora = jogosFiltrados.filter((j: any) => j.awayTeamId === query.awayTeamId).length
+      const homeCasa = jogosFiltradosHome.filter((j: any) => j.homeTeamId === query.homeTeamId).length
+      const homeFora = jogosFiltradosHome.filter((j: any) => j.awayTeamId === query.homeTeamId).length
+      const awayCasa = jogosFiltradosAway.filter((j: any) => j.homeTeamId === query.awayTeamId).length
+      const awayFora = jogosFiltradosAway.filter((j: any) => j.awayTeamId === query.awayTeamId).length
       const hasFilters = query.roundFrom || query.roundTo || query.months || query.oddsCasaFaixas || query.oddsVisFaixas
       const filterMsg = hasFilters
         ? ` Após filtros — Mandante: ${homeCasa} casa / ${homeFora} fora · Visitante: ${awayCasa} casa / ${awayFora} fora (mín. 4 cada).`

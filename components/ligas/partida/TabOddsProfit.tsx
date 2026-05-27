@@ -54,11 +54,38 @@ function ProfitDisplay({ strategy, profit }: { strategy: string, profit: ProfitS
     </div>
   )
 }
+function combineProfit(homeProfit: ProfitSummary, awayProfit: ProfitSummary): ProfitSummary {
+  const bets = homeProfit.bets + awayProfit.bets
+  const profitVal = homeProfit.profit + awayProfit.profit
+  const wins = homeProfit.wins + awayProfit.wins
+  const hitRate = bets > 0 ? (wins / bets) * 100 : 0
+  const roi = bets > 0 ? (profitVal / bets) * 100 : 0
+  
+  const homeTotalOdd = (homeProfit.averageOdd ?? 0) * homeProfit.bets
+  const awayTotalOdd = (awayProfit.averageOdd ?? 0) * awayProfit.bets
+  const averageOdd = bets > 0 ? (homeTotalOdd + awayTotalOdd) / bets : null
+
+  return {
+    profit: profitVal,
+    roi,
+    bets,
+    wins,
+    hitRate,
+    averageOdd
+  }
+}
 
 export function TabOddsProfit({ homeStats, awayStats }: TabOddsProfitProps) {
   if (homeStats.sampleSize === 0 && awayStats.sampleSize === 0) {
     return <div className="text-center p-8 text-muted-foreground">Dados indisponíveis para esta métrica.</div>
   }
+
+  // Combinar resultados das duas equipes para os mercados compatíveis
+  const combinedDraw = combineProfit(homeStats.profit.draw, awayStats.profit.draw)
+  const combinedOver25 = combineProfit(homeStats.profit.over25, awayStats.profit.over25)
+  const combinedUnder25 = combineProfit(homeStats.profit.under25, awayStats.profit.under25)
+  const combinedBttsYes = combineProfit(homeStats.profit.bttsYes, awayStats.profit.bttsYes)
+  const combinedBttsNo = combineProfit(homeStats.profit.bttsNo, awayStats.profit.bttsNo)
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -164,6 +191,22 @@ export function TabOddsProfit({ homeStats, awayStats }: TabOddsProfitProps) {
           </Card>
         </div>
       </div>
+
+      {/* COMBINADO (MANDANTE + VISITANTE) */}
+      <Card className="shadow-none border-l-4 border-l-purple-500">
+        <CardHeader className="bg-muted/10 pb-3 border-b">
+          <CardTitle className="text-sm font-bold tracking-wide uppercase">
+            Profit/Loss Combinado ({homeStats.teamName} [Casa] + {awayStats.teamName} [Fora])
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <ProfitDisplay strategy="Apostar no Empate" profit={combinedDraw} />
+          <ProfitDisplay strategy="Apostar Over 2.5" profit={combinedOver25} />
+          <ProfitDisplay strategy="Apostar Under 2.5" profit={combinedUnder25} />
+          <ProfitDisplay strategy="Apostar BTTS Sim" profit={combinedBttsYes} />
+          <ProfitDisplay strategy="Apostar BTTS Não" profit={combinedBttsNo} />
+        </CardContent>
+      </Card>
     </div>
   )
 }

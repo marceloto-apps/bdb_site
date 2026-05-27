@@ -1,9 +1,10 @@
 import { Metadata } from 'next'
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { calcularMediasLiga } from '@/lib/analytics'
 import { getSeasonDateFilter } from '@/lib/utils/season-filter'
 import { DashboardLigaClient } from './DashboardLigaClient'
+import { auth } from '@/auth'
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const liga = await prisma.competition.findUnique({
@@ -16,7 +17,15 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function LigaDashboardPage({ params }: { params: { slug: string } }) {
+  const session = await auth()
   const slug = params.slug
+
+  const freeSlugs = ['brasileirao-serie-a', 'premier-league', 'la-liga', 'serie-a']
+  const isPremium = (session?.user as any)?.plan === 'PREMIUM'
+
+  if (!freeSlugs.includes(slug) && !isPremium) {
+    redirect('/planos')
+  }
 
   const liga = await prisma.competition.findUnique({
     where: { slug },
@@ -55,7 +64,19 @@ export default async function LigaDashboardPage({ params }: { params: { slug: st
     },
     include: {
       homeTeam: { select: { id: true, name: true, shortName: true } },
-      awayTeam: { select: { id: true, name: true, shortName: true } }
+      awayTeam: { select: { id: true, name: true, shortName: true } },
+      stats: {
+        select: {
+          homeXg: true,
+          awayXg: true,
+          homeCorners: true,
+          awayCorners: true,
+          homeYellowCards: true,
+          awayYellowCards: true,
+          homeRedCards: true,
+          awayRedCards: true,
+        }
+      }
     },
     orderBy: { utcDate: 'asc' }
   })
@@ -91,7 +112,17 @@ export default async function LigaDashboardPage({ params }: { params: { slug: st
     fthg: p.fthg!,
     ftag: p.ftag!,
     homeTeamName: p.homeTeam.name,
-    awayTeamName: p.awayTeam.name
+    awayTeamName: p.awayTeam.name,
+    stats: p.stats ? {
+      homeXg: p.stats.homeXg ?? null,
+      awayXg: p.stats.awayXg ?? null,
+      homeCorners: p.stats.homeCorners ?? null,
+      awayCorners: p.stats.awayCorners ?? null,
+      homeYellowCards: p.stats.homeYellowCards ?? null,
+      awayYellowCards: p.stats.awayYellowCards ?? null,
+      homeRedCards: p.stats.homeRedCards ?? null,
+      awayRedCards: p.stats.awayRedCards ?? null,
+    } : null
   }))
 
   const ligaSerializada = {

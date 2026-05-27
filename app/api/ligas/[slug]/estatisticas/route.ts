@@ -104,6 +104,35 @@ export async function GET(
       })
     }
 
+    // Filtro de odds - suporte a faixas não-contíguas
+    const parseFaixas = (csv: string) =>
+      csv.split(',').map(f => {
+        const [min, max] = f.split('-').map(Number)
+        return { min, max }
+      })
+
+    const faixasCasa = query.oddsCasaFaixas ? parseFaixas(query.oddsCasaFaixas) : null
+    const faixasVis = query.oddsVisFaixas ? parseFaixas(query.oddsVisFaixas) : null
+
+    const filtrarJogosPorOdds = (teamId: string, jogos: typeof uniqueMatches) => {
+      if (!faixasCasa && !faixasVis) return jogos
+
+      return jogos.filter(j => {
+        const isHome = j.homeTeamId === teamId
+        const isAway = j.awayTeamId === teamId
+
+        if (isHome && faixasCasa) {
+          const oddCasa = j.odds.find((o: any) => o.selection === 'home')?.odds
+          if (oddCasa && !faixasCasa.some(f => oddCasa >= f.min && oddCasa <= f.max)) return false
+        }
+        if (isAway && faixasVis) {
+          const oddVis = j.odds.find((o: any) => o.selection === 'away')?.odds
+          if (oddVis && !faixasVis.some(f => oddVis >= f.min && oddVis <= f.max)) return false
+        }
+        return true
+      })
+    }
+
     let homeMatches = jogosFiltrados
     let awayMatches = jogosFiltrados
 
@@ -111,6 +140,10 @@ export async function GET(
       homeMatches = jogosFiltrados.filter(j => j.homeTeamId === homeTeam.id)
       awayMatches = jogosFiltrados.filter(j => j.awayTeamId === awayTeam.id)
     }
+
+    // Aplicar filtros de odds de forma independente
+    homeMatches = filtrarJogosPorOdds(homeTeam.id, homeMatches)
+    awayMatches = filtrarJogosPorOdds(awayTeam.id, awayMatches)
 
     const homeStats = buildTeamMatchStats(homeTeam.id, homeTeam.name, homeMatches)
     const awayStats = buildTeamMatchStats(awayTeam.id, awayTeam.name, awayMatches)

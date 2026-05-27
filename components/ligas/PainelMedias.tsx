@@ -185,7 +185,7 @@ export function PainelMedias({
               {/* Confiança */}
               <div>
                 <div className="flex items-center gap-2 mb-2 mt-4">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">── Confiança</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">── Confiança (medidas de dispersão)</span>
                 </div>
                 
                 <div className="flex items-center justify-between text-sm flex-wrap gap-y-2">
@@ -351,7 +351,7 @@ export function PainelMedias({
               {/* Confiança */}
               <div>
                 <div className="flex items-center gap-2 mb-2 mt-4">
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">── Confiança</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">── Confiança (medidas de dispersão)</span>
                 </div>
                 
                 <div className="flex items-center justify-between text-sm flex-wrap gap-y-2">

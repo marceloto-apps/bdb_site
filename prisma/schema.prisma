@@ -929,10 +929,12 @@ model OddsMovement {
   odds         Float
   oddsType     OddsType  @default(PREMATCH_CLOSING)
   capturedAt   DateTime
+  milestone    String?   @db.VarChar(20)
   createdAt    DateTime  @default(now())
 
   @@index([matchId, bookmakerId, marketId, selection])
   @@index([matchId, capturedAt])
+  @@index([matchId, bookmakerId, milestone])
   @@map("odds_movements")
 }
 

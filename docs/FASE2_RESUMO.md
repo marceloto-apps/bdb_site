@@ -29,6 +29,19 @@ e o dashboard interativo para análise de confrontos.
   - **Gráfico "Evoluções por Partida" Multivariado**: Expansão do gráfico de linha temporal para incluir xG, Escanteios e Cartões além de Gols, com adição de curvas de Totais (em tons cinza neutros) e um filtro de métricas (Todos / A Favor / Contra / Total) em sobreposição ao filtro de visão de mando.
   - **P&L Combinado**: Criação de um bloco resumido na aba "Odds / Profit" consolidando a soma dos ganhos e perdas das duas equipes nos mercados compatíveis (Empate, Over/Under 2.5, BTTS).
   - **Marcação de Ligas Finalizadas**: Indicador visual e filtros de acesso para as ligas concluídas (Premier League, La Liga, Serie A da Itália), sinalizando de forma clara o término das mesmas.
+- **Motor de Lambda "Mercado" (Expectativa do Mercado)**:
+  - Implementado o método de lambda `'MERCADO'` que realiza engenharia reversa das cotações capturadas na tabela `odds_movements` (Bet365).
+  - Resolução do $\lambda_T$ (Total de Gols Esperados) via busca por bisseção no intervalo $[0.1, 15.0]$ sobre a probabilidade implícita de Under 2.5 gols sem overround.
+  - Resolução da partilha de gols ($\alpha$) através de otimização de mínimos quadrados, minimizando o erro quadrático médio sobre as cotações 1X2 reais (Home, Draw, Away) ajustadas sem overround.
+  - Adicionado suporte a estado de indisponibilidade visual (`λH: —` e `λA: —`) e tratamento de erros quando dados de mercado para o confronto estiverem vazios ou ausentes.
+- **Atalhos de Dashboard e Fluxos de Autenticação**:
+  - Adicionado um botão "Dashboard" (outline verde com ícone de gráfico) no cabeçalho principal (`components/layout/header.tsx`) posicionado ao lado esquerdo do menu de avatar do usuário, fornecendo acesso direto quando o mesmo está logado.
+  - Implementado redirecionamento forçado após autenticação no callback `redirect` de NextAuth (`auth.config.ts`), encaminhando o usuário diretamente para `/dashboard` ao fazer login com sucesso.
+- **Prova Social por Carrossel Dinâmico**:
+  - Substituição da antiga grade de depoimentos de texto estáticos na Landing Page por um carrossel de 7 imagens de prova social de conversas reais do WhatsApp (`01-prova-social.png` a `07-prova-social.png`) localizadas no diretório `/public/images/`.
+  - Configuração de exibição de **1 imagem por vez** de forma centralizada e responsiva (`w-full max-w-4xl`) para assegurar máxima legibilidade dos textos em todos os viewports.
+  - Rotação automática (autoplay) a cada 4 segundos com comportamento de pausa ao passar o mouse (`onMouseEnter`/`onMouseLeave`).
+  - Navegação manual integrada usando setas flutuantes (Chevrons) nas laterais do carrossel e pílulas/pontos indicadores (Dots) na base do componente.
 
 ---
 

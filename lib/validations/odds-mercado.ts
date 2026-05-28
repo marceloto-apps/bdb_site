@@ -4,6 +4,7 @@ export const oddsMercadoQuerySchema = z.object({
   homeTeamId: z.string().min(1, "homeTeamId é obrigatório"),
   awayTeamId: z.string().min(1, "awayTeamId é obrigatório"),
   bookmaker: z.string().optional().default("bet365"),
+  oddsType: z.enum(["opening", "current"]).optional().default("current"),
 })
 
 const oddSchema = z.number().nullable()

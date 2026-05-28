@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   calcularLambdas,
   calcularTodosLambdas,
-  montarComposicaoLambdas
+  montarComposicaoLambdas,
+  calibrarLambdas
 } from '@/lib/analytics/lambda-calculators'
 import type { MediasTime, ForcasTime } from '@/lib/analytics/forca-time'
 import type { MediasLigaCalculadas } from '@/lib/analytics/medias'
@@ -100,6 +101,74 @@ describe('Lambda Calculators', () => {
       expect(composicao.xg?.home.fcAtCxg).toBe(1.3)
       expect(composicao.xg?.home.fcDfVxgAdv).toBe(1.2)
       expect(composicao.xg?.home.muHxg).toBe(1.5)
+    })
+  })
+
+  describe('calibrarLambdas (MERCADO)', () => {
+    it('calibra lambdas de forma consistente para odds equilibradas de futebol', () => {
+      const odds = {
+        casa: 2.00,
+        empate: 3.40,
+        fora: 3.80,
+        over25: 2.10,
+        under25: 1.70
+      }
+
+      const { lambdaH, lambdaA } = calibrarLambdas(odds)
+
+      expect(lambdaH).toBeGreaterThan(0.01)
+      expect(lambdaA).toBeGreaterThan(0.01)
+      expect(lambdaH + lambdaA).toBeCloseTo(2.45, 1) // O total de gols esperados deve ser ~2.45
+      expect(lambdaH).toBeGreaterThan(lambdaA) // Casa é favorito (odd 2.00 vs 3.80), então lambdaH > lambdaA
+    })
+
+    it('rejeita calibração incoerente com desvio excessivo ou valores absurdos', () => {
+      const oddsInconsistentes = {
+        casa: 2.0,
+        empate: 3.4,
+        fora: 3.8,
+        over25: 1.02,
+        under25: 1000.0
+      }
+      expect(() => calibrarLambdas(oddsInconsistentes)).toThrow()
+    })
+  })
+
+  describe('MERCADO Dispatcher Integration', () => {
+    it('retorna os lambdas pré-calculados do mercado', () => {
+      const paramsComMercado = {
+        ...mockParams,
+        lambdaMercado: { lambdaH: 1.85, lambdaA: 1.15, capturadoEm: new Date('2026-05-28T18:00:00Z') }
+      }
+
+      const result = calcularLambdas('MERCADO', paramsComMercado)
+      expect(result.lambdaH).toBe(1.85)
+      expect(result.lambdaA).toBe(1.15)
+      expect(result.fallback).toBe(false)
+    })
+
+    it('falha se o lambda de mercado for solicitado mas não fornecido', () => {
+      expect(() => calcularLambdas('MERCADO', mockParams)).toThrow()
+    })
+
+    it('inclui mercado em calcularTodosLambdas', () => {
+      const paramsComMercado = {
+        ...mockParams,
+        lambdaMercado: { lambdaH: 1.85, lambdaA: 1.15 }
+      }
+      const todos = calcularTodosLambdas(paramsComMercado)
+      expect(todos.mercado).toEqual({ lambdaH: 1.85, lambdaA: 1.15 })
+    })
+
+    it('inclui mercado em montarComposicaoLambdas', () => {
+      const capturadoEm = new Date('2026-05-28T18:00:00Z')
+      const paramsComMercado = {
+        ...mockParams,
+        lambdaMercado: { lambdaH: 1.85, lambdaA: 1.15, capturadoEm }
+      }
+      const composicao = montarComposicaoLambdas(paramsComMercado)
+      expect(composicao.mercado?.fonte).toBe('Bet365')
+      expect(composicao.mercado?.capturadoEm).toEqual(capturadoEm)
     })
   })
 })

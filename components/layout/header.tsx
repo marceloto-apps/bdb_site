@@ -3,7 +3,7 @@ import Image from "next/image"
 import { auth } from "@/auth"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/auth/user-menu"
-import { Menu } from "lucide-react"
+import { Menu, LayoutDashboard } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet"
 
 /** Links públicos de navegação */
@@ -51,7 +51,15 @@ export async function Header() {
       {/* Lado Direito: Ações (Entrar ou Menu do Usuário) e Menu Mobile */}
       <div className="absolute right-4 md:right-8 flex items-center gap-2 md:gap-4 h-full top-0">
         {session ? (
-          <UserMenu />
+          <div className="flex items-center gap-2 md:gap-4">
+            <Link href="/dashboard">
+              <Button variant="default" size="sm" className="bg-[#22c55e] text-black hover:bg-[#16a34a] font-semibold text-xs gap-1.5 h-8">
+                <LayoutDashboard className="h-3.5 w-3.5" />
+                Dashboard
+              </Button>
+            </Link>
+            <UserMenu />
+          </div>
         ) : (
           <Link href="/login">
             <Button variant="default" className="bg-[#22c55e] text-black hover:bg-[#16a34a] font-semibold">

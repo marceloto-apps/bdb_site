@@ -17,7 +17,7 @@ export async function GET(
       )
     }
 
-    const { homeTeamId, awayTeamId, bookmaker: bookmakerSlug } = result.data
+    const { homeTeamId, awayTeamId, bookmaker: bookmakerSlug, oddsType } = result.data
 
     // 1. Validar se o bookmaker existe na tabela
     const bookmaker = await prisma.bookmaker.findUnique({
@@ -73,17 +73,23 @@ export async function GET(
 
     // 4. Buscar Odds
     // Primeiro tenta buscar do histórico em tempo real (OddsMovement) que é onde ficam as atualizações recentes
+    const oddsMovementsWhere: any = {
+      matchId: match.id,
+      bookmakerId: bookmaker.id,
+    }
+    if (oddsType === "opening") {
+      oddsMovementsWhere.milestone = "opening"
+    }
+
     const oddsMovements = await prisma.oddsMovement.findMany({
-      where: {
-        matchId: match.id,
-        bookmakerId: bookmaker.id,
-      },
+      where: oddsMovementsWhere,
       select: {
         id: true,
         selection: true,
         line: true,
         odds: true,
         market: true,
+        oddsType: true,
       },
       orderBy: {
         capturedAt: "desc",
@@ -96,11 +102,15 @@ export async function GET(
       oddsToProcess = oddsMovements
     } else {
       // Fallback para MatchOdds
+      const matchOddsWhere: any = {
+        matchId: match.id,
+        bookmakerId: bookmaker.id,
+      }
+      if (oddsType === "opening") {
+        matchOddsWhere.oddsType = "PREMATCH_OPENING"
+      }
       const odds = await prisma.matchOdds.findMany({
-        where: {
-          matchId: match.id,
-          bookmakerId: bookmaker.id,
-        },
+        where: matchOddsWhere,
         include: {
           market: true,
         },
@@ -129,9 +139,14 @@ export async function GET(
       // Se for OddsMovement, a ordenação DESC por capturedAt garante que o primeiro é o mais recente.
       if (!existing) {
         latestOdds.set(key, odd)
-      } else if (existing.oddsType === 'PREMATCH_OPENING' && odd.oddsType === 'PREMATCH_CLOSING') {
-        // Fallback apenas útil para MatchOdds
-        latestOdds.set(key, odd)
+      } else if (oddsType === 'opening') {
+        if (existing.oddsType === 'PREMATCH_CLOSING' && odd.oddsType === 'PREMATCH_OPENING') {
+          latestOdds.set(key, odd)
+        }
+      } else {
+        if (existing.oddsType === 'PREMATCH_OPENING' && odd.oddsType === 'PREMATCH_CLOSING') {
+          latestOdds.set(key, odd)
+        }
       }
     }
 

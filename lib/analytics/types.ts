@@ -3,7 +3,7 @@ import { MediasTime, ForcasTime, DispersaoTime } from './forca-time'
 import { MediasLigaCalculadas } from './medias'
 
 /** Método de estimativa do λ (gols esperados por time no confronto) */
-export type LambdaMethod = 'MEDIA_SIMPLES' | 'FORCAS_RELATIVAS' | 'XG'
+export type LambdaMethod = 'MEDIA_SIMPLES' | 'FORCAS_RELATIVAS' | 'XG' | 'MERCADO'
 
 /** Médias calculadas via xG (estrutura idêntica a MediasTime) */
 export interface MediasTimeXG {
@@ -39,6 +39,7 @@ export interface LambdasCalculados {
   mediaSimples: { lambdaH: number; lambdaA: number }
   forcasRelativas: { lambdaH: number; lambdaA: number }
   xg: { lambdaH: number; lambdaA: number } | null  // null se xG indisponível
+  mercado: { lambdaH: number; lambdaA: number } | null // null se Mercado indisponível
 }
 
 /** Variáveis que compõem cada λ (para exibição no painel) */
@@ -55,6 +56,10 @@ export interface LambdaComposicao {
     home: { fcAtCxg: number; fcDfVxgAdv: number; muHxg: number }
     away: { fcAtVxg: number; fcDfCxgAdv: number; muAxg: number }
   } | null
+  mercado?: {
+    fonte: string
+    capturadoEm: Date
+  } | null
 }
 
 /** Parâmetros para o dispatcher de λ */
@@ -69,6 +74,7 @@ export interface LambdaCalculationParams {
   forcasHomeXG?: ForcasTimeXG
   forcasAwayXG?: ForcasTimeXG
   ligaMediasXG?: MediasLigaXG
+  lambdaMercado?: { lambdaH: number; lambdaA: number; capturadoEm?: Date } | null
 }
 
 export interface PrevisaoConfig {

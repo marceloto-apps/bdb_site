@@ -22,8 +22,7 @@ export function SeletorLambda({
 }: SeletorLambdaProps) {
   
   const formatVal = (val?: number) => typeof val === 'number' ? val.toFixed(2) : '--'
-
-
+  const mercadoDisponivel = !!todosLambdas.mercado
 
   return (
     <Card className="w-full h-full flex flex-col">
@@ -33,7 +32,7 @@ export function SeletorLambda({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 flex flex-col">
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-3 flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 flex-1">
           {/* MÉDIA SIMPLES */}
           <div className={`flex flex-col h-full gap-3 p-4 rounded-lg border bg-card transition-all ${lambdaAtivo === 'MEDIA_SIMPLES' ? 'border-l-4 border-l-primary border-primary/20 bg-primary/5' : 'border-border/50'}`}>
             <div className="flex items-center justify-between">
@@ -87,7 +86,7 @@ export function SeletorLambda({
           {/* EXPECTED GOALS (xG) */}
           <div className={`flex flex-col h-full gap-3 p-4 rounded-lg border transition-all ${!xgDisponivel ? 'opacity-60 bg-muted/30 grayscale-[50%]' : lambdaAtivo === 'XG' ? 'border-l-4 border-l-primary border-primary/20 bg-primary/5' : 'bg-card border-border/50'}`}>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">Expected Goals (xG)</span>
+              <span className="text-sm font-semibold">xG</span>
             </div>
             <div className="flex flex-col font-mono text-base font-bold gap-1 mt-1">
               <div className="flex items-center justify-between">
@@ -129,6 +128,74 @@ export function SeletorLambda({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+            )}
+          </div>
+
+          {/* EXPECTATIVA DO MERCADO */}
+          <div className={`flex flex-col h-full gap-3 p-4 rounded-lg border transition-all ${!mercadoDisponivel ? 'opacity-60 bg-muted/30 grayscale-[50%]' : lambdaAtivo === 'MERCADO' ? 'border-l-4 border-l-primary border-primary/20 bg-primary/5' : 'bg-card border-border/50'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-semibold">Mercado</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="text-muted-foreground cursor-help text-xs">ⓘ</span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="text-xs max-w-[220px]">
+                        λ total ancorado no mercado Over/Under 2.5; 1x2 define a assimetria casa/fora. Modelos avançados rodando com estes lambdas podem diferir ligeiramente das odds.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+            <div className="flex flex-col font-mono text-base font-bold gap-1 mt-1">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-xs font-sans font-normal">λH:</span>
+                <span className="text-green-500">{formatVal(todosLambdas.mercado?.lambdaH)}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground text-xs font-sans font-normal">λA:</span>
+                <span className="text-blue-500">{formatVal(todosLambdas.mercado?.lambdaA)}</span>
+              </div>
+            </div>
+
+            {mercadoDisponivel ? (
+              <Button
+                variant={lambdaAtivo === 'MERCADO' ? 'default' : 'outline'}
+                size="sm"
+                className="mt-auto w-full text-xs h-8"
+                onClick={() => onChange('MERCADO')}
+              >
+                {lambdaAtivo === 'MERCADO' ? '● Ativo' : 'Selecionar'}
+              </Button>
+            ) : (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="mt-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled
+                        className="mt-auto w-full text-xs h-8 border border-dashed border-muted-foreground/30"
+                      >
+                        Indisponível
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs max-w-[200px]">Dados de mercado não disponíveis para este lambda</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+
+            {!mercadoDisponivel && (
+              <div className="text-[10px] text-red-500 leading-tight mt-1 text-center font-sans font-normal">
+                Dados de mercado não disponíveis para este lambda
+              </div>
             )}
           </div>
         </div>

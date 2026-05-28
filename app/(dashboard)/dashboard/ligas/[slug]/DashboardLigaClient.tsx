@@ -68,19 +68,58 @@ export function DashboardLigaClient({
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const [activeTab, setActiveTab] = useState('resumo')
   const [mandoContext, setMandoContext] = useState<'CASA_VISITANTE' | 'GERAL'>('CASA_VISITANTE')
+  const [profitOddsType, setProfitOddsType] = useState<'opening' | 'closing'>('closing')
 
   const nomeTimeCasa = useMemo(() => times.find(t => t.id === filtros.homeTeamId)?.name ?? '', [times, filtros.homeTeamId])
   const nomeTimeVisitante = useMemo(() => times.find(t => t.id === filtros.awayTeamId)?.name ?? '', [times, filtros.awayTeamId])
 
-  const partidasParaEvolucao = useMemo(() => {
-    if (!filtros.homeTeamId || !filtros.awayTeamId) return []
-    return partidasIniciais.filter(p =>
-      p.homeTeamId === filtros.homeTeamId ||
-      p.awayTeamId === filtros.homeTeamId ||
-      p.homeTeamId === filtros.awayTeamId ||
-      p.awayTeamId === filtros.awayTeamId
-    )
-  }, [partidasIniciais, filtros.homeTeamId, filtros.awayTeamId])
+  const partidasParaEvolucaoHome = useMemo(() => {
+    if (!filtros.homeTeamId) return []
+    let matches = partidasIniciais.filter(p => p.homeTeamId === filtros.homeTeamId || p.awayTeamId === filtros.homeTeamId)
+    
+    // Filtro de Mando (CASA_VISITANTE = apenas jogos em casa)
+    if (mandoContext === 'CASA_VISITANTE') {
+      matches = matches.filter(p => p.homeTeamId === filtros.homeTeamId)
+    }
+    
+    // Filtro de Rodadas
+    if (filtros.roundFrom) matches = matches.filter(p => p.round !== null && p.round >= filtros.roundFrom!)
+    if (filtros.roundTo) matches = matches.filter(p => p.round !== null && p.round <= filtros.roundTo!)
+    
+    // Filtro de Meses
+    if (filtros.months && filtros.months.length > 0) {
+      matches = matches.filter(p => {
+        const month = new Date(p.utcDate).getMonth() + 1
+        return filtros.months.includes(month)
+      })
+    }
+    
+    return matches
+  }, [partidasIniciais, filtros.homeTeamId, mandoContext, filtros.roundFrom, filtros.roundTo, filtros.months])
+
+  const partidasParaEvolucaoAway = useMemo(() => {
+    if (!filtros.awayTeamId) return []
+    let matches = partidasIniciais.filter(p => p.homeTeamId === filtros.awayTeamId || p.awayTeamId === filtros.awayTeamId)
+    
+    // Filtro de Mando (CASA_VISITANTE = apenas jogos fora de casa)
+    if (mandoContext === 'CASA_VISITANTE') {
+      matches = matches.filter(p => p.awayTeamId === filtros.awayTeamId)
+    }
+    
+    // Filtro de Rodadas
+    if (filtros.roundFrom) matches = matches.filter(p => p.round !== null && p.round >= filtros.roundFrom!)
+    if (filtros.roundTo) matches = matches.filter(p => p.round !== null && p.round <= filtros.roundTo!)
+    
+    // Filtro de Meses
+    if (filtros.months && filtros.months.length > 0) {
+      matches = matches.filter(p => {
+        const month = new Date(p.utcDate).getMonth() + 1
+        return filtros.months.includes(month)
+      })
+    }
+    
+    return matches
+  }, [partidasIniciais, filtros.awayTeamId, mandoContext, filtros.roundFrom, filtros.roundTo, filtros.months])
 
   const handleFiltrosChange = (updates: Partial<typeof filtros>) => {
     if (updates.homeTeamId !== undefined) setters.setHomeTeamId(updates.homeTeamId)
@@ -123,10 +162,11 @@ export function DashboardLigaClient({
     }
   }
 
-  const fetchEstatisticas = async (paramsObj: Record<string, string>, contextStr: 'CASA_VISITANTE' | 'GERAL') => {
+  const fetchEstatisticas = async (paramsObj: Record<string, string>, contextStr: 'CASA_VISITANTE' | 'GERAL', oddsTypeStr?: 'opening' | 'closing') => {
     try {
       const params = new URLSearchParams(paramsObj)
       params.set('mandoContext', contextStr)
+      params.set('profitOddsType', oddsTypeStr || profitOddsType)
       const resEst = await fetch(`/api/ligas/${liga.slug}/estatisticas?${params}`)
       if (resEst.ok) {
         const jsonEst = await resEst.json()
@@ -263,29 +303,58 @@ export function DashboardLigaClient({
             </TabsList>
 
             {activeTab !== 'resumo' && (
-              <div className="flex justify-end mb-4 gap-2 animate-in fade-in">
-                <Button 
-                  variant={mandoContext === 'CASA_VISITANTE' ? 'default' : 'outline'} 
-                  size="sm" 
-                  onClick={() => {
-                    setMandoContext('CASA_VISITANTE')
-                    fetchEstatisticas(queryParams, 'CASA_VISITANTE')
-                  }}
-                  className="text-xs"
-                >
-                  Contexto: Casa / Visitante
-                </Button>
-                <Button 
-                  variant={mandoContext === 'GERAL' ? 'default' : 'outline'} 
-                  size="sm"
-                  onClick={() => {
-                    setMandoContext('GERAL')
-                    fetchEstatisticas(queryParams, 'GERAL')
-                  }}
-                  className="text-xs"
-                >
-                  Contexto: Geral
-                </Button>
+              <div className="flex flex-wrap justify-between items-center mb-4 gap-2 animate-in fade-in">
+                <div className="flex gap-2">
+                  <Button 
+                    variant={mandoContext === 'CASA_VISITANTE' ? 'default' : 'outline'} 
+                    size="sm" 
+                    onClick={() => {
+                      setMandoContext('CASA_VISITANTE')
+                      fetchEstatisticas(queryParams, 'CASA_VISITANTE', profitOddsType)
+                    }}
+                    className="text-xs"
+                  >
+                    Contexto: Casa / Visitante
+                  </Button>
+                  <Button 
+                    variant={mandoContext === 'GERAL' ? 'default' : 'outline'} 
+                    size="sm"
+                    onClick={() => {
+                      setMandoContext('GERAL')
+                      fetchEstatisticas(queryParams, 'GERAL', profitOddsType)
+                    }}
+                    className="text-xs"
+                  >
+                    Contexto: Geral
+                  </Button>
+                </div>
+
+                {activeTab === 'odds' && (
+                  <div className="flex gap-2">
+                    <Button 
+                      variant={profitOddsType === 'closing' ? 'default' : 'outline'} 
+                      size="sm" 
+                      onClick={() => {
+                        setProfitOddsType('closing')
+                        fetchEstatisticas(queryParams, mandoContext, 'closing')
+                      }}
+                      className="text-xs"
+                    >
+                      Odds: Fechamento
+                    </Button>
+                    <Button 
+                      variant={profitOddsType === 'opening' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => {
+                        setProfitOddsType('opening')
+                        fetchEstatisticas(queryParams, mandoContext, 'opening')
+                      }}
+                      className="text-xs"
+                    >
+                      Odds: Abertura
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -303,9 +372,9 @@ export function DashboardLigaClient({
             xgDisponivel={previsao.xgDisponivel}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-7 gap-4 items-stretch">
-            {/* Modelos — 4 de 7 colunas = ~57% — ESQUERDA */}
-            <div className="lg:col-span-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+            {/* Modelos — ESQUERDA */}
+            <div>
               <SeletorModelo
                 modo={modelo}
                 onChange={handleModeloChange}
@@ -313,8 +382,8 @@ export function DashboardLigaClient({
               />
             </div>
 
-            {/* Lambdas — 3 de 7 colunas = ~43% — DIREITA */}
-            <div className="lg:col-span-3">
+            {/* Lambdas — DIREITA */}
+            <div>
               <SeletorLambda
                 todosLambdas={previsao.todosLambdas}
                 composicao={previsao.composicao}
@@ -370,7 +439,8 @@ export function DashboardLigaClient({
           {/* SEÇÃO 5: EVOLUÇÃO DE GOLS */}
           <div className="w-full">
             <PainelEvolucao
-              partidas={partidasParaEvolucao}
+              partidasHome={partidasParaEvolucaoHome}
+              partidasAway={partidasParaEvolucaoAway}
               homeTeamId={filtros.homeTeamId!}
               awayTeamId={filtros.awayTeamId!}
               homeTeamName={nomeTimeCasa}
@@ -380,7 +450,7 @@ export function DashboardLigaClient({
             </TabsContent>
 
             <TabsContent value="odds" className="outline-none mt-6">
-              {estatisticas ? <TabOddsProfit homeStats={estatisticas.homeStats} awayStats={estatisticas.awayStats} /> : <div className="text-center p-8 text-muted-foreground animate-pulse">Carregando estatísticas...</div>}
+              {estatisticas ? <TabOddsProfit homeStats={estatisticas.homeStats} awayStats={estatisticas.awayStats} oddsType={profitOddsType} /> : <div className="text-center p-8 text-muted-foreground animate-pulse">Carregando estatísticas...</div>}
             </TabsContent>
 
             <TabsContent value="gols" className="outline-none mt-6">

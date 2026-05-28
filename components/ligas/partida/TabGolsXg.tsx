@@ -39,6 +39,12 @@ export function TabGolsXg({ homeStats, awayStats }: TabGolsXgProps) {
                 <StatDisplay stat={stats.goalsXgShots.goalsConceded1H} label="Gols Sofridos 1H" />
                 <StatDisplay stat={stats.goalsXgShots.goalsDiff1H} label="Saldo de Gols 1H" />
               </div>
+              <div className="space-y-1">
+                <StatDisplay stat={stats.goalsXgShots.goalsTotal2H} label="Total Gols 2H" />
+                <StatDisplay stat={stats.goalsXgShots.goals2H} label="Gols Marcados 2H" />
+                <StatDisplay stat={stats.goalsXgShots.goalsConceded2H} label="Gols Sofridos 2H" />
+                <StatDisplay stat={stats.goalsXgShots.goalsDiff2H} label="Saldo de Gols 2H" />
+              </div>
             </div>
           </div>
 
@@ -63,6 +69,31 @@ export function TabGolsXg({ homeStats, awayStats }: TabGolsXgProps) {
                 <StatDisplay stat={stats.goalsXgShots.xg2H} label="xG a Favor 2H" />
                 <StatDisplay stat={stats.goalsXgShots.xgConceded2H} label="xG Contra 2H" />
                 <StatDisplay stat={stats.goalsXgShots.xgDiff2H} label="Saldo xG 2H" />
+              </div>
+            </div>
+          </div>
+
+          {/* GOLS POR xG */}
+          <div>
+            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3">── Gols por xG</h4>
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgTotalFT} label="Total Gols / xG FT" />
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgFT} label="Gols Marcados / xG FT" />
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgConcededFT} label="Gols Sofridos / xG FT" />
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgDiffFT} label="Saldo Gols / Saldo xG FT" />
+              </div>
+              <div className="space-y-1">
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgTotal1H} label="Total Gols / xG 1H" />
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXg1H} label="Gols Marcados / xG 1H" />
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgConceded1H} label="Gols Sofridos / xG 1H" />
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgDiff1H} label="Saldo Gols / Saldo xG 1H" />
+              </div>
+              <div className="space-y-1">
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgTotal2H} label="Total Gols / xG 2H" />
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXg2H} label="Gols Marcados / xG 2H" />
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgConceded2H} label="Gols Sofridos / xG 2H" />
+                <StatDisplay stat={stats.goalsXgShots.goalsPerXgDiff2H} label="Saldo Gols / Saldo xG 2H" />
               </div>
             </div>
           </div>

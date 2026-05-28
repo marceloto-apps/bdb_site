@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 interface TabOddsProfitProps {
   homeStats: TeamMatchStats
   awayStats: TeamMatchStats
+  oddsType?: 'opening' | 'closing'
 }
 
 function ProfitDisplay({ strategy, profit }: { strategy: string, profit: ProfitSummary }) {
@@ -75,7 +76,7 @@ function combineProfit(homeProfit: ProfitSummary, awayProfit: ProfitSummary): Pr
   }
 }
 
-export function TabOddsProfit({ homeStats, awayStats }: TabOddsProfitProps) {
+export function TabOddsProfit({ homeStats, awayStats, oddsType = 'closing' }: TabOddsProfitProps) {
   if (homeStats.sampleSize === 0 && awayStats.sampleSize === 0) {
     return <div className="text-center p-8 text-muted-foreground">Dados indisponíveis para esta métrica.</div>
   }
@@ -121,7 +122,7 @@ export function TabOddsProfit({ homeStats, awayStats }: TabOddsProfitProps) {
                 </div>
               </div>
               <div className="text-xs text-center text-muted-foreground pt-2">
-                Amostra: {homeStats.sampleSize} jogos (Base Bet365)
+                Amostra: {homeStats.sampleSize} jogos (Base Bet365 · {oddsType === 'opening' ? 'Abertura' : 'Fechamento'})
               </div>
             </CardContent>
           </Card>
@@ -171,7 +172,7 @@ export function TabOddsProfit({ homeStats, awayStats }: TabOddsProfitProps) {
                 </div>
               </div>
               <div className="text-xs text-center text-muted-foreground pt-2">
-                Amostra: {awayStats.sampleSize} jogos (Base Bet365)
+                Amostra: {awayStats.sampleSize} jogos (Base Bet365 · {oddsType === 'opening' ? 'Abertura' : 'Fechamento'})
               </div>
             </CardContent>
           </Card>

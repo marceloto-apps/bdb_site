@@ -26,6 +26,14 @@ export const authConfig = {
       }
       return session
     },
+    async redirect({ url, baseUrl }) {
+      // Se for o redirecionamento de logout (apenas a raiz), envia para a raiz/Home
+      if (url === baseUrl || url === `${baseUrl}/` || url === '/') {
+        return baseUrl
+      }
+      // Para qualquer outro redirecionamento pós-login, garante o envio ao dashboard
+      return `${baseUrl}/dashboard`
+    },
     async authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
       const isOnDashboard = nextUrl.pathname.startsWith("/dashboard")

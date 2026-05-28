@@ -1,12 +1,50 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
 import Image from "next/image"
 import { SOCIAL_LINKS } from "@/lib/constants"
-import { Card, CardContent } from "@/components/ui/card"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+
+const socialProofImages = [
+  "/images/01-prova-social.png",
+  "/images/02-prova-social.png",
+  "/images/03-prova-social.png",
+  "/images/04-prova-social.png",
+  "/images/05-prova-social.png",
+  "/images/06-prova-social.png",
+  "/images/07-prova-social.png",
+]
 
 export function SocialProofSection() {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [isHovering, setIsHovering] = useState(false)
+
+  const maxIndex = socialProofImages.length - 1
+  const totalDots = socialProofImages.length
+
+  const nextSlide = useCallback(() => {
+    setCurrentIndex((prevIndex) => (prevIndex >= maxIndex ? 0 : prevIndex + 1))
+  }, [maxIndex])
+
+  const prevSlide = useCallback(() => {
+    setCurrentIndex((prevIndex) => (prevIndex <= 0 ? maxIndex : prevIndex - 1))
+  }, [maxIndex])
+
+  // Autoplay functionality with hover pause
+  useEffect(() => {
+    if (isHovering) return
+
+    const interval = setInterval(() => {
+      nextSlide()
+    }, 4000)
+
+    return () => clearInterval(interval)
+  }, [isHovering, nextSlide])
+
   return (
     <section className="py-20">
       <div className="container px-4 md:px-6 mx-auto">
-        <h2 className="text-3xl font-bold tracking-tight mb-12 text-center">
+        <h2 className="text-3xl font-bold tracking-tight mb-12 text-center text-text-primary">
           Uma comunidade que cresce com dados, não com hype.
         </h2>
 
@@ -56,32 +94,82 @@ export function SocialProofSection() {
           </div>
         </div>
 
-        {/* Depoimentos */}
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="bg-surface border-border shadow-md">
-            <CardContent className="pt-6">
-              <p className="italic text-muted-foreground mb-4">
-                &quot;Conheci a comunidade em 2023 e passei a entender que tem gente séria estudando e disseminando conteúdos relevantes sobre aposta esportiva no Brasil. Luciano está de parabéns pelo trabalho que fez nestes anos. Obrigado pelo dinheiro que me fez ganhar também seguindo seus grupos.&quot;
-              </p>
-              <p className="font-semibold">— Marcelo · Desde 2023</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-surface border-border opacity-70">
-            <CardContent className="pt-6">
-              <p className="italic text-muted-foreground mb-4">
-                &quot;[Depoimento de membro a ser coletado]&quot;
-              </p>
-              <p className="font-semibold">— [Nome do membro] · [Desde XXXX]</p>
-            </CardContent>
-          </Card>
-          <Card className="bg-surface border-border opacity-70">
-            <CardContent className="pt-6">
-              <p className="italic text-muted-foreground mb-4">
-                &quot;[Depoimento de membro a ser coletado]&quot;
-              </p>
-              <p className="font-semibold">— [Nome do membro] · [Desde XXXX]</p>
-            </CardContent>
-          </Card>
+        {/* Subtítulo do Carrossel */}
+        <h3 className="text-xl md:text-2xl font-bold tracking-tight mb-8 text-center text-text-primary">
+          O que dizem sobre nossos produtos
+        </h3>
+
+        {/* Carrossel de Provas Sociais */}
+        <div 
+          className="relative w-full max-w-5xl mx-auto px-4 md:px-12 group"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+        >
+          {/* Wrapper com Overflow hidden */}
+          <div className="overflow-hidden py-4">
+            <div 
+              className="flex transition-transform duration-500 ease-in-out"
+              style={{ 
+                transform: `translateX(-${currentIndex * 100}%)` 
+              }}
+            >
+              {socialProofImages.map((src, index) => (
+                <div 
+                  key={src}
+                  className="flex-shrink-0 w-full px-4 flex justify-center"
+                >
+                  <div className="relative h-[250px] sm:h-[350px] md:h-[450px] w-full max-w-4xl rounded-2xl bg-surface/30 border border-border/80 overflow-hidden flex items-center justify-center p-3 hover:border-primary/40 hover:bg-surface/40 transition-all duration-300 backdrop-blur-sm shadow-xl hover:shadow-primary/5">
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={src}
+                        alt={`Prova social ${index + 1}`}
+                        fill
+                        sizes="(max-width: 768px) 100vw, 80vw"
+                        className="object-contain select-none transition-transform duration-500 hover:scale-[1.02]"
+                        priority={index === 0}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Seta Esquerda (Chevron Left) */}
+          <button
+            onClick={prevSlide}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-surface/80 hover:bg-primary border border-border hover:border-primary text-text-primary hover:text-background transition-all duration-300 shadow-xl opacity-0 group-hover:opacity-100 hidden md:flex items-center justify-center focus:outline-none cursor-pointer"
+            aria-label="Depoimento anterior"
+          >
+            <ChevronLeft size={24} className="stroke-[2.5]" />
+          </button>
+
+          {/* Seta Direita (Chevron Right) */}
+          <button
+            onClick={nextSlide}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-surface/80 hover:bg-primary border border-border hover:border-primary text-text-primary hover:text-background transition-all duration-300 shadow-xl opacity-0 group-hover:opacity-100 hidden md:flex items-center justify-center focus:outline-none cursor-pointer"
+            aria-label="Próximo depoimento"
+          >
+            <ChevronRight size={24} className="stroke-[2.5]" />
+          </button>
+
+          {/* Dots Indicadores */}
+          {totalDots > 1 && (
+            <div className="flex justify-center gap-2 mt-8">
+              {Array.from({ length: totalDots }).map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentIndex(index)}
+                  className={`h-2.5 rounded-full transition-all duration-300 ${
+                    currentIndex === index 
+                      ? "w-8 bg-primary shadow-sm shadow-primary/50" 
+                      : "w-2.5 bg-border hover:bg-text-muted"
+                  }`}
+                  aria-label={`Ir para depoimento ${index + 1}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </section>

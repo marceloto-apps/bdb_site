@@ -55,6 +55,8 @@ export async function GET(
       return NextResponse.json({ error: 'TEAMS_NOT_FOUND', message: 'Times não encontrados' }, { status: 404 })
     }
 
+    const targetOddsType = query.profitOddsType === 'opening' ? 'PREMATCH_OPENING' : 'PREMATCH_CLOSING'
+
     // Buscar TODOS os jogos finalizados da temporada atual onde um dos times participou
     const todosOsJogos = await prisma.match.findMany({
       where: {
@@ -74,6 +76,7 @@ export async function GET(
         odds: {
           where: {
             bookmaker: { name: 'Bet365' },
+            oddsType: targetOddsType,
           },
           orderBy: { createdAt: 'desc' }, // Tenta pegar a mais recente
           include: { market: true }

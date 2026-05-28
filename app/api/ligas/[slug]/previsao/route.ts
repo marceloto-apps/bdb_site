@@ -26,7 +26,7 @@ import {
   calcularForcasTimeXG,
   calcularMediasTimeXGComDecay,
   type MediasLigaXG,
-
+  calcularLambdaMercado,
 } from '@/lib/analytics'
 
 export async function GET(
@@ -92,6 +92,17 @@ export async function GET(
       },
     })
     const dataReferencia = confronto ? confronto.utcDate : new Date()
+
+    // Calcular o lambda de mercado (Bet365) para o confronto
+    const mercadoResult = await calcularLambdaMercado(confronto?.id || '')
+
+    // Se o usuário escolheu 'MERCADO' mas ele está indisponível, falhar com 400
+    if (query.lambdaMethod === 'MERCADO' && !mercadoResult.disponivel) {
+      return NextResponse.json(
+        { error: 'MARKET_ODDS_UNAVAILABLE', message: mercadoResult.motivo || 'Dados de mercado não disponíveis para este lambda' },
+        { status: 400 }
+      )
+    }
 
     // Buscar APENAS jogos finalizados da temporada atual
     const todosOsJogos = await prisma.match.findMany({
@@ -251,6 +262,9 @@ export async function GET(
         forcasHome: forcasHomePoisson,
         forcasAway: forcasAwayPoisson,
         ligaMedias: mediasLiga,
+        lambdaMercado: mercadoResult.disponivel
+          ? { lambdaH: mercadoResult.lambdaH, lambdaA: mercadoResult.lambdaA, capturadoEm: mercadoResult.capturadoEm }
+          : null,
         ...(xgDisponivel ? {
           mediasHomeXG: mediasHomeXGPoisson,
           mediasAwayXG: mediasAwayXGPoisson,
@@ -287,6 +301,9 @@ export async function GET(
           forcasHome,
           forcasAway,
           ligaMedias: mediasLiga,
+          lambdaMercado: mercadoResult.disponivel
+            ? { lambdaH: mercadoResult.lambdaH, lambdaA: mercadoResult.lambdaA, capturadoEm: mercadoResult.capturadoEm }
+            : null,
           ...(xgDisponivel ? {
             mediasHomeXG,
             mediasAwayXG,

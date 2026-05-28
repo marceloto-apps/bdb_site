@@ -27,6 +27,10 @@ export function buildTeamMatchStats(teamId: string, teamName: string, matches: a
   const goalsConcededFT: (number | null)[] = []
   const goals1H: (number | null)[] = []
   const goalsConceded1H: (number | null)[] = []
+  const goals2H: (number | null)[] = []
+  const goalsConceded2H: (number | null)[] = []
+  
+  // Note: Gols por xG is calculated at the end directly from averages
   
   const xgFT: (number | null)[] = []
   const xgConcededFT: (number | null)[] = []
@@ -129,6 +133,12 @@ export function buildTeamMatchStats(teamId: string, teamName: string, matches: a
       goals1H.push(teamGoals1H)
       goalsConceded1H.push(oppGoals1H)
       totalGoalsHT.push(hthg + htag)
+      
+      goals2H.push(teamGoals !== null ? teamGoals - teamGoals1H : null)
+      goalsConceded2H.push(oppGoals !== null ? oppGoals - oppGoals1H : null)
+    } else {
+      goals2H.push(null)
+      goalsConceded2H.push(null)
     }
 
     const teamWon = teamGoals > oppGoals
@@ -148,6 +158,26 @@ export function buildTeamMatchStats(teamId: string, teamName: string, matches: a
     // Stats
     const stats = m.stats
     if (stats) {
+      const teamXg = isHome ? stats.homeXg : stats.awayXg
+      const oppXg = isHome ? stats.awayXg : stats.homeXg
+      const teamXg1H = isHome ? stats.homeXgFirstHalf : stats.awayXgFirstHalf
+      const oppXg1H = isHome ? stats.awayXgFirstHalf : stats.homeXgFirstHalf
+      const teamXg2H = isHome ? stats.homeXgSecondHalf : stats.awayXgSecondHalf
+      const oppXg2H = isHome ? stats.awayXgSecondHalf : stats.homeXgSecondHalf
+
+      // Gols FT
+      const teamGoalsFT = teamGoals
+      const oppGoalsFT = oppGoals
+
+      // Gols 1H
+      const teamGoals1H = isHome ? hthg : htag
+      const oppGoals1H = isHome ? htag : hthg
+
+      // Gols 2H
+      const teamGoals2H = (teamGoalsFT !== null && teamGoals1H !== null) ? teamGoalsFT - teamGoals1H : null
+      const oppGoals2H = (oppGoalsFT !== null && oppGoals1H !== null) ? oppGoalsFT - oppGoals1H : null
+
+
       // xG
       xgFT.push(isHome ? stats.homeXg : stats.awayXg)
       xgConcededFT.push(isHome ? stats.awayXg : stats.homeXg)
@@ -220,6 +250,67 @@ export function buildTeamMatchStats(teamId: string, teamName: string, matches: a
   const calcTotal = (forArr: (number|null)[], againstArr: (number|null)[]) => {
     return forArr.map((v, i) => v !== null && againstArr[i] !== null ? v + againstArr[i]! : null)
   }
+  const makeRatioSummary = (golsSummary: StatSummary, xgSummary: StatSummary) => {
+    const avgGols = golsSummary.average
+    const avgXg = xgSummary.average
+    
+    if (avgGols === null || avgXg === null) {
+      return {
+        average: null,
+        standardDeviation: null,
+        coefficientOfVariation: null,
+        sampleSize: xgSummary.sampleSize
+      }
+    }
+    
+    if (avgXg === 0) {
+      return {
+        average: 0,
+        standardDeviation: null,
+        coefficientOfVariation: null,
+        sampleSize: xgSummary.sampleSize
+      }
+    }
+    
+    const ratio = avgGols / avgXg
+    const average = isNaN(ratio) || !isFinite(ratio) ? 0 : ratio
+    return {
+      average,
+      standardDeviation: null,
+      coefficientOfVariation: null,
+      sampleSize: xgSummary.sampleSize
+    }
+  }
+
+  const gTotalFT = calculateStatSummary(calcTotal(goalsFT, goalsConcededFT))
+  const gFT = calculateStatSummary(goalsFT)
+  const gConcededFT = calculateStatSummary(goalsConcededFT)
+  const gDiffFT = calculateStatSummary(calcDiff(goalsFT, goalsConcededFT))
+
+  const gTotal1H = calculateStatSummary(calcTotal(goals1H, goalsConceded1H))
+  const g1H = calculateStatSummary(goals1H)
+  const gConceded1H = calculateStatSummary(goalsConceded1H)
+  const gDiff1H = calculateStatSummary(calcDiff(goals1H, goalsConceded1H))
+
+  const gTotal2H = calculateStatSummary(calcTotal(goals2H, goalsConceded2H))
+  const g2H = calculateStatSummary(goals2H)
+  const gConceded2H = calculateStatSummary(goalsConceded2H)
+  const gDiff2H = calculateStatSummary(calcDiff(goals2H, goalsConceded2H))
+
+  const xgTotalFTVal = calculateStatSummary(calcTotal(xgFT, xgConcededFT))
+  const xgFTVal = calculateStatSummary(xgFT)
+  const xgConcededFTVal = calculateStatSummary(xgConcededFT)
+  const xgDiffFTVal = calculateStatSummary(calcDiff(xgFT, xgConcededFT))
+
+  const xgTotal1HVal = calculateStatSummary(calcTotal(xg1H, xgConceded1H))
+  const xg1HVal = calculateStatSummary(xg1H)
+  const xgConceded1HVal = calculateStatSummary(xgConceded1H)
+  const xgDiff1HVal = calculateStatSummary(calcDiff(xg1H, xgConceded1H))
+
+  const xgTotal2HVal = calculateStatSummary(calcTotal(xg2H, xgConceded2H))
+  const xg2HVal = calculateStatSummary(xg2H)
+  const xgConceded2HVal = calculateStatSummary(xgConceded2H)
+  const xgDiff2HVal = calculateStatSummary(calcDiff(xg2H, xgConceded2H))
 
   return {
     teamId,
@@ -243,27 +334,46 @@ export function buildTeamMatchStats(teamId: string, teamName: string, matches: a
       bttsNo: calculateProfitSummary(bttsNoProfit),
     },
     goalsXgShots: {
-      goalsTotalFT: calculateStatSummary(calcTotal(goalsFT, goalsConcededFT)),
-      goalsFT: calculateStatSummary(goalsFT),
-      goalsConcededFT: calculateStatSummary(goalsConcededFT),
-      goalsDiffFT: calculateStatSummary(calcDiff(goalsFT, goalsConcededFT)),
-      goalsTotal1H: calculateStatSummary(calcTotal(goals1H, goalsConceded1H)),
-      goals1H: calculateStatSummary(goals1H),
-      goalsConceded1H: calculateStatSummary(goalsConceded1H),
-      goalsDiff1H: calculateStatSummary(calcDiff(goals1H, goalsConceded1H)),
+      goalsTotalFT: gTotalFT,
+      goalsFT: gFT,
+      goalsConcededFT: gConcededFT,
+      goalsDiffFT: gDiffFT,
+      goalsTotal1H: gTotal1H,
+      goals1H: g1H,
+      goalsConceded1H: gConceded1H,
+      goalsDiff1H: gDiff1H,
+      goalsTotal2H: gTotal2H,
+      goals2H: g2H,
+      goalsConceded2H: gConceded2H,
+      goalsDiff2H: gDiff2H,
       
-      xgTotalFT: calculateStatSummary(calcTotal(xgFT, xgConcededFT)),
-      xgFT: calculateStatSummary(xgFT),
-      xgConcededFT: calculateStatSummary(xgConcededFT),
-      xgDiffFT: calculateStatSummary(calcDiff(xgFT, xgConcededFT)),
-      xgTotal1H: calculateStatSummary(calcTotal(xg1H, xgConceded1H)),
-      xg1H: calculateStatSummary(xg1H),
-      xgConceded1H: calculateStatSummary(xgConceded1H),
-      xgDiff1H: calculateStatSummary(calcDiff(xg1H, xgConceded1H)),
-      xgTotal2H: calculateStatSummary(calcTotal(xg2H, xgConceded2H)),
-      xg2H: calculateStatSummary(xg2H),
-      xgConceded2H: calculateStatSummary(xgConceded2H),
-      xgDiff2H: calculateStatSummary(calcDiff(xg2H, xgConceded2H)),
+      xgTotalFT: xgTotalFTVal,
+      xgFT: xgFTVal,
+      xgConcededFT: xgConcededFTVal,
+      xgDiffFT: xgDiffFTVal,
+      xgTotal1H: xgTotal1HVal,
+      xg1H: xg1HVal,
+      xgConceded1H: xgConceded1HVal,
+      xgDiff1H: xgDiff1HVal,
+      xgTotal2H: xgTotal2HVal,
+      xg2H: xg2HVal,
+      xgConceded2H: xgConceded2HVal,
+      xgDiff2H: xgDiff2HVal,
+
+      goalsPerXgTotalFT: makeRatioSummary(gTotalFT, xgTotalFTVal),
+      goalsPerXgFT: makeRatioSummary(gFT, xgFTVal),
+      goalsPerXgConcededFT: makeRatioSummary(gConcededFT, xgConcededFTVal),
+      goalsPerXgDiffFT: makeRatioSummary(gDiffFT, xgDiffFTVal),
+
+      goalsPerXgTotal1H: makeRatioSummary(gTotal1H, xgTotal1HVal),
+      goalsPerXg1H: makeRatioSummary(g1H, xg1HVal),
+      goalsPerXgConceded1H: makeRatioSummary(gConceded1H, xgConceded1HVal),
+      goalsPerXgDiff1H: makeRatioSummary(gDiff1H, xgDiff1HVal),
+
+      goalsPerXgTotal2H: makeRatioSummary(gTotal2H, xgTotal2HVal),
+      goalsPerXg2H: makeRatioSummary(g2H, xg2HVal),
+      goalsPerXgConceded2H: makeRatioSummary(gConceded2H, xgConceded2HVal),
+      goalsPerXgDiff2H: makeRatioSummary(gDiff2H, xgDiff2HVal),
 
       shotsTotalFT: calculateStatSummary(calcTotal(shotsFT, shotsConcededFT)),
       shotsFT: calculateStatSummary(shotsFT),

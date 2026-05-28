@@ -28,6 +28,7 @@ const createEmptyOdds = (fonte: 'bet365' | 'pinnacle' | 'manual'): OddsMercado =
 
 export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }: PainelOddsMercadoProps) {
   const [bookmaker, setBookmaker] = useState<'bet365' | 'pinnacle'>('bet365')
+  const [oddsType, setOddsType] = useState<'opening' | 'current'>('current')
   const [isManual, setIsManual] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -42,7 +43,7 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
   // Ref para guardar o timeout do debounce
   const debounceRef = useRef<NodeJS.Timeout>()
 
-  const cacheKey = `${homeTeamId}-${awayTeamId}-${bookmaker}`
+  const cacheKey = `${homeTeamId}-${awayTeamId}-${bookmaker}-${oddsType}`
 
   // Efeito principal para buscar dados
   useEffect(() => {
@@ -72,7 +73,8 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
         const params = new URLSearchParams({
           homeTeamId,
           awayTeamId,
-          bookmaker
+          bookmaker,
+          oddsType
         })
         const res = await fetch(`/api/ligas/${slug}/odds-mercado?${params}`)
         const json = await res.json()
@@ -123,7 +125,7 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
 
     fetchOdds()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, homeTeamId, awayTeamId, bookmaker])
+  }, [slug, homeTeamId, awayTeamId, bookmaker, oddsType])
 
   // Efeito para repassar mudanças no modo manual com debounce
   useEffect(() => {
@@ -244,11 +246,11 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
       <CardContent className="p-4 md:p-6 flex flex-col gap-6 overflow-y-auto">
         
         {/* Controles de Fonte */}
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between gap-4">
           <Tabs 
             value={bookmaker} 
             onValueChange={(v) => setBookmaker(v as any)} 
-            className="w-full max-w-[200px]"
+            className="w-full max-w-[150px]"
           >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="bet365" disabled={isManual}>Bet365</TabsTrigger>
@@ -256,7 +258,20 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
             </TabsList>
           </Tabs>
 
-          {isLoading && <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />}
+          <div className="flex items-center gap-3">
+            {isLoading && <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />}
+            
+            <Tabs 
+              value={oddsType} 
+              onValueChange={(v) => setOddsType(v as any)} 
+              className="w-full max-w-[180px]"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="current" disabled={isManual}>Atuais</TabsTrigger>
+                <TabsTrigger value="opening" disabled={isManual}>Abertura</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
         </div>
 
         {/* Mensagem se não houver jogo ou odds */}
@@ -394,7 +409,7 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
           {apiMatchInfo?.status === 'SCHEDULED' ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="font-normal border-primary/20 bg-primary/5 text-primary">
-                📡 {bookmaker === 'bet365' ? 'Bet365' : 'Pinnacle'}
+                📡 {bookmaker === 'bet365' ? 'Bet365' : 'Pinnacle'} ({oddsType === 'opening' ? 'Abertura' : 'Atuais'})
               </Badge>
               <span className="truncate">
                 {apiMatchInfo.utcDate ? new Date(apiMatchInfo.utcDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}

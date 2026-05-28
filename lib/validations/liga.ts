@@ -20,7 +20,7 @@ export const previsaoQuerySchema = z.object({
   homeTeamId: z.string().cuid(),
   awayTeamId: z.string().cuid(),
   modelo: z.enum(['POISSON', 'ZIP', 'NB', 'DIXON_COLES']).default('POISSON'),
-  lambdaMethod: z.enum(['MEDIA_SIMPLES', 'FORCAS_RELATIVAS', 'XG']).default('MEDIA_SIMPLES'),
+  lambdaMethod: z.enum(['MEDIA_SIMPLES', 'FORCAS_RELATIVAS', 'XG', 'MERCADO']).default('MEDIA_SIMPLES'),
   // Filtros opcionais (mesmos do /partidas, usados para filtrar a base do cálculo)
   roundFrom: z.coerce.number().int().min(1).optional(),
   roundTo: z.coerce.number().int().min(1).optional(),
@@ -28,6 +28,7 @@ export const previsaoQuerySchema = z.object({
   oddsCasaFaixas: z.string().optional(),   // csv de faixas: "1.21-1.40,3.51-5.00"
   oddsVisFaixas: z.string().optional(),    // csv de faixas: "1.41-1.70,2.01-2.30"
   mandoContext: z.enum(['CASA_VISITANTE', 'GERAL']).default('CASA_VISITANTE').optional(),
+  profitOddsType: z.enum(['opening', 'closing']).default('closing').optional(),
 })
 
 // GET /api/ligas/[slug]/info — sem params obrigatórios

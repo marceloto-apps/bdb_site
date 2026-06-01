@@ -442,6 +442,11 @@ export async function GET(
         ligaMediasXG,
         oddsFaixasDisponiveisCasa,
         oddsFaixasDisponiveisVisitante,
+        confronto: confronto ? {
+          id: confronto.id,
+          round: confronto.round,
+          utcDate: confronto.utcDate.toISOString(),
+        } : null,
       },
     })
   } catch (error) {

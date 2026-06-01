@@ -25,6 +25,7 @@ import { TabOddsProfit } from '@/components/ligas/partida/TabOddsProfit'
 import { TabGolsXg } from '@/components/ligas/partida/TabGolsXg'
 import { TabEscanteiosCartoes } from '@/components/ligas/partida/TabEscanteiosCartoes'
 import { TabOverUnder } from '@/components/ligas/partida/TabOverUnder'
+import { TabJogadores } from '@/components/ligas/partida/TabJogadores'
 import type { LambdaMethod } from '@/lib/analytics/types'
 import { OddsMercado } from '@/lib/validations/odds-mercado'
 
@@ -69,6 +70,8 @@ export function DashboardLigaClient({
   const [activeTab, setActiveTab] = useState('resumo')
   const [mandoContext, setMandoContext] = useState<'CASA_VISITANTE' | 'GERAL'>('CASA_VISITANTE')
   const [profitOddsType, setProfitOddsType] = useState<'opening' | 'closing'>('closing')
+  const [jogadores, setJogadores] = useState<any | null>(null)
+  const [isCalculatingJogadores, setIsCalculatingJogadores] = useState(false)
 
   const nomeTimeCasa = useMemo(() => times.find(t => t.id === filtros.homeTeamId)?.name ?? '', [times, filtros.homeTeamId])
   const nomeTimeVisitante = useMemo(() => times.find(t => t.id === filtros.awayTeamId)?.name ?? '', [times, filtros.awayTeamId])
@@ -135,6 +138,37 @@ export function DashboardLigaClient({
     if (updates.oddsVisitante !== undefined) setters.setOddsVisitante(updates.oddsVisitante)
   }
 
+  const fetchJogadores = async (homeId: string, awayId: string, refConfronto: any) => {
+    setIsCalculatingJogadores(true)
+    try {
+      const params = new URLSearchParams()
+      params.set('temporada', liga.temporada)
+      params.set('time', `${homeId},${awayId}`)
+      
+      if (refConfronto?.utcDate) {
+        params.set('dataPartida', refConfronto.utcDate)
+      } else if (refConfronto?.round) {
+        params.set('rodada', refConfronto.round.toString())
+      } else {
+        params.set('dataPartida', new Date().toISOString())
+      }
+
+      const res = await fetch(`/api/ligas/${liga.slug}/jogadores?${params}`)
+      if (res.ok) {
+        const json = await res.json()
+        setJogadores(json.data)
+      } else {
+        console.error('Erro ao buscar estatísticas dos jogadores')
+        setJogadores(null)
+      }
+    } catch (err) {
+      console.error('Erro de conexão ao buscar jogadores', err)
+      setJogadores(null)
+    } finally {
+      setIsCalculatingJogadores(false)
+    }
+  }
+
   const fetchPrevisao = async (paramsObj: Record<string, string>) => {
     setIsCalculating(true)
     setError(null)
@@ -147,6 +181,11 @@ export function DashboardLigaClient({
         return
       }
       setPrevisao(json.data)
+
+      // Buscar aba de jogadores automaticamente
+      if (paramsObj.homeTeamId && paramsObj.awayTeamId) {
+        fetchJogadores(paramsObj.homeTeamId, paramsObj.awayTeamId, json.data.confronto)
+      }
 
       if (!mapaValor) {
         const resMapa = await fetch(`/api/ligas/${liga.slug}/mapa-valor`)
@@ -300,6 +339,7 @@ export function DashboardLigaClient({
               <TabsTrigger value="gols" className="py-2 whitespace-normal h-full">Gols / xG / Fin.</TabsTrigger>
               <TabsTrigger value="escanteios" className="py-2 whitespace-normal h-full">Escant. / Cartões / Faltas</TabsTrigger>
               <TabsTrigger value="overunder" className="py-2 whitespace-normal h-full">Over / Under</TabsTrigger>
+              {/* <TabsTrigger value="jogadores" className="py-2 whitespace-normal h-full">Jogadores</TabsTrigger> */}
             </TabsList>
 
             {activeTab !== 'resumo' && (
@@ -463,6 +503,16 @@ export function DashboardLigaClient({
 
             <TabsContent value="overunder" className="outline-none mt-6">
               {estatisticas ? <TabOverUnder homeStats={estatisticas.homeStats} awayStats={estatisticas.awayStats} /> : <div className="text-center p-8 text-muted-foreground animate-pulse">Carregando estatísticas...</div>}
+            </TabsContent>
+
+            <TabsContent value="jogadores" className="outline-none mt-6">
+               {isCalculating || isCalculatingJogadores ? (
+                 <div className="text-center p-8 text-muted-foreground animate-pulse">Carregando estatísticas dos jogadores...</div>
+               ) : jogadores ? (
+                 <TabJogadores homeStats={jogadores.home} awayStats={jogadores.away} coverage={jogadores.coverage} />
+               ) : (
+                 <div className="text-center p-8 text-muted-foreground">Estatísticas dos jogadores não disponíveis para este confronto.</div>
+               )}
             </TabsContent>
           </Tabs>
         </div>

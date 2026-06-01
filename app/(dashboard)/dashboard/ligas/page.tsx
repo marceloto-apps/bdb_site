@@ -30,7 +30,7 @@ export default async function LigasPage() {
   })
 
   // Ligas FREE
-  const freeSlugs = ['brasileirao-serie-a', 'premier-league', 'la-liga', 'serie-a']
+  const freeSlugs = ['brasileirao-serie-a', 'brasileirao-serie-b', 'premier-league', 'la-liga', 'serie-a']
   // Ligas Finalizadas
   const finishedSlugs = ['premier-league', 'la-liga', 'serie-a']
 

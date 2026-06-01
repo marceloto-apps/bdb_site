@@ -20,7 +20,7 @@ export default async function LigaDashboardPage({ params }: { params: { slug: st
   const session = await auth()
   const slug = params.slug
 
-  const freeSlugs = ['brasileirao-serie-a', 'premier-league', 'la-liga', 'serie-a']
+  const freeSlugs = ['brasileirao-serie-a', 'brasileirao-serie-b', 'premier-league', 'la-liga', 'serie-a']
   const isPremium = (session?.user as any)?.plan === 'PREMIUM'
 
   if (!freeSlugs.includes(slug) && !isPremium) {

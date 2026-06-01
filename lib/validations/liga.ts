@@ -34,6 +34,19 @@ export const previsaoQuerySchema = z.object({
 // GET /api/ligas/[slug]/info — sem params obrigatórios
 export const ligaInfoQuerySchema = z.object({})
 
+// GET /api/ligas/[slug]/jogadores
+export const jogadoresQuerySchema = z.object({
+  temporada: z.string(),
+  rodada: z.coerce.number().int().min(1).optional(),
+  dataPartida: z.string().datetime().optional(),
+  time: z.string().optional(), // ID do time ou IDs separados por vírgula
+  setor: z.enum(['GOL', 'DEF', 'MEI', 'ATA']).optional(),
+}).refine(data => data.rodada !== undefined || data.dataPartida !== undefined, {
+  message: "É necessário informar 'rodada' ou 'dataPartida'",
+  path: ['rodada']
+})
+
 // Tipos inferidos para uso nas rotas
 export type PartidasQuery = z.infer<typeof partidasQuerySchema>
 export type PrevisaoQuery = z.infer<typeof previsaoQuerySchema>
+export type JogadoresQuery = z.infer<typeof jogadoresQuerySchema>

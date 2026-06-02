@@ -44,7 +44,6 @@ function getStatValue(stat: PlayerMatchStatWithRelations, key: string): number |
 
 /**
  * Calcula a taxa de cobertura (0..1) de cada métrica no confronto (Home + Away).
- * Chave = nome do campo per90 sem o sufixo "Per90".
  */
 export function calculateConfrontationCoverage(allMatchStats: PlayerMatchStatWithRelations[]): Record<string, number> {
   const total = allMatchStats.length
@@ -55,15 +54,25 @@ export function calculateConfrontationCoverage(allMatchStats: PlayerMatchStatWit
     'expectedGoals',
     'shotsTotal',
     'shotsOnTarget',
+    'shotsOffTarget',
+    'shotsBlocked',
+    'dribblesAttempted',
+    'dribblesSucceeded',
+    'offsides',
+    'keyPasses',
+    'assists',
+    'expectedAssists',
     'passesTotal',
     'passesAccurate',
-    'keyPasses',
+    'touches',
+    'foulsDrawn',
+    'crossesTotal',
+    'crossesAccurate',
     'tackles',
     'interceptions',
     'clearances',
-    'dribblesAttempted',
-    'dribblesSucceeded',
-    'foulsDrawn',
+    'dispossessed',
+    'saves',
     'foulsCommitted',
     'yellowCards',
     'redCards'
@@ -91,7 +100,6 @@ export function buildTeamSectorStats(
   cutoff: { dataPartida?: Date; rodada?: number } // Parâmetro para garantir o corte temporal estrito anti-vazamento no builder
 ): TeamSectorStats {
   // Defesa em profundidade: refiltra mesmo que a query já tenha cortado
-  // O corte temporal é estritamente menor (<). Se round for nulo em um cutoff por rodada, ele é excluído.
   const safeStats = teamMatchStats.filter(s => {
     if (cutoff.dataPartida) {
       return s.match.utcDate < cutoff.dataPartida
@@ -129,8 +137,8 @@ export function buildTeamSectorStats(
     const totalMinutes = playedMatches.reduce((acc, s) => acc + (s.minutesPlayed || 0), 0)
     const matchesPlayed = playedMatches.length
 
-    // Aplicar o piso de elegibilidade estrito de 270 minutos na janela
-    if (totalMinutes < 270) {
+    // Aplicar o piso de elegibilidade estrito de 180 minutos na janela
+    if (totalMinutes < 180) {
       continue
     }
 
@@ -145,45 +153,50 @@ export function buildTeamSectorStats(
     }
     const weightedRating = ratingDenominator > 0 ? ratingNumerator / ratingDenominator : null
 
-    // B. Função auxiliar para calcular métricas volumétricas per 90 independentes
-    const calcPer90 = (field: string): number | null => {
-      let eventSum = 0
-      let minutesSum = 0
+    // B. Função auxiliar para calcular valores totais absolutos acumulados
+    const calcTotal = (field: string): number | null => {
+      let sum = 0
+      let hasValue = false
       for (const s of playedMatches) {
         const val = getStatValue(s, field)
-        if (val !== null && s.minutesPlayed !== null && s.minutesPlayed > 0) {
-          eventSum += val
-          minutesSum += s.minutesPlayed
+        if (val !== null) {
+          sum += val
+          hasValue = true
         }
       }
-      return minutesSum > 0 ? (eventSum / minutesSum) * 90 : null
+      return hasValue ? sum : null
     }
 
-    const goalsPer90 = calcPer90('goals')
-    const expectedGoalsPer90 = calcPer90('expectedGoals')
-    
-    // overperformancePer90 = goalsPer90 - expectedGoalsPer90 (apenas se ambos forem válidos)
-    const overperformancePer90 = (goalsPer90 !== null && expectedGoalsPer90 !== null)
-      ? goalsPer90 - expectedGoalsPer90
-      : null
+    const goals = calcTotal('goals')
+    const expectedGoals = calcTotal('expectedGoals')
+    const shotsTotal = calcTotal('shotsTotal')
+    const shotsOnTarget = calcTotal('shotsOnTarget')
+    const shotsOffTarget = calcTotal('shotsOffTarget')
+    const shotsBlocked = calcTotal('shotsBlocked')
+    const dribblesAttempted = calcTotal('dribblesAttempted')
+    const dribblesSucceeded = calcTotal('dribblesSucceeded')
+    const offsides = calcTotal('offsides')
 
-    const shotsTotalPer90 = calcPer90('shotsTotal')
-    const shotsOnTargetPer90 = calcPer90('shotsOnTarget')
-    const passesTotalPer90 = calcPer90('passesTotal')
-    const passesAccuratePer90 = calcPer90('passesAccurate')
-    const keyPassesPer90 = calcPer90('keyPasses')
-    const tacklesPer90 = calcPer90('tackles')
-    const interceptionsPer90 = calcPer90('interceptions')
-    const clearancesPer90 = calcPer90('clearances')
-    const dribblesAttemptedPer90 = calcPer90('dribblesAttempted')
-    const dribblesSucceededPer90 = calcPer90('dribblesSucceeded')
-    const foulsDrawnPer90 = calcPer90('foulsDrawn')
-    const foulsCommittedPer90 = calcPer90('foulsCommitted')
-    const yellowCardsPer90 = calcPer90('yellowCards')
-    const redCardsPer90 = calcPer90('redCards')
+    const keyPasses = calcTotal('keyPasses')
+    const assists = calcTotal('assists')
+    const expectedAssists = calcTotal('expectedAssists')
+    const passesTotal = calcTotal('passesTotal')
+    const passesAccurate = calcTotal('passesAccurate')
+    const touches = calcTotal('touches')
+    const foulsDrawn = calcTotal('foulsDrawn')
+    const crossesTotal = calcTotal('crossesTotal')
+    const crossesAccurate = calcTotal('crossesAccurate')
+
+    const tackles = calcTotal('tackles')
+    const interceptions = calcTotal('interceptions')
+    const clearances = calcTotal('clearances')
+    const dispossessed = calcTotal('dispossessed')
+    const saves = calcTotal('saves')
+    const foulsCommitted = calcTotal('foulsCommitted')
+    const yellowCards = calcTotal('yellowCards')
+    const redCards = calcTotal('redCards')
 
     // C. Montar histórico individual do jogador para o Drill-down
-    // Mapeado a partir de playedMatches para não exibir partidas em que ficou no banco
     const matchHistory = playedMatches.map(s => {
       const isHome = s.teamId === s.match.homeTeamId
       const opponentName = isHome ? s.match.awayTeam.name : s.match.homeTeam.name
@@ -195,11 +208,33 @@ export function buildTeamSectorStats(
         isHome,
         rating: s.rating,
         minutesPlayed: s.minutesPlayed,
+        
         goals: s.goals,
         expectedGoals: s.expectedGoals,
+        shotsTotal: s.shotsTotal,
+        shotsOnTarget: s.shotsOnTarget,
+        shotsOffTarget: s.shotsOffTarget,
+        shotsBlocked: s.shotsBlocked,
+        dribblesAttempted: s.dribblesAttempted,
+        dribblesSucceeded: s.dribblesSucceeded,
+        offsides: s.offsides,
         keyPasses: s.keyPasses,
+        assists: s.assists,
+        expectedAssists: s.expectedAssists,
+        passesTotal: s.passesTotal,
+        passesAccurate: s.passesAccurate,
+        touches: s.touches,
+        foulsDrawn: s.foulsDrawn,
+        crossesTotal: s.crossesTotal,
+        crossesAccurate: s.crossesAccurate,
         tackles: s.tackles,
-        interceptions: s.interceptions
+        interceptions: s.interceptions,
+        clearances: s.clearances,
+        dispossessed: s.dispossessed,
+        saves: s.saves,
+        foulsCommitted: s.foulsCommitted,
+        yellowCards: s.yellowCards,
+        redCards: s.redCards
       }
     }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
@@ -211,29 +246,41 @@ export function buildTeamSectorStats(
       totalMinutes,
       matchesPlayed,
       weightedRating,
-      goalsPer90,
-      expectedGoalsPer90,
-      overperformancePer90,
-      shotsTotalPer90,
-      shotsOnTargetPer90,
-      passesTotalPer90,
-      passesAccuratePer90,
-      keyPassesPer90,
-      tacklesPer90,
-      interceptionsPer90,
-      clearancesPer90,
-      dribblesAttemptedPer90,
-      dribblesSucceededPer90,
-      foulsDrawnPer90,
-      foulsCommittedPer90,
-      yellowCardsPer90,
-      redCardsPer90,
+      
+      goals,
+      expectedGoals,
+      shotsTotal,
+      shotsOnTarget,
+      shotsOffTarget,
+      shotsBlocked,
+      dribblesAttempted,
+      dribblesSucceeded,
+      offsides,
+
+      keyPasses,
+      assists,
+      expectedAssists,
+      passesTotal,
+      passesAccurate,
+      touches,
+      foulsDrawn,
+      crossesTotal,
+      crossesAccurate,
+
+      tackles,
+      interceptions,
+      clearances,
+      dispossessed,
+      saves,
+      foulsCommitted,
+      yellowCards,
+      redCards,
+
       matchHistory
     })
   }
 
   // 3. Eleição do XI Provável (Top 11 Elegíveis com desempate determinístico)
-  // Critério de ordenação: totalMinutes DESC -> matchesPlayed DESC -> weightedRating DESC -> playerId ASC
   const sortPlayersDeterministically = (players: PlayerAggregateStats[]) => {
     return [...players].sort((a, b) => {
       if (b.totalMinutes !== a.totalMinutes) return b.totalMinutes - a.totalMinutes

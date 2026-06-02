@@ -9,24 +9,35 @@ export interface PlayerAggregateStats {
   matchesPlayed: number
   weightedRating: number | null
   
-  // Métricas per 90
-  goalsPer90: number | null
-  expectedGoalsPer90: number | null
-  overperformancePer90: number | null
-  shotsTotalPer90: number | null
-  shotsOnTargetPer90: number | null
-  passesTotalPer90: number | null
-  passesAccuratePer90: number | null
-  keyPassesPer90: number | null
-  tacklesPer90: number | null
-  interceptionsPer90: number | null
-  clearancesPer90: number | null
-  dribblesAttemptedPer90: number | null
-  dribblesSucceededPer90: number | null
-  foulsDrawnPer90: number | null
-  foulsCommittedPer90: number | null
-  yellowCardsPer90: number | null
-  redCardsPer90: number | null
+  // Métricas Totais Acumuladas
+  goals: number | null
+  expectedGoals: number | null
+  shotsTotal: number | null
+  shotsOnTarget: number | null
+  shotsOffTarget: number | null
+  shotsBlocked: number | null
+  dribblesAttempted: number | null
+  dribblesSucceeded: number | null
+  offsides: number | null
+
+  keyPasses: number | null
+  assists: number | null
+  expectedAssists: number | null
+  passesTotal: number | null
+  passesAccurate: number | null
+  touches: number | null
+  foulsDrawn: number | null
+  crossesTotal: number | null
+  crossesAccurate: number | null
+
+  tackles: number | null
+  interceptions: number | null
+  clearances: number | null
+  dispossessed: number | null
+  saves: number | null
+  foulsCommitted: number | null
+  yellowCards: number | null
+  redCards: number | null
 
   // Histórico embutido para o Drill-down
   matchHistory: {
@@ -37,11 +48,34 @@ export interface PlayerAggregateStats {
     isHome: boolean
     rating: number | null
     minutesPlayed: number | null
+    
+    // Métricas por partida
     goals: number | null
     expectedGoals: number | null
+    shotsTotal: number | null
+    shotsOnTarget: number | null
+    shotsOffTarget: number | null
+    shotsBlocked: number | null
+    dribblesAttempted: number | null
+    dribblesSucceeded: number | null
+    offsides: number | null
     keyPasses: number | null
+    assists: number | null
+    expectedAssists: number | null
+    passesTotal: number | null
+    passesAccurate: number | null
+    touches: number | null
+    foulsDrawn: number | null
+    crossesTotal: number | null
+    crossesAccurate: number | null
     tackles: number | null
     interceptions: number | null
+    clearances: number | null
+    dispossessed: number | null
+    saves: number | null
+    foulsCommitted: number | null
+    yellowCards: number | null
+    redCards: number | null
   }[]
 }
 

@@ -49,10 +49,6 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
   ): number | null => {
     if (field === 'weightedRating') return player.weightedRating
     if (field === 'matchesPlayed') return player.matchesPlayed
-    if (field === 'totalMinutes') return player.totalMinutes
-    if (field === 'minutosPorPartida') {
-      return player.matchesPlayed > 0 ? player.totalMinutes / player.matchesPlayed : null
-    }
     if (field === 'passesAccuratePct') {
       return (player.passesAccurate !== null && player.passesTotal)
         ? (player.passesAccurate / player.passesTotal) * 100
@@ -93,61 +89,61 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
     const baseCols = [
       { label: 'Rating', field: 'weightedRating', sortKey: 'weightedRating', align: 'right' as const },
       { label: 'J', field: 'matchesPlayed', sortKey: 'matchesPlayed', align: 'right' as const },
-      { label: 'Min', field: 'totalMinutes', sortKey: 'totalMinutes', align: 'right' as const },
+      { label: 'MIN', field: 'totalMinutes', sortKey: 'totalMinutes', align: 'right' as const },
     ]
 
     switch (activeTabCategory) {
       case 'sumario':
         return [
           ...baseCols,
-          { label: 'Gols (Saves)', field: 'golsSaves', sortKey: 'golsSaves', align: 'right' as const },
-          ...(isCovered('shotsTotal') ? [{ label: 'Chutes', field: 'shotsTotal', sortKey: 'shotsTotal', align: 'right' as const }] : []),
-          ...(isCovered('shotsOnTarget') ? [{ label: 'Chutes Gol', field: 'shotsOnTarget', sortKey: 'shotsOnTarget', align: 'right' as const }] : []),
+          { label: 'G', field: 'golsSaves', sortKey: 'golsSaves', align: 'right' as const },
+          ...(isCovered('shotsTotal') ? [{ label: 'CHT', field: 'shotsTotal', sortKey: 'shotsTotal', align: 'right' as const }] : []),
+          ...(isCovered('shotsOnTarget') ? [{ label: 'CHG', field: 'shotsOnTarget', sortKey: 'shotsOnTarget', align: 'right' as const }] : []),
           ...(isCovered('yellowCards') ? [{ label: 'CA', field: 'yellowCards', sortKey: 'yellowCards', align: 'right' as const }] : []),
           ...(isCovered('redCards') ? [{ label: 'CV', field: 'redCards', sortKey: 'redCards', align: 'right' as const }] : []),
-          ...(isCovered('passesTotal') && isCovered('passesAccurate') ? [{ label: 'P. Certos (%)', field: 'passesAccuratePct', sortKey: 'passesAccuratePct', align: 'right' as const }] : []),
+          ...(isCovered('passesTotal') && isCovered('passesAccurate') ? [{ label: 'P%', field: 'passesAccuratePct', sortKey: 'passesAccuratePct', align: 'right' as const }] : []),
         ]
 
       case 'ofensividade':
         return [
           ...baseCols,
-          ...(isCovered('goals') ? [{ label: 'Gols', field: 'goals', sortKey: 'goals', align: 'right' as const }] : []),
+          ...(isCovered('goals') ? [{ label: 'G', field: 'goals', sortKey: 'goals', align: 'right' as const }] : []),
           ...(isCovered('expectedGoals') ? [{ label: 'xG', field: 'expectedGoals', sortKey: 'expectedGoals', align: 'right' as const }] : []),
-          ...(isCovered('shotsTotal') ? [{ label: 'Chutes', field: 'shotsTotal', sortKey: 'shotsTotal', align: 'right' as const }] : []),
-          ...(isCovered('shotsOnTarget') ? [{ label: 'Chutes Gol', field: 'shotsOnTarget', sortKey: 'shotsOnTarget', align: 'right' as const }] : []),
-          ...(isCovered('shotsBlocked') ? [{ label: 'Bloqueados', field: 'shotsBlocked', sortKey: 'shotsBlocked', align: 'right' as const }] : []),
-          ...(isCovered('shotsOffTarget') ? [{ label: 'Chutes Fora', field: 'shotsOffTarget', sortKey: 'shotsOffTarget', align: 'right' as const }] : []),
-          ...(isCovered('dribblesAttempted') ? [{ label: 'Dribles Tent.', field: 'dribblesAttempted', sortKey: 'dribblesAttempted', align: 'right' as const }] : []),
-          ...(isCovered('dribblesSucceeded') ? [{ label: 'Dribles Certos', field: 'dribblesSucceeded', sortKey: 'dribblesSucceeded', align: 'right' as const }] : []),
-          ...(isCovered('offsides') ? [{ label: 'Impedimentos', field: 'offsides', sortKey: 'offsides', align: 'right' as const }] : []),
+          ...(isCovered('shotsTotal') ? [{ label: 'CHT', field: 'shotsTotal', sortKey: 'shotsTotal', align: 'right' as const }] : []),
+          ...(isCovered('shotsOnTarget') ? [{ label: 'CHG', field: 'shotsOnTarget', sortKey: 'shotsOnTarget', align: 'right' as const }] : []),
+          ...(isCovered('shotsBlocked') ? [{ label: 'CHB', field: 'shotsBlocked', sortKey: 'shotsBlocked', align: 'right' as const }] : []),
+          ...(isCovered('shotsOffTarget') ? [{ label: 'CHF', field: 'shotsOffTarget', sortKey: 'shotsOffTarget', align: 'right' as const }] : []),
+          ...(isCovered('dribblesAttempted') ? [{ label: 'DRT', field: 'dribblesAttempted', sortKey: 'dribblesAttempted', align: 'right' as const }] : []),
+          ...(isCovered('dribblesSucceeded') ? [{ label: 'DRC', field: 'dribblesSucceeded', sortKey: 'dribblesSucceeded', align: 'right' as const }] : []),
+          ...(isCovered('offsides') ? [{ label: 'IMP', field: 'offsides', sortKey: 'offsides', align: 'right' as const }] : []),
         ]
 
       case 'passes':
         return [
           ...baseCols,
-          ...(isCovered('keyPasses') ? [{ label: 'P. Chave', field: 'keyPasses', sortKey: 'keyPasses', align: 'right' as const }] : []),
-          ...(isCovered('assists') ? [{ label: 'Assist.', field: 'assists', sortKey: 'assists', align: 'right' as const }] : []),
+          ...(isCovered('keyPasses') ? [{ label: 'PCH', field: 'keyPasses', sortKey: 'keyPasses', align: 'right' as const }] : []),
+          ...(isCovered('assists') ? [{ label: 'AST', field: 'assists', sortKey: 'assists', align: 'right' as const }] : []),
           ...(isCovered('expectedAssists') ? [{ label: 'xA', field: 'expectedAssists', sortKey: 'expectedAssists', align: 'right' as const }] : []),
-          ...(isCovered('passesTotal') ? [{ label: 'Passes Tent.', field: 'passesTotal', sortKey: 'passesTotal', align: 'right' as const }] : []),
-          ...(isCovered('passesAccurate') ? [{ label: 'Passes Certos', field: 'passesAccurate', sortKey: 'passesAccurate', align: 'right' as const }] : []),
-          ...(isCovered('passesTotal') && isCovered('passesAccurate') ? [{ label: 'P. Certos (%)', field: 'passesAccuratePct', sortKey: 'passesAccuratePct', align: 'right' as const }] : []),
-          ...(isCovered('touches') ? [{ label: 'Toques', field: 'touches', sortKey: 'touches', align: 'right' as const }] : []),
-          ...(isCovered('foulsDrawn') ? [{ label: 'Faltas Sofr.', field: 'foulsDrawn', sortKey: 'foulsDrawn', align: 'right' as const }] : []),
-          ...(isCovered('crossesTotal') ? [{ label: 'Cruz. Tent.', field: 'crossesTotal', sortKey: 'crossesTotal', align: 'right' as const }] : []),
-          ...(isCovered('crossesAccurate') ? [{ label: 'Cruz. Certos', field: 'crossesAccurate', sortKey: 'crossesAccurate', align: 'right' as const }] : []),
+          ...(isCovered('passesTotal') ? [{ label: 'PT', field: 'passesTotal', sortKey: 'passesTotal', align: 'right' as const }] : []),
+          ...(isCovered('passesAccurate') ? [{ label: 'PC', field: 'passesAccurate', sortKey: 'passesAccurate', align: 'right' as const }] : []),
+          ...(isCovered('passesTotal') && isCovered('passesAccurate') ? [{ label: 'P%', field: 'passesAccuratePct', sortKey: 'passesAccuratePct', align: 'right' as const }] : []),
+          ...(isCovered('touches') ? [{ label: 'TQ', field: 'touches', sortKey: 'touches', align: 'right' as const }] : []),
+          ...(isCovered('foulsDrawn') ? [{ label: 'FS', field: 'foulsDrawn', sortKey: 'foulsDrawn', align: 'right' as const }] : []),
+          ...(isCovered('crossesTotal') ? [{ label: 'CRT', field: 'crossesTotal', sortKey: 'crossesTotal', align: 'right' as const }] : []),
+          ...(isCovered('crossesAccurate') ? [{ label: 'CRC', field: 'crossesAccurate', sortKey: 'crossesAccurate', align: 'right' as const }] : []),
         ]
 
       case 'defesa':
         return [
           ...baseCols,
-          ...(isCovered('tackles') ? [{ label: 'Desarmes', field: 'tackles', sortKey: 'tackles', align: 'right' as const }] : []),
-          ...(isCovered('interceptions') ? [{ label: 'Intercept.', field: 'interceptions', sortKey: 'interceptions', align: 'right' as const }] : []),
-          ...(isCovered('clearances') ? [{ label: 'Cortes', field: 'clearances', sortKey: 'clearances', align: 'right' as const }] : []),
-          ...(isCovered('dispossessed') ? [{ label: 'Desarmado', field: 'dispossessed', sortKey: 'dispossessed', align: 'right' as const }] : []),
-          ...(isCovered('saves') ? [{ label: 'Defesas (GOL)', field: 'saves', sortKey: 'saves', align: 'right' as const }] : []),
-          ...(isCovered('foulsCommitted') ? [{ label: 'Faltas Com.', field: 'foulsCommitted', sortKey: 'foulsCommitted', align: 'right' as const }] : []),
-          ...(isCovered('yellowCards') ? [{ label: 'Cartões Am.', field: 'yellowCards', sortKey: 'yellowCards', align: 'right' as const }] : []),
-          ...(isCovered('redCards') ? [{ label: 'Cartões Verm.', field: 'redCards', sortKey: 'redCards', align: 'right' as const }] : []),
+          ...(isCovered('tackles') ? [{ label: 'DES', field: 'tackles', sortKey: 'tackles', align: 'right' as const }] : []),
+          ...(isCovered('interceptions') ? [{ label: 'INT', field: 'interceptions', sortKey: 'interceptions', align: 'right' as const }] : []),
+          ...(isCovered('clearances') ? [{ label: 'COR', field: 'clearances', sortKey: 'clearances', align: 'right' as const }] : []),
+          ...(isCovered('dispossessed') ? [{ label: 'DMD', field: 'dispossessed', sortKey: 'dispossessed', align: 'right' as const }] : []),
+          ...(isCovered('saves') ? [{ label: 'DEF', field: 'saves', sortKey: 'saves', align: 'right' as const }] : []),
+          ...(isCovered('foulsCommitted') ? [{ label: 'FC', field: 'foulsCommitted', sortKey: 'foulsCommitted', align: 'right' as const }] : []),
+          ...(isCovered('yellowCards') ? [{ label: 'CA', field: 'yellowCards', sortKey: 'yellowCards', align: 'right' as const }] : []),
+          ...(isCovered('redCards') ? [{ label: 'CV', field: 'redCards', sortKey: 'redCards', align: 'right' as const }] : []),
         ]
     }
   }, [activeTabCategory, coverage])
@@ -188,8 +184,11 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
     
     if (field === 'weightedRating') return val.toFixed(2)
     if (field === 'matchesPlayed') return val.toFixed(0)
-    if (field === 'totalMinutes') return val.toFixed(0)
     if (field === 'passesAccuratePct') return `${val.toFixed(1)}%`
+    
+    if (field === 'totalMinutes') {
+      return activeScale === 'totais' ? val.toFixed(0) : val.toFixed(1)
+    }
     
     // Se for decimal (por exemplo, médias Per 90 ou Por Jogo)
     if (activeScale !== 'totais') {
@@ -198,10 +197,64 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
     return val.toFixed(0)
   }
 
-  // Obter o label
+  // Obter o label canônico
   const getColumnLabelWithScale = (col: typeof columns[number]) => {
     return col.label
   }
+
+  // Legenda dinâmica por sub-aba
+  const legendItems = useMemo(() => {
+    switch (activeTabCategory) {
+      case 'sumario':
+        return [
+          { abbr: 'Rating', desc: 'Nota média ponderada por minutos' },
+          { abbr: 'J', desc: 'Jogos disputados' },
+          { abbr: 'MIN', desc: 'Minutos jogados' },
+          { abbr: 'G', desc: 'Gols marcados (ou defesas se goleiro)' },
+          { abbr: 'CHT', desc: 'Chutes realizados' },
+          { abbr: 'CHG', desc: 'Chutes no gol' },
+          { abbr: 'CA', desc: 'Cartões amarelos' },
+          { abbr: 'CV', desc: 'Cartões vermelhos' },
+          { abbr: 'P%', desc: 'Porcentagem de passes certos' },
+        ]
+      case 'ofensividade':
+        return [
+          { abbr: 'G', desc: 'Gols marcados' },
+          { abbr: 'xG', desc: 'Gols esperados (Expected Goals)' },
+          { abbr: 'CHT', desc: 'Chutes realizados' },
+          { abbr: 'CHG', desc: 'Chutes no gol' },
+          { abbr: 'CHB', desc: 'Chutes bloqueados' },
+          { abbr: 'CHF', desc: 'Chutes para fora' },
+          { abbr: 'DRT', desc: 'Dribles tentados' },
+          { abbr: 'DRC', desc: 'Dribles com sucesso' },
+          { abbr: 'IMP', desc: 'Impedimentos' },
+        ]
+      case 'passes':
+        return [
+          { abbr: 'PCH', desc: 'Passes chave' },
+          { abbr: 'AST', desc: 'Assistências para gol' },
+          { abbr: 'xA', desc: 'Assistências esperadas (Expected Assists)' },
+          { abbr: 'PT', desc: 'Passes totais tentados' },
+          { abbr: 'PC', desc: 'Passes certos' },
+          { abbr: 'P%', desc: 'Porcentagem de passes certos' },
+          { abbr: 'TQ', desc: 'Toques na bola' },
+          { abbr: 'FS', desc: 'Faltas sofridas' },
+          { abbr: 'CRT', desc: 'Cruzamentos tentados' },
+          { abbr: 'CRC', desc: 'Cruzamentos certos' },
+        ]
+      case 'defesa':
+        return [
+          { abbr: 'DES', desc: 'Desarmes com sucesso' },
+          { abbr: 'INT', desc: 'Interceptações' },
+          { abbr: 'COR', desc: 'Cortes (bolas afastadas)' },
+          { abbr: 'DMD', desc: 'Vezes desarmado' },
+          { abbr: 'DEF', desc: 'Defesas realizadas' },
+          { abbr: 'FC', desc: 'Faltas cometidas' },
+          { abbr: 'CA', desc: 'Cartões amarelos' },
+          { abbr: 'CV', desc: 'Cartões vermelhos' },
+        ]
+    }
+  }, [activeTabCategory])
 
   const renderComparisonBar = (label: string, homeVal: number | null, awayVal: number | null) => {
     const bothPresent = homeVal !== null && awayVal !== null
@@ -504,6 +557,22 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
         </Card>
 
       </div>
+
+      {/* CAMADA 2.5: LEGENDA DINÂMICA */}
+      <Card className="bg-muted/10 border border-muted/30 p-4 shadow-none">
+        <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mb-2 flex items-center gap-1">
+          <HelpCircle className="w-3.5 h-3.5" />
+          Abreviações das Colunas:
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-4 gap-y-1.5">
+          {legendItems.map((item) => (
+            <div key={item.abbr} className="text-xs flex items-baseline gap-1.5">
+              <span className="font-bold text-primary shrink-0 min-w-[32px]">{item.abbr}</span>
+              <span className="text-muted-foreground text-[11px] truncate" title={item.desc}>{item.desc}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* CAMADA 3: DRILL-DOWN (SIDE PANEL DE HISTÓRICO DE JOGOS) */}
       <Sheet open={!!selectedPlayer} onOpenChange={(open) => { if (!open) setSelectedPlayer(null) }}>

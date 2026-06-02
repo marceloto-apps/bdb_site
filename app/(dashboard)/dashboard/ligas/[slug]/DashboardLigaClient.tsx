@@ -333,13 +333,13 @@ export function DashboardLigaClient({
           />
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="w-full sm:w-auto grid grid-cols-2 md:grid-cols-5 mb-4 h-auto">
+            <TabsList className="w-full sm:w-auto grid grid-cols-2 md:grid-cols-6 mb-4 h-auto">
               <TabsTrigger value="resumo" className="py-2 whitespace-normal h-full">Principal / Projeção</TabsTrigger>
               <TabsTrigger value="odds" className="py-2 whitespace-normal h-full">Odds / Profit</TabsTrigger>
               <TabsTrigger value="gols" className="py-2 whitespace-normal h-full">Gols / xG / Fin.</TabsTrigger>
               <TabsTrigger value="escanteios" className="py-2 whitespace-normal h-full">Escant. / Cartões / Faltas</TabsTrigger>
               <TabsTrigger value="overunder" className="py-2 whitespace-normal h-full">Over / Under</TabsTrigger>
-              {/* <TabsTrigger value="jogadores" className="py-2 whitespace-normal h-full">Jogadores</TabsTrigger> */}
+              <TabsTrigger value="jogadores" className="py-2 whitespace-normal h-full">Jogadores</TabsTrigger>
             </TabsList>
 
             {activeTab !== 'resumo' && (

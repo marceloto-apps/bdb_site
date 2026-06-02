@@ -47,6 +47,16 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
     field: string,
     scale: ScaleOption
   ): number | null => {
+    if (field === 'position') {
+      if (!player.position) return 5
+      switch (player.position) {
+        case 'GOALKEEPER': return 1
+        case 'DEFENDER': return 2
+        case 'MIDFIELDER': return 3
+        case 'FORWARD': return 4
+        default: return 5
+      }
+    }
     if (field === 'weightedRating') return player.weightedRating
     if (field === 'matchesPlayed') return player.matchesPlayed
     if (field === 'passesAccuratePct') {
@@ -78,6 +88,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
     }
 
     const baseCols = [
+      { label: 'P', field: 'position', sortKey: 'position', align: 'center' as const },
       { label: 'Rating', field: 'weightedRating', sortKey: 'weightedRating', align: 'right' as const },
       { label: 'J', field: 'matchesPlayed', sortKey: 'matchesPlayed', align: 'right' as const },
       { label: 'MIN', field: 'totalMinutes', sortKey: 'totalMinutes', align: 'right' as const },
@@ -171,6 +182,15 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
 
   // Formatação de valores para exibição
   const formatDisplayValue = (val: number | null, field: string) => {
+    if (field === 'position') {
+      switch (val) {
+        case 1: return 'GK'
+        case 2: return 'DF'
+        case 3: return 'MC'
+        case 4: return 'AT'
+        default: return '—'
+      }
+    }
     if (val === null || val === undefined) return '—'
     
     if (field === 'weightedRating') return val.toFixed(2)
@@ -198,6 +218,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
     switch (activeTabCategory) {
       case 'sumario':
         return [
+          { abbr: 'P', desc: 'Posição do jogador (GK, DF, MC, AT)' },
           { abbr: 'Rating', desc: 'Nota média ponderada por minutos' },
           { abbr: 'J', desc: 'Jogos disputados' },
           { abbr: 'MIN', desc: 'Minutos jogados' },
@@ -210,6 +231,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
         ]
       case 'ofensividade':
         return [
+          { abbr: 'P', desc: 'Posição do jogador (GK, DF, MC, AT)' },
           { abbr: 'G', desc: 'Gols marcados' },
           { abbr: 'xG', desc: 'Gols esperados (Expected Goals)' },
           { abbr: 'CHT', desc: 'Chutes realizados' },
@@ -222,6 +244,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
         ]
       case 'passes':
         return [
+          { abbr: 'P', desc: 'Posição do jogador (GK, DF, MC, AT)' },
           { abbr: 'PCH', desc: 'Passes chave' },
           { abbr: 'AST', desc: 'Assistências para gol' },
           { abbr: 'xA', desc: 'Assistências esperadas (Expected Assists)' },
@@ -235,6 +258,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
         ]
       case 'defesa':
         return [
+          { abbr: 'P', desc: 'Posição do jogador (GK, DF, MC, AT)' },
           { abbr: 'DES', desc: 'Desarmes com sucesso' },
           { abbr: 'INT', desc: 'Interceptações' },
           { abbr: 'COR', desc: 'Cortes (bolas afastadas)' },
@@ -433,10 +457,10 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                     {columns.map(c => (
                       <TableHead 
                         key={c.field} 
-                        className="text-right text-xs font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/20 transition-colors select-none"
+                        className={`${c.align === 'center' ? 'text-center' : 'text-right'} text-xs font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/20 transition-colors select-none`}
                         onClick={() => handleSort(c.sortKey)}
                       >
-                        <span className="flex items-center justify-end gap-1">
+                        <span className={`flex items-center ${c.align === 'center' ? 'justify-center' : 'justify-end'} gap-1`}>
                           {getColumnLabelWithScale(c)}
                           <ArrowUpDown className="w-3 h-3 text-muted-foreground/50 shrink-0" />
                         </span>
@@ -462,7 +486,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                         {columns.map(c => {
                           const val = getScaledValue(p, c.field, activeScale)
                           return (
-                            <TableCell key={c.field} className="text-right text-xs whitespace-nowrap">
+                            <TableCell key={c.field} className={`${c.align === 'center' ? 'text-center' : 'text-right'} text-xs whitespace-nowrap`}>
                               {formatDisplayValue(val, c.field)}
                             </TableCell>
                           )
@@ -504,10 +528,10 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                     {columns.map(c => (
                       <TableHead 
                         key={c.field} 
-                        className="text-right text-xs font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/20 transition-colors select-none"
+                        className={`${c.align === 'center' ? 'text-center' : 'text-right'} text-xs font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/20 transition-colors select-none`}
                         onClick={() => handleSort(c.sortKey)}
                       >
-                        <span className="flex items-center justify-end gap-1">
+                        <span className={`flex items-center ${c.align === 'center' ? 'justify-center' : 'justify-end'} gap-1`}>
                           {getColumnLabelWithScale(c)}
                           <ArrowUpDown className="w-3 h-3 text-muted-foreground/50 shrink-0" />
                         </span>
@@ -533,7 +557,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                         {columns.map(c => {
                           const val = getScaledValue(p, c.field, activeScale)
                           return (
-                            <TableCell key={c.field} className="text-right text-xs whitespace-nowrap">
+                            <TableCell key={c.field} className={`${c.align === 'center' ? 'text-center' : 'text-right'} text-xs whitespace-nowrap`}>
                               {formatDisplayValue(val, c.field)}
                             </TableCell>
                           )

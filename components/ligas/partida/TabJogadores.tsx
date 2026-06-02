@@ -55,16 +55,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
         : null
     }
     
-    // Gols (se goleiro saves) no Sumário
-    if (field === 'golsSaves') {
-      const isGk = player.sector === 'GOL'
-      const rawVal = isGk ? player.saves : player.goals
-      if (rawVal === null || rawVal === undefined) return null
-      if (scale === 'totais') return rawVal
-      if (scale === 'per90') return player.totalMinutes > 0 ? (rawVal / player.totalMinutes) * 90 : null
-      if (scale === 'perjogo') return player.matchesPlayed > 0 ? rawVal / player.matchesPlayed : null
-      return null
-    }
+    
 
     const rawVal = (player as any)[field]
     if (rawVal === null || rawVal === undefined) return null
@@ -96,7 +87,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
       case 'sumario':
         return [
           ...baseCols,
-          { label: 'G', field: 'golsSaves', sortKey: 'golsSaves', align: 'right' as const },
+          { label: 'G', field: 'goals', sortKey: 'goals', align: 'right' as const },
           ...(isCovered('shotsTotal') ? [{ label: 'CHT', field: 'shotsTotal', sortKey: 'shotsTotal', align: 'right' as const }] : []),
           ...(isCovered('shotsOnTarget') ? [{ label: 'CHG', field: 'shotsOnTarget', sortKey: 'shotsOnTarget', align: 'right' as const }] : []),
           ...(isCovered('yellowCards') ? [{ label: 'CA', field: 'yellowCards', sortKey: 'yellowCards', align: 'right' as const }] : []),
@@ -210,7 +201,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
           { abbr: 'Rating', desc: 'Nota média ponderada por minutos' },
           { abbr: 'J', desc: 'Jogos disputados' },
           { abbr: 'MIN', desc: 'Minutos jogados' },
-          { abbr: 'G', desc: 'Gols marcados (ou defesas se goleiro)' },
+          { abbr: 'G', desc: 'Gols marcados' },
           { abbr: 'CHT', desc: 'Chutes realizados' },
           { abbr: 'CHG', desc: 'Chutes no gol' },
           { abbr: 'CA', desc: 'Cartões amarelos' },

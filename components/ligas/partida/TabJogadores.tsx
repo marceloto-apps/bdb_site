@@ -15,34 +15,76 @@ interface TabJogadoresProps {
   coverage: Record<string, number>
 }
 
-type SetorType = 'GOL' | 'DEF' | 'MEI' | 'ATA'
+type TabCategory = 'sumario' | 'ofensividade' | 'passes' | 'defesa'
+type ScaleOption = 'totais' | 'per90' | 'perjogo'
 
 export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresProps) {
-  const [selectedSetor, setSelectedSetor] = useState<SetorType>('ATA')
+  const [activeTabCategory, setActiveTabCategory] = useState<TabCategory>('sumario')
+  const [activeScale, setActiveScale] = useState<ScaleOption>('totais')
   const [selectedPlayer, setSelectedPlayer] = useState<PlayerAggregateStats | null>(null)
   
   // Estados de ordenação
-  const [sortField, setSortField] = useState<string>('')
+  const [sortField, setSortField] = useState<string>('weightedRating')
   const [sortAsc, setSortAsc] = useState<boolean>(false)
 
-  // Mapeamento de métrica primária padrão para ordenação por setor
-  const defaultSortField = useMemo(() => {
-    switch (selectedSetor) {
-      case 'ATA':
-        return 'goalsPer90'
-      case 'MEI':
-        return 'keyPassesPer90'
-      case 'DEF':
-        return 'tacklesPer90'
-      case 'GOL':
-        return 'weightedRating'
-      default:
-        return 'weightedRating'
+  // Resetar ordenação padrão ao trocar de sub-aba
+  React.useEffect(() => {
+    if (activeTabCategory === 'sumario') {
+      setSortField('weightedRating')
+    } else if (activeTabCategory === 'ofensividade') {
+      setSortField('goals')
+    } else if (activeTabCategory === 'passes') {
+      setSortField('keyPasses')
+    } else if (activeTabCategory === 'defesa') {
+      setSortField('tackles')
     }
-  }, [selectedSetor])
+    setSortAsc(false)
+  }, [activeTabCategory])
 
-  // Colunas a serem exibidas por setor baseadas em cobertura (≥ 70%)
-  const columnsBySector = useMemo(() => {
+  // Helper para computar e escalar valores dinamicamente no client
+  const getScaledValue = (
+    player: PlayerAggregateStats,
+    field: string,
+    scale: ScaleOption
+  ): number | null => {
+    if (field === 'weightedRating') return player.weightedRating
+    if (field === 'matchesPlayed') return player.matchesPlayed
+    if (field === 'totalMinutes') return player.totalMinutes
+    if (field === 'minutosPorPartida') {
+      return player.matchesPlayed > 0 ? player.totalMinutes / player.matchesPlayed : null
+    }
+    if (field === 'passesAccuratePct') {
+      return (player.passesAccurate !== null && player.passesTotal)
+        ? (player.passesAccurate / player.passesTotal) * 100
+        : null
+    }
+    
+    // Gols (se goleiro saves) no Sumário
+    if (field === 'golsSaves') {
+      const isGk = player.sector === 'GOL'
+      const rawVal = isGk ? player.saves : player.goals
+      if (rawVal === null || rawVal === undefined) return null
+      if (scale === 'totais') return rawVal
+      if (scale === 'per90') return player.totalMinutes > 0 ? (rawVal / player.totalMinutes) * 90 : null
+      if (scale === 'perjogo') return player.matchesPlayed > 0 ? rawVal / player.matchesPlayed : null
+      return null
+    }
+
+    const rawVal = (player as any)[field]
+    if (rawVal === null || rawVal === undefined) return null
+
+    if (scale === 'totais') {
+      return rawVal
+    } else if (scale === 'per90') {
+      return player.totalMinutes > 0 ? (rawVal / player.totalMinutes) * 90 : null
+    } else if (scale === 'perjogo') {
+      return player.matchesPlayed > 0 ? rawVal / player.matchesPlayed : null
+    }
+    return null
+  }
+
+  // Colunas por sub-aba
+  const columns = useMemo(() => {
     const isCovered = (key: string) => {
       const rate = coverage[key]
       return rate !== undefined && rate >= 0.7
@@ -54,46 +96,61 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
       { label: 'Min', field: 'totalMinutes', sortKey: 'totalMinutes', align: 'right' as const },
     ]
 
-    switch (selectedSetor) {
-      case 'GOL':
+    switch (activeTabCategory) {
+      case 'sumario':
         return [
           ...baseCols,
-          ...(isCovered('passesTotal') ? [{ label: 'Passes/90', field: 'passesTotalPer90', sortKey: 'passesTotalPer90', align: 'right' as const }] : []),
+          { label: 'Gols (Saves)', field: 'golsSaves', sortKey: 'golsSaves', align: 'right' as const },
+          ...(isCovered('shotsTotal') ? [{ label: 'Chutes', field: 'shotsTotal', sortKey: 'shotsTotal', align: 'right' as const }] : []),
+          ...(isCovered('shotsOnTarget') ? [{ label: 'Chutes Gol', field: 'shotsOnTarget', sortKey: 'shotsOnTarget', align: 'right' as const }] : []),
+          ...(isCovered('yellowCards') ? [{ label: 'CA', field: 'yellowCards', sortKey: 'yellowCards', align: 'right' as const }] : []),
+          ...(isCovered('redCards') ? [{ label: 'CV', field: 'redCards', sortKey: 'redCards', align: 'right' as const }] : []),
+          ...(isCovered('passesTotal') && isCovered('passesAccurate') ? [{ label: 'P. Certos (%)', field: 'passesAccuratePct', sortKey: 'passesAccuratePct', align: 'right' as const }] : []),
         ]
-      case 'DEF':
+
+      case 'ofensividade':
         return [
           ...baseCols,
-          ...(isCovered('tackles') ? [{ label: 'Desarmes/90', field: 'tacklesPer90', sortKey: 'tacklesPer90', align: 'right' as const }] : []),
-          ...(isCovered('interceptions') ? [{ label: 'Intercept./90', field: 'interceptionsPer90', sortKey: 'interceptionsPer90', align: 'right' as const }] : []),
-          ...(isCovered('clearances') ? [{ label: 'Cortes/90', field: 'clearancesPer90', sortKey: 'clearancesPer90', align: 'right' as const }] : []),
-          ...(isCovered('foulsCommitted') ? [{ label: 'Faltas Com./90', field: 'foulsCommittedPer90', sortKey: 'foulsCommittedPer90', align: 'right' as const }] : []),
+          ...(isCovered('goals') ? [{ label: 'Gols', field: 'goals', sortKey: 'goals', align: 'right' as const }] : []),
+          ...(isCovered('expectedGoals') ? [{ label: 'xG', field: 'expectedGoals', sortKey: 'expectedGoals', align: 'right' as const }] : []),
+          ...(isCovered('shotsTotal') ? [{ label: 'Chutes', field: 'shotsTotal', sortKey: 'shotsTotal', align: 'right' as const }] : []),
+          ...(isCovered('shotsOnTarget') ? [{ label: 'Chutes Gol', field: 'shotsOnTarget', sortKey: 'shotsOnTarget', align: 'right' as const }] : []),
+          ...(isCovered('shotsBlocked') ? [{ label: 'Bloqueados', field: 'shotsBlocked', sortKey: 'shotsBlocked', align: 'right' as const }] : []),
+          ...(isCovered('shotsOffTarget') ? [{ label: 'Chutes Fora', field: 'shotsOffTarget', sortKey: 'shotsOffTarget', align: 'right' as const }] : []),
+          ...(isCovered('dribblesAttempted') ? [{ label: 'Dribles Tent.', field: 'dribblesAttempted', sortKey: 'dribblesAttempted', align: 'right' as const }] : []),
+          ...(isCovered('dribblesSucceeded') ? [{ label: 'Dribles Certos', field: 'dribblesSucceeded', sortKey: 'dribblesSucceeded', align: 'right' as const }] : []),
+          ...(isCovered('offsides') ? [{ label: 'Impedimentos', field: 'offsides', sortKey: 'offsides', align: 'right' as const }] : []),
         ]
-      case 'MEI':
+
+      case 'passes':
         return [
           ...baseCols,
-          ...(isCovered('passesTotal') ? [{ label: 'Passes/90', field: 'passesTotalPer90', sortKey: 'passesTotalPer90', align: 'right' as const }] : []),
-          ...(isCovered('passesAccurate') ? [{ label: 'P. Certos/90', field: 'passesAccuratePer90', sortKey: 'passesAccuratePer90', align: 'right' as const }] : []),
-          ...(isCovered('keyPasses') ? [{ label: 'P. Chaves/90', field: 'keyPassesPer90', sortKey: 'keyPassesPer90', align: 'right' as const }] : []),
-          ...(isCovered('foulsDrawn') ? [{ label: 'Faltas Sofr./90', field: 'foulsDrawnPer90', sortKey: 'foulsDrawnPer90', align: 'right' as const }] : []),
+          ...(isCovered('keyPasses') ? [{ label: 'P. Chave', field: 'keyPasses', sortKey: 'keyPasses', align: 'right' as const }] : []),
+          ...(isCovered('assists') ? [{ label: 'Assist.', field: 'assists', sortKey: 'assists', align: 'right' as const }] : []),
+          ...(isCovered('expectedAssists') ? [{ label: 'xA', field: 'expectedAssists', sortKey: 'expectedAssists', align: 'right' as const }] : []),
+          ...(isCovered('passesTotal') ? [{ label: 'Passes Tent.', field: 'passesTotal', sortKey: 'passesTotal', align: 'right' as const }] : []),
+          ...(isCovered('passesAccurate') ? [{ label: 'Passes Certos', field: 'passesAccurate', sortKey: 'passesAccurate', align: 'right' as const }] : []),
+          ...(isCovered('passesTotal') && isCovered('passesAccurate') ? [{ label: 'P. Certos (%)', field: 'passesAccuratePct', sortKey: 'passesAccuratePct', align: 'right' as const }] : []),
+          ...(isCovered('touches') ? [{ label: 'Toques', field: 'touches', sortKey: 'touches', align: 'right' as const }] : []),
+          ...(isCovered('foulsDrawn') ? [{ label: 'Faltas Sofr.', field: 'foulsDrawn', sortKey: 'foulsDrawn', align: 'right' as const }] : []),
+          ...(isCovered('crossesTotal') ? [{ label: 'Cruz. Tent.', field: 'crossesTotal', sortKey: 'crossesTotal', align: 'right' as const }] : []),
+          ...(isCovered('crossesAccurate') ? [{ label: 'Cruz. Certos', field: 'crossesAccurate', sortKey: 'crossesAccurate', align: 'right' as const }] : []),
         ]
-      case 'ATA':
-      default:
+
+      case 'defesa':
         return [
           ...baseCols,
-          ...(isCovered('goals') ? [{ label: 'Gols/90', field: 'goalsPer90', sortKey: 'goalsPer90', align: 'right' as const }] : []),
-          ...(isCovered('expectedGoals') ? [{ label: 'xG/90', field: 'expectedGoalsPer90', sortKey: 'expectedGoalsPer90', align: 'right' as const }] : []),
-          ...(isCovered('goals') && isCovered('expectedGoals') ? [{ label: 'Overperf.', field: 'overperformancePer90', sortKey: 'overperformancePer90', align: 'right' as const }] : []),
-          ...(isCovered('shotsTotal') ? [{ label: 'Fin./90', field: 'shotsTotalPer90', sortKey: 'shotsTotalPer90', align: 'right' as const }] : []),
-          ...(isCovered('shotsOnTarget') ? [{ label: 'Fin. Alvo/90', field: 'shotsOnTargetPer90', sortKey: 'shotsOnTargetPer90', align: 'right' as const }] : []),
+          ...(isCovered('tackles') ? [{ label: 'Desarmes', field: 'tackles', sortKey: 'tackles', align: 'right' as const }] : []),
+          ...(isCovered('interceptions') ? [{ label: 'Intercept.', field: 'interceptions', sortKey: 'interceptions', align: 'right' as const }] : []),
+          ...(isCovered('clearances') ? [{ label: 'Cortes', field: 'clearances', sortKey: 'clearances', align: 'right' as const }] : []),
+          ...(isCovered('dispossessed') ? [{ label: 'Desarmado', field: 'dispossessed', sortKey: 'dispossessed', align: 'right' as const }] : []),
+          ...(isCovered('saves') ? [{ label: 'Defesas (GOL)', field: 'saves', sortKey: 'saves', align: 'right' as const }] : []),
+          ...(isCovered('foulsCommitted') ? [{ label: 'Faltas Com.', field: 'foulsCommitted', sortKey: 'foulsCommitted', align: 'right' as const }] : []),
+          ...(isCovered('yellowCards') ? [{ label: 'Cartões Am.', field: 'yellowCards', sortKey: 'yellowCards', align: 'right' as const }] : []),
+          ...(isCovered('redCards') ? [{ label: 'Cartões Verm.', field: 'redCards', sortKey: 'redCards', align: 'right' as const }] : []),
         ]
     }
-  }, [selectedSetor, coverage])
-
-  // Resetar a ordenação ao trocar de setor
-  React.useEffect(() => {
-    setSortField(defaultSortField)
-    setSortAsc(false)
-  }, [selectedSetor, defaultSortField])
+  }, [activeTabCategory, coverage])
 
   const handleSort = (field: string) => {
     if (sortField === field) {
@@ -107,14 +164,11 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
   // Filtrar e ordenar jogadores de um time
   const getOrderedPlayers = (teamStats: TeamSectorStats | null) => {
     if (!teamStats) return []
-    // Filtrar pelo setor selecionado
-    const filtered = teamStats.players.filter(p => p.sector === selectedSetor)
     
-    // Aplicar ordenação
-    return [...filtered].sort((a, b) => {
-      const activeField = sortField || defaultSortField
-      const valA = (a as any)[activeField]
-      const valB = (b as any)[activeField]
+    // Aplicar ordenação baseada no valor calculado da escala ativa
+    return [...teamStats.players].sort((a, b) => {
+      const valA = getScaledValue(a, sortField, activeScale)
+      const valB = getScaledValue(b, sortField, activeScale)
 
       if (valA === null || valA === undefined) return 1
       if (valB === null || valB === undefined) return -1
@@ -125,19 +179,31 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
     })
   }
 
-  const orderedHomePlayers = useMemo(() => getOrderedPlayers(homeStats), [homeStats, selectedSetor, sortField, sortAsc, defaultSortField])
-  const orderedAwayPlayers = useMemo(() => getOrderedPlayers(awayStats), [awayStats, selectedSetor, sortField, sortAsc, defaultSortField])
+  const orderedHomePlayers = useMemo(() => getOrderedPlayers(homeStats), [homeStats, sortField, sortAsc, activeScale])
+  const orderedAwayPlayers = useMemo(() => getOrderedPlayers(awayStats), [awayStats, sortField, sortAsc, activeScale])
 
   // Formatação de valores para exibição
-  const formatValue = (val: number | null, decimalPlaces: number = 2) => {
+  const formatDisplayValue = (val: number | null, field: string) => {
     if (val === null || val === undefined) return '—'
-    return val.toFixed(decimalPlaces)
+    
+    if (field === 'weightedRating') return val.toFixed(2)
+    if (field === 'matchesPlayed') return val.toFixed(0)
+    if (field === 'totalMinutes') return val.toFixed(0)
+    if (field === 'passesAccuratePct') return `${val.toFixed(1)}%`
+    
+    // Se for decimal (por exemplo, médias Per 90 ou Por Jogo)
+    if (activeScale !== 'totais') {
+      return val.toFixed(2)
+    }
+    return val.toFixed(0)
   }
 
-  // Renderização de uma barra de comparação de rating
+  // Obter o label
+  const getColumnLabelWithScale = (col: typeof columns[number]) => {
+    return col.label
+  }
+
   const renderComparisonBar = (label: string, homeVal: number | null, awayVal: number | null) => {
-    // Barra neutra (50/50) quando qualquer lado é null,
-    // evitando falsa impressão de "vitória 100%".
     const bothPresent = homeVal !== null && awayVal !== null
     const h = homeVal ?? 0
     const a = awayVal ?? 0
@@ -148,9 +214,9 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
     return (
       <div className="space-y-1">
         <div className="flex justify-between items-center text-xs px-1">
-          <span className="font-semibold text-primary">{formatValue(homeVal, 2)}</span>
+          <span className="font-semibold text-primary">{formatDisplayValue(homeVal, 'weightedRating')}</span>
           <span className="text-muted-foreground uppercase font-bold tracking-wider text-[10px]">{label}</span>
-          <span className="font-semibold text-blue-400">{formatValue(awayVal, 2)}</span>
+          <span className="font-semibold text-blue-400">{formatDisplayValue(awayVal, 'weightedRating')}</span>
         </div>
         <div className="h-2.5 w-full bg-muted/40 rounded-full overflow-hidden flex">
           <div 
@@ -164,16 +230,6 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
         </div>
       </div>
     )
-  }
-
-  // Define se o jogador é um dos top performers (rating alto e overperformance positiva se atacante)
-  const isTopPerformer = (player: PlayerAggregateStats) => {
-    const rating = player.weightedRating || 0
-    const overperformance = player.overperformancePer90 || 0
-    if (selectedSetor === 'ATA') {
-      return rating >= 7.0 && overperformance > 0
-    }
-    return rating >= 7.2
   }
 
   return (
@@ -193,7 +249,6 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
             {(() => {
-              // Verifica se há ao menos um rating de setor válido em qualquer lado
               const temAlgumRating =
                 (homeStats?.teamRating ?? null) !== null ||
                 (awayStats?.teamRating ?? null) !== null ||
@@ -203,7 +258,6 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                     (awayStats?.sectorRatings[s] ?? null) !== null
                 )
 
-              // Fallback quando nenhum dado atinge o piso na janela
               if (!temAlgumRating) {
                 return (
                   <div className="col-span-full text-center text-sm text-muted-foreground bg-muted/20 p-6 rounded border border-dashed border-muted">
@@ -212,7 +266,6 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                 )
               }
 
-              // Renderização normal das barras
               return (
                 <>
                   <div className="space-y-4">
@@ -231,22 +284,81 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
         </CardContent>
       </Card>
 
-      {/* SELETOR DE SETOR */}
-      <div className="flex justify-center md:justify-start gap-1 p-1 bg-muted/30 rounded-lg max-w-fit border">
-        {(['ATA', 'MEI', 'DEF', 'GOL'] as SetorType[]).map(s => (
+      {/* SELEÇÃO DE SUB-ABAS E ESCALAS */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        {/* Sub-abas de Categorias */}
+        <div className="flex flex-wrap gap-1 p-1 bg-muted/30 rounded-lg border max-w-fit">
           <Button
-            key={s}
-            variant={selectedSetor === s ? 'default' : 'ghost'}
+            variant={activeTabCategory === 'sumario' ? 'default' : 'ghost'}
             size="sm"
-            onClick={() => setSelectedSetor(s)}
-            className="text-xs px-4"
+            onClick={() => setActiveTabCategory('sumario')}
+            className="text-xs px-3 py-1.5 h-auto rounded-md transition-all"
           >
-            {s === 'GOL' ? 'Goleiros' : s === 'DEF' ? 'Defesa' : s === 'MEI' ? 'Meio-Campo' : 'Ataque'}
+            Sumário
           </Button>
-        ))}
+          <Button
+            variant={activeTabCategory === 'ofensividade' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTabCategory('ofensividade')}
+            className="text-xs px-3 py-1.5 h-auto rounded-md transition-all"
+          >
+            Ofensividade
+          </Button>
+          <Button
+            variant={activeTabCategory === 'passes' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTabCategory('passes')}
+            className="text-xs px-3 py-1.5 h-auto rounded-md transition-all"
+          >
+            Passes
+          </Button>
+          <Button
+            variant={activeTabCategory === 'defesa' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTabCategory('defesa')}
+            className="text-xs px-3 py-1.5 h-auto rounded-md transition-all"
+          >
+            Defesa
+          </Button>
+        </div>
+
+        {/* Subtítulo Centralizado Dinâmico */}
+        <div className="text-center font-semibold text-xs text-muted-foreground uppercase tracking-widest py-1 px-3 bg-muted/10 rounded border border-dashed border-muted/30">
+          {activeScale === 'totais' && "Estatísticas Totais"}
+          {activeScale === 'per90' && "Estatísticas médias por 90 minutos"}
+          {activeScale === 'perjogo' && "Estatísticas médias por jogo"}
+        </div>
+
+        {/* Toggles de Escala de Métricas */}
+        <div className="flex gap-1 p-1 bg-muted/30 rounded-lg border max-w-fit">
+          <Button
+            variant={activeScale === 'totais' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveScale('totais')}
+            className="text-[11px] px-2.5 py-1 h-auto rounded-md"
+          >
+            Valores Totais
+          </Button>
+          <Button
+            variant={activeScale === 'per90' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveScale('per90')}
+            className="text-[11px] px-2.5 py-1 h-auto rounded-md"
+          >
+            Por 90 Minutos
+          </Button>
+          <Button
+            variant={activeScale === 'perjogo' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveScale('perjogo')}
+            className="text-[11px] px-2.5 py-1 h-auto rounded-md"
+          >
+            Por Jogo
+          </Button>
+        </div>
       </div>
 
-      {/* CAMADA 2: VISÃO POR SETOR (LADO A LADO) */}
+      {/* CAMADA 2: TABELAS LADO A LADO */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         
         {/* TIME CASA */}
@@ -257,7 +369,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                 {homeStats?.teamName || 'MANDANTE'}
               </CardTitle>
               <CardDescription className="text-xs">
-                Jogadores elegíveis no setor {selectedSetor}
+                Estatísticas gerais de todos os jogadores (mínimo 180 min)
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-[10px]">
@@ -267,21 +379,21 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
           <CardContent className="p-0 flex-1 overflow-x-auto">
             {orderedHomePlayers.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                Nenhum jogador deste setor atinge o piso de 270 minutos.
+                Nenhum jogador deste time atinge o piso de 180 minutos.
               </div>
             ) : (
               <Table>
                 <TableHeader className="bg-muted/5">
                   <TableRow>
                     <TableHead className="text-xs font-semibold pl-4">Jogador</TableHead>
-                    {columnsBySector.map(c => (
+                    {columns.map(c => (
                       <TableHead 
                         key={c.field} 
-                        className={`text-${c.align} text-xs font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/20 transition-colors`}
+                        className="text-right text-xs font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/20 transition-colors select-none"
                         onClick={() => handleSort(c.sortKey)}
                       >
-                        <span className="flex items-center justify-end gap-1 select-none">
-                          {c.label}
+                        <span className="flex items-center justify-end gap-1">
+                          {getColumnLabelWithScale(c)}
                           <ArrowUpDown className="w-3 h-3 text-muted-foreground/50 shrink-0" />
                         </span>
                       </TableHead>
@@ -290,36 +402,24 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                 </TableHeader>
                 <TableBody>
                   {orderedHomePlayers.map(p => {
-                    const isTop = isTopPerformer(p)
+                    const isHighRating = (p.weightedRating || 0) >= 7.0
                     return (
                       <TableRow 
                         key={p.playerId} 
                         onClick={() => setSelectedPlayer(p)}
                         className="cursor-pointer hover:bg-muted/30 transition-colors group"
                       >
-                        <TableCell className="font-medium text-xs pl-4 max-w-[150px] truncate">
+                        <TableCell className="font-medium text-xs pl-4 max-w-[140px] truncate">
                           <span className="flex items-center gap-1.5">
-                            {isTop && <Star className="w-3.5 h-3.5 fill-primary text-primary shrink-0" />}
+                            {isHighRating && <Star className="w-3 h-3 fill-primary text-primary shrink-0" />}
                             <span className="group-hover:text-primary transition-colors">{p.name}</span>
                           </span>
                         </TableCell>
-                        {columnsBySector.map(c => {
-                          const val = (p as any)[c.field]
-                          let rendered: React.ReactNode = formatValue(val)
-                          
-                          // Destaque para overperformance
-                          if (c.field === 'overperformancePer90' && val !== null) {
-                            const isPositive = val > 0
-                            rendered = (
-                              <Badge className={`text-[10px] font-semibold ${isPositive ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/30' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/30'}`}>
-                                {val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2)}
-                              </Badge>
-                            )
-                          }
-
+                        {columns.map(c => {
+                          const val = getScaledValue(p, c.field, activeScale)
                           return (
-                            <TableCell key={c.field} className={`text-right text-xs whitespace-nowrap`}>
-                              {rendered}
+                            <TableCell key={c.field} className="text-right text-xs whitespace-nowrap">
+                              {formatDisplayValue(val, c.field)}
                             </TableCell>
                           )
                         })}
@@ -340,7 +440,7 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                 {awayStats?.teamName || 'VISITANTE'}
               </CardTitle>
               <CardDescription className="text-xs">
-                Jogadores elegíveis no setor {selectedSetor}
+                Estatísticas gerais de todos os jogadores (mínimo 180 min)
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-[10px]">
@@ -350,21 +450,21 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
           <CardContent className="p-0 flex-1 overflow-x-auto">
             {orderedAwayPlayers.length === 0 ? (
               <div className="p-8 text-center text-sm text-muted-foreground">
-                Nenhum jogador deste setor atinge o piso de 270 minutos.
+                Nenhum jogador deste time atinge o piso de 180 minutos.
               </div>
             ) : (
               <Table>
                 <TableHeader className="bg-muted/5">
                   <TableRow>
                     <TableHead className="text-xs font-semibold pl-4">Jogador</TableHead>
-                    {columnsBySector.map(c => (
+                    {columns.map(c => (
                       <TableHead 
                         key={c.field} 
-                        className={`text-${c.align} text-xs font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/20 transition-colors`}
+                        className="text-right text-xs font-semibold whitespace-nowrap cursor-pointer hover:bg-muted/20 transition-colors select-none"
                         onClick={() => handleSort(c.sortKey)}
                       >
-                        <span className="flex items-center justify-end gap-1 select-none">
-                          {c.label}
+                        <span className="flex items-center justify-end gap-1">
+                          {getColumnLabelWithScale(c)}
                           <ArrowUpDown className="w-3 h-3 text-muted-foreground/50 shrink-0" />
                         </span>
                       </TableHead>
@@ -373,36 +473,24 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                 </TableHeader>
                 <TableBody>
                   {orderedAwayPlayers.map(p => {
-                    const isTop = isTopPerformer(p)
+                    const isHighRating = (p.weightedRating || 0) >= 7.0
                     return (
                       <TableRow 
                         key={p.playerId} 
                         onClick={() => setSelectedPlayer(p)}
                         className="cursor-pointer hover:bg-muted/30 transition-colors group"
                       >
-                        <TableCell className="font-medium text-xs pl-4 max-w-[150px] truncate">
+                        <TableCell className="font-medium text-xs pl-4 max-w-[140px] truncate">
                           <span className="flex items-center gap-1.5">
-                            {isTop && <Star className="w-3.5 h-3.5 fill-primary text-primary shrink-0" />}
+                            {isHighRating && <Star className="w-3 h-3 fill-primary text-primary shrink-0" />}
                             <span className="group-hover:text-blue-400 transition-colors">{p.name}</span>
                           </span>
                         </TableCell>
-                        {columnsBySector.map(c => {
-                          const val = (p as any)[c.field]
-                          let rendered: React.ReactNode = formatValue(val)
-                          
-                          // Destaque para overperformance
-                          if (c.field === 'overperformancePer90' && val !== null) {
-                            const isPositive = val > 0
-                            rendered = (
-                              <Badge className={`text-[10px] font-semibold ${isPositive ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/30' : 'bg-red-500/10 text-red-500 hover:bg-red-500/20 border-red-500/30'}`}>
-                                {val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2)}
-                              </Badge>
-                            )
-                          }
-
+                        {columns.map(c => {
+                          const val = getScaledValue(p, c.field, activeScale)
                           return (
-                            <TableCell key={c.field} className={`text-right text-xs whitespace-nowrap`}>
-                              {rendered}
+                            <TableCell key={c.field} className="text-right text-xs whitespace-nowrap">
+                              {formatDisplayValue(val, c.field)}
                             </TableCell>
                           )
                         })}
@@ -417,10 +505,10 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
 
       </div>
 
-      {/* CAMADA 3: DRILL-DOWN (SIDE PANEL) */}
+      {/* CAMADA 3: DRILL-DOWN (SIDE PANEL DE HISTÓRICO DE JOGOS) */}
       <Sheet open={!!selectedPlayer} onOpenChange={(open) => { if (!open) setSelectedPlayer(null) }}>
         {selectedPlayer && (
-          <SheetContent className="w-full sm:max-w-2xl bg-background/95 backdrop-blur-md flex flex-col h-full border-l p-6">
+          <SheetContent className="w-full sm:max-w-2xl bg-background/95 backdrop-blur-md flex flex-col h-full border-l p-6 overflow-hidden">
             <SheetHeader className="pb-4 border-b">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -429,97 +517,113 @@ export function TabJogadores({ homeStats, awayStats, coverage }: TabJogadoresPro
                 <div>
                   <SheetTitle className="text-xl font-display font-bold leading-none">{selectedPlayer.name}</SheetTitle>
                   <SheetDescription className="text-xs mt-1">
-                    Histórico detalhado das partidas na janela de análise.
+                    Histórico detalhado por partida na temporada atual.
                   </SheetDescription>
                 </div>
               </div>
             </SheetHeader>
 
-            <div className="flex-1 flex flex-col min-h-0 space-y-6 pt-6">
+            <div className="flex-1 flex flex-col min-h-0 space-y-6 pt-6 overflow-y-auto pr-1">
               {/* Cards de Resumo Rápido */}
-              <div className="grid grid-cols-3 gap-3">
-                <Card className="p-3 text-center bg-muted/20">
-                  <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Média Rating</div>
-                  <div className="text-lg font-bold flex items-center justify-center gap-1">
-                    <Star className="w-4 h-4 fill-primary text-primary" />
-                    {formatValue(selectedPlayer.weightedRating, 2)}
+              <div className="grid grid-cols-4 gap-2">
+                <Card className="p-2.5 text-center bg-muted/20">
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Média Rating</div>
+                  <div className="text-base font-bold flex items-center justify-center gap-0.5">
+                    <Star className="w-3.5 h-3.5 fill-primary text-primary" />
+                    {formatDisplayValue(selectedPlayer.weightedRating, 'weightedRating')}
                   </div>
                 </Card>
-                <Card className="p-3 text-center bg-muted/20">
-                  <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Partidas</div>
-                  <div className="text-lg font-bold">{selectedPlayer.matchesPlayed}</div>
+                <Card className="p-2.5 text-center bg-muted/20">
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Partidas</div>
+                  <div className="text-base font-bold">{selectedPlayer.matchesPlayed}</div>
                 </Card>
-                <Card className="p-3 text-center bg-muted/20">
-                  <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Minutos</div>
-                  <div className="text-lg font-bold">{selectedPlayer.totalMinutes}</div>
+                <Card className="p-2.5 text-center bg-muted/20">
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Minutos Totais</div>
+                  <div className="text-base font-bold">{selectedPlayer.totalMinutes}</div>
+                </Card>
+                <Card className="p-2.5 text-center bg-muted/20">
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold tracking-wider mb-1">Minutos/Jogo</div>
+                  <div className="text-base font-bold">
+                    {formatDisplayValue(selectedPlayer.totalMinutes / selectedPlayer.matchesPlayed, 'minutosPorPartida')}
+                  </div>
                 </Card>
               </div>
 
               {/* Tabela do Histórico de Partidas */}
-              <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex flex-col min-h-0">
                 <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 flex items-center gap-1.5">
                   <Shield className="w-4 h-4 text-primary" />
-                  Jogos Recentes
+                  Jogos no Campeonato
                 </h4>
-                <div className="flex-1 border rounded-lg overflow-hidden flex flex-col bg-card/45">
-                  <div className="flex-1 overflow-y-auto max-h-[400px]">
-                    <Table>
-                      <TableHeader className="bg-muted/10 sticky top-0 backdrop-blur-md z-10">
-                        <TableRow>
-                          <TableHead className="text-xs font-semibold text-center w-12 pl-4">Rod.</TableHead>
-                          <TableHead className="text-xs font-semibold">Adversário</TableHead>
-                          <TableHead className="text-xs font-semibold text-center w-12">Mando</TableHead>
-                          <TableHead className="text-xs font-semibold text-right w-16">Minutos</TableHead>
-                          <TableHead className="text-xs font-semibold text-right w-16">Rating</TableHead>
+                <div className="border rounded-lg overflow-x-auto bg-card/45">
+                  <Table>
+                    <TableHeader className="bg-muted/10">
+                      <TableRow>
+                        <TableHead className="text-xs font-semibold text-center w-12 pl-4">Rodada</TableHead>
+                        <TableHead className="text-xs font-semibold">Adversário</TableHead>
+                        <TableHead className="text-xs font-semibold text-center w-12">Mando</TableHead>
+                        <TableHead className="text-xs font-semibold text-right w-16">Minutos</TableHead>
+                        <TableHead className="text-xs font-semibold text-right w-16">Rating</TableHead>
+                        {selectedPlayer.sector === 'ATA' && (
+                          <>
+                            <TableHead className="text-xs font-semibold text-right w-14">Gols</TableHead>
+                            <TableHead className="text-xs font-semibold text-right w-14">xG</TableHead>
+                          </>
+                        )}
+                        {selectedPlayer.sector === 'MEI' && (
+                          <>
+                            <TableHead className="text-xs font-semibold text-right w-14">Assist.</TableHead>
+                            <TableHead className="text-xs font-semibold text-right w-14">P. Chaves</TableHead>
+                          </>
+                        )}
+                        {selectedPlayer.sector === 'DEF' && (
+                          <>
+                            <TableHead className="text-xs font-semibold text-right w-14">Desarm.</TableHead>
+                            <TableHead className="text-xs font-semibold text-right w-14">Intercept.</TableHead>
+                          </>
+                        )}
+                        {selectedPlayer.sector === 'GOL' && (
+                          <TableHead className="text-xs font-semibold text-right w-14">Defesas</TableHead>
+                        )}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedPlayer.matchHistory.map(h => (
+                        <TableRow key={h.matchId} className="hover:bg-muted/10 transition-colors">
+                          <TableCell className="text-center text-xs text-muted-foreground pl-4">{h.round || '—'}</TableCell>
+                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{h.opponentName}</TableCell>
+                          <TableCell className="text-center text-xs">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                              {h.isHome ? 'Casa' : 'Fora'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right text-xs">{h.minutesPlayed || '—'}</TableCell>
+                          <TableCell className="text-right text-xs font-bold text-primary">{formatDisplayValue(h.rating, 'weightedRating')}</TableCell>
                           {selectedPlayer.sector === 'ATA' && (
                             <>
-                              <TableHead className="text-xs font-semibold text-right w-14">Gols</TableHead>
-                              <TableHead className="text-xs font-semibold text-right w-14">xG</TableHead>
+                              <TableCell className="text-right text-xs">{h.goals !== null ? h.goals : '—'}</TableCell>
+                              <TableCell className="text-right text-xs text-muted-foreground">{formatDisplayValue(h.expectedGoals, 'expectedGoals')}</TableCell>
                             </>
                           )}
                           {selectedPlayer.sector === 'MEI' && (
-                            <TableHead className="text-xs font-semibold text-right w-18">P. Chaves</TableHead>
+                            <>
+                              <TableCell className="text-right text-xs">{h.assists !== null ? h.assists : '—'}</TableCell>
+                              <TableCell className="text-right text-xs">{h.keyPasses !== null ? h.keyPasses : '—'}</TableCell>
+                            </>
                           )}
                           {selectedPlayer.sector === 'DEF' && (
                             <>
-                              <TableHead className="text-xs font-semibold text-right w-14">Des.</TableHead>
-                              <TableHead className="text-xs font-semibold text-right w-14">Int.</TableHead>
+                              <TableCell className="text-right text-xs">{h.tackles !== null ? h.tackles : '—'}</TableCell>
+                              <TableCell className="text-right text-xs">{h.interceptions !== null ? h.interceptions : '—'}</TableCell>
                             </>
                           )}
+                          {selectedPlayer.sector === 'GOL' && (
+                            <TableCell className="text-right text-xs">{h.saves !== null ? h.saves : '—'}</TableCell>
+                          )}
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedPlayer.matchHistory.map(h => (
-                          <TableRow key={h.matchId} className="hover:bg-muted/10 transition-colors">
-                            <TableCell className="text-center text-xs text-muted-foreground pl-4">{h.round || '—'}</TableCell>
-                            <TableCell className="font-medium text-xs max-w-[140px] truncate">{h.opponentName}</TableCell>
-                            <TableCell className="text-center text-xs">
-                              <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                                {h.isHome ? 'Casa' : 'Fora'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right text-xs">{h.minutesPlayed || '—'}</TableCell>
-                            <TableCell className="text-right text-xs font-bold text-primary">{formatValue(h.rating, 1)}</TableCell>
-                            {selectedPlayer.sector === 'ATA' && (
-                              <>
-                                <TableCell className="text-right text-xs">{h.goals !== null ? h.goals : '—'}</TableCell>
-                                <TableCell className="text-right text-xs text-muted-foreground">{formatValue(h.expectedGoals, 2)}</TableCell>
-                              </>
-                            )}
-                            {selectedPlayer.sector === 'MEI' && (
-                              <TableCell className="text-right text-xs">{h.keyPasses !== null ? h.keyPasses : '—'}</TableCell>
-                            )}
-                            {selectedPlayer.sector === 'DEF' && (
-                              <>
-                                <TableCell className="text-right text-xs">{h.tackles !== null ? h.tackles : '—'}</TableCell>
-                                <TableCell className="text-right text-xs">{h.interceptions !== null ? h.interceptions : '—'}</TableCell>
-                              </>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
             </div>

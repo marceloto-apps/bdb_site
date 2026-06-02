@@ -342,7 +342,7 @@ export function DashboardLigaClient({
               <TabsTrigger value="jogadores" className="py-2 whitespace-normal h-full">Jogadores</TabsTrigger>
             </TabsList>
 
-            {activeTab !== 'resumo' && (
+            {activeTab !== 'resumo' && activeTab !== 'jogadores' && (
               <div className="flex flex-wrap justify-between items-center mb-4 gap-2 animate-in fade-in">
                 <div className="flex gap-2">
                   <Button 

@@ -489,3 +489,31 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
 - Implementado o `PainelProjecaoHandicaps`, que varre matematicamente a Matriz de Placares do modelo atual (Poisson, ZIP, etc) e gera um quadro completo das linhas de mercado.
 - A UI calcula instantaneamente a chance de Full Win (`%Win`), a chance de Meio-Ganho/Push (`%Push`) e deriva a **Odd Justa** utilizando a fórmula exata de Valor Esperado ($EV=0$) para dezenas de linhas Asiáticas do Mandante, Visitante e Over Gols.
 - O Layout do Dashboard de Liga foi refeito: o Gráfico de Evolução de Gols desceu ocupando toda a largura da tela, dando destaque ao novo quadro de Handicaps que foi fixado ao lado da Matriz de Placares.
+
+### 30. Reorganização e Refinamento do Módulo de Jogadores (Fase 2+) — Junho/2026
+
+**Reestruturação Visual por Categoria:**
+- A aba de análise de atletas foi completamente reformulada. Em vez da visualização clássica por posições fixas de campo, as estatísticas de desempenho agora estão agrupadas em quatro sub-abas dinâmicas de categoria: **Sumário**, **Ofensividade**, **Passes** e **Defesa**.
+- **Novo Piso de Minutos**: Reduzimos o critério de inclusão de minutagem mínima na temporada de 270 para 180 minutos totais, permitindo a análise de um leque maior de atletas e reservas ativos.
+
+**Engine de Escala Dinâmica (Client-side):**
+- Implementação de toggles no frontend para alternar as estatísticas volumétricas dinamicamente entre **Valores Totais**, **Por 90 Minutos** e **Por Jogo**.
+- O cálculo é feito de forma responsiva no cliente:
+  - Totais: valor bruto.
+  - Por 90: `(valorTotal / totalMinutes) * 90`.
+  - Por Jogo: `valorTotal / matchesPlayed`.
+- Campos especiais como nota/rating (`weightedRating`), partidas (`matchesPlayed`) e taxas percentuais (`passesAccuratePct`) possuem regras de escape de escala. A coluna `MIN` de minutos responde à escala de jogo exibindo a média de minutos por jogo do atleta.
+
+**Polimento Visual e Otimização de Espaço:**
+- **Remoção de Controles Redundantes**: Ocultamos os seletores globais de mando (Casa/Visitante/Geral) especificamente na aba de jogadores para despoluir a visualização.
+- **Abreviaturas Compactas**: Renomeação de todas as colunas das tabelas para siglas enxutas (e.g. `MIN`, `G`, `CHT`, `CHG`, `P%`, `PCH`, `DES`, `COR`) garantindo que as tabelas caibam na tela de forma fluida sem rolagem horizontal.
+- **Legenda Dinâmica**: Implementação de um card explicativo no rodapé que detecta a aba de estatística ativa e exibe as descrições detalhadas de cada sigla.
+- **Isolamento de Gols**: Ajuste da coluna `G` do Sumário para representar estritamente os gols marcados, desvinculando-se do fallback de defesas do goleiro.
+
+**Coluna de Posições (P) com Ordenação Tática:**
+- Introduzida a coluna `P` de posição no início das tabelas base, com alinhamento centralizado e exibindo as siglas: `GK` (Goleiro), `DF` (Defensor), `MC` (Meio Campo) e `AT` (Atacante).
+- O algoritmo de ordenação da coluna foi estruturado para agrupar e ordenar os atletas logicamente de trás para frente no campo (`GK` $\rightarrow$ `DF` $\rightarrow$ `MC` $\rightarrow$ `AT`).
+
+**Integração do Ingestor e Schema DB:**
+- Sincronização e ingestão em `PlayerMatchStats` de mais de 35 novos campos de métricas refinadas de passes, finalizações, duelos e goleiro fornecidas pela *TheStatsAPI*, garantindo a consistência das estatísticas detalhadas no site.
+

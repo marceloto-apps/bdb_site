@@ -464,10 +464,10 @@ enum OddsType {
 }
 
 enum PlayerPosition {
-  G
-  D
-  M
-  A
+  FORWARD
+  MIDFIELDER
+  DEFENDER
+  GOALKEEPER
 }
 
 enum ShotResult {
@@ -768,24 +768,48 @@ model PlayerMatchStats {
   started             Boolean  @default(false)
   played              Boolean  @default(false)
 
+  // ── PASSING ──
   passesTotal         Int?
   passesAccurate      Int?
   keyPasses           Int?
+  assists             Int?
+  crossesTotal        Int?
+  crossesAccurate     Int?
+  longBallsTotal      Int?
+  longBallsAccurate   Int?
 
+  // ── SHOOTING ──
   shotsTotal          Int?
   shotsOnTarget       Int?
+  shotsOffTarget      Int?
+  shotsBlocked        Int?
   goals               Int?
   expectedGoals       Float?
+  expectedAssists     Float?
+  npExpectedGoals     Float?
+  bigChancesCreated   Int?
 
+  // ── DUELS ──
   duelsTotal          Int?
   duelsWon            Int?
+  aerialsWon          Int?
+  challengesLost      Int?
+  dispossessed        Int?
+  dribblesAttempted   Int?
+  dribblesSucceeded   Int?
 
+  // ── DEFENDING ──
   tackles             Int?
   interceptions       Int?
   clearances          Int?
 
-  dribblesAttempted   Int?
-  dribblesSucceeded   Int?
+  // ── GOALKEEPING ──
+  saves               Int?
+
+  // ── GENERAL ──
+  touches             Int?
+  offsides            Int?
+  possessionLost      Int?
   foulsDrawn          Int?
   foulsCommitted      Int?
   yellowCards         Int?
@@ -794,7 +818,8 @@ model PlayerMatchStats {
   createdAt           DateTime @default(now())
 
   match               Match   @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  player              Player  @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  team                Team     @relation(fields: [teamId], references: [id])
+  player              Player   @relation(fields: [playerId], references: [id])
 
   @@unique([matchId, playerId])
   @@index([matchId])

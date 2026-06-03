@@ -42,6 +42,13 @@ e o dashboard interativo para análise de confrontos.
   - Configuração de exibição de **1 imagem por vez** de forma centralizada e responsiva (`w-full max-w-4xl`) para assegurar máxima legibilidade dos textos em todos os viewports.
   - Rotação automática (autoplay) a cada 4 segundos com comportamento de pausa ao passar o mouse (`onMouseEnter`/`onMouseLeave`).
   - Navegação manual integrada usando setas flutuantes (Chevrons) nas laterais do carrossel e pílulas/pontos indicadores (Dots) na base do componente.
+- **Aba de Jogadores e Análise Individual (Fase 2+)**:
+  - Implementação de sub-abas específicas na análise de atletas: **Sumário**, **Ofensividade**, **Passes** e **Defesa**.
+  - **Filtro de Minutagem Mínima**: Restrição reduzida para 180 minutos de jogo acumulados no campeonato para inclusão nas tabelas.
+  - **Escala Dinâmica**: Suporte para alternar a exibição no cliente entre **Valores Totais**, **Por 90 Minutos** e **Por Jogo**, recalculando os valores volumétricos dinamicamente.
+  - **Remoção de Contextos Redundantes**: Ocultação dos seletores de mando (Casa/Visitante/Geral) especificamente nesta aba.
+  - **Coluna de Posições (P)**: Introduzida no início da tabela mostrando siglas padronizadas: `GK` (Goleiro), `DF` (Defensor), `MC` (Meio Campo) e `AT` (Atacante), com suporte a ordenação tática sequencial (GK → DF → MC → AT).
+  - **Abreviaturas Compactas e Legenda**: Abreviatura dos nomes das colunas de estatísticas para economizar espaço e exibição de legenda dinâmica no rodapé com base na sub-aba ativa.
 
 ---
 
@@ -76,6 +83,7 @@ API-Football → Sync Admin → MySQL → API Routes → Motor Analítico → Cl
 | `model-selector.ts` | Seleção automática via AIC |
 | `market-calculator.ts` | Derivação de mercados (1X2, BTTS, O/U, AH) |
 | `mapa-valor.ts` | Cálculo de ROI por faixa de odds |
+| `estatisticas-jogadores-builder.ts` | Agregação de dados volumétricos, minutagem (mínimo 180 min) e histórico de partidas de jogadores |
 
 ### APIs (`app/api/`)
 | Rota | Método | Descrição |
@@ -86,6 +94,7 @@ API-Football → Sync Admin → MySQL → API Routes → Motor Analítico → Cl
 | `/api/ligas/[slug]/previsao` | GET | Previsão completa de confronto |
 | `/api/ligas/[slug]/mapa-valor` | GET | ROI por faixa de odds |
 | `/api/ligas/[slug]/estatisticas` | GET | Agregação completa de MatchStats para o confronto (Gols, xG, Escanteios, Cartões, Profit) |
+| `/api/ligas/[slug]/jogadores` | GET | Listagem de jogadores mandante/visitante com estatísticas detalhadas e agregadas |
 | `/api/admin/sync/partidas` | POST | Sincronizar partidas |
 | `/api/admin/sync/odds` | POST | Sincronizar odds |
 | `/api/admin/sync/status` | GET | Status de sincronizações |
@@ -111,6 +120,7 @@ API-Football → Sync Admin → MySQL → API Routes → Motor Analítico → Cl
 | `TabGolsXg` | Client | Aba de Gols FT/HT, Expected Goals e Finalizações |
 | `TabEscanteiosCartoes` | Client | Aba de métricas disciplinares e cantos |
 | `TabOverUnder` | Client | Aba com percentuais de batimento do mercado Over/Under |
+| `TabJogadores` | Client | Aba de análise comparativa de jogadores com categorização (Sumário, Ofensividade, Passes, Defesa), escala dinâmica (Totais, Per 90, Por Jogo) e legenda explicativa |
 | `LigaCard` | Server | Card clicável no grid de ligas |
 
 ### Componentes Admin (`components/admin/`)

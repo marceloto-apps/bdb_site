@@ -32,34 +32,52 @@ export default async function LigasPage() {
   // Ligas FREE
   const freeSlugs = ['brasileirao-serie-a', 'brasileirao-serie-b', 'premier-league', 'la-liga', 'serie-a']
   // Ligas Finalizadas
-  const finishedSlugs = ['premier-league', 'la-liga', 'serie-a']
+  const finishedSlugs = [
+    'premier-league', 
+    'la-liga', 
+    'serie-a',
+    '2-bundesliga',
+    'bundesliga',
+    'championship',
+    'eredivisie',
+    'laliga-2',
+    'liga-portugal',
+    'ligue-1',
+    'pro-league'
+  ]
 
-  // Mapear para o formato esperado pelo LigaCard
-  const ligas = competicoes.map(comp => {
-    const season = comp.seasons[0]
-    const totalJogos = season ? season._count.matches : 0
-    // Simular o tier no MVP. Você pode checar o campo 'tier' do prisma se ele existir, ou mockar
-    const tier = freeSlugs.includes(comp.slug) ? 'FREE' : 'VIP'
-    const disponivel = isPremium || tier === 'FREE'
-    const finalizada = finishedSlugs.includes(comp.slug)
+  // Mapear para o formato esperado pelo LigaCard e filtrar se o usuário não for Premium
+  const ligas = competicoes
+    .map(comp => {
+      const season = comp.seasons[0]
+      const totalJogos = season ? season._count.matches : 0
+      // Simular o tier no MVP. Você pode checar o campo 'tier' do prisma se ele existir, ou mockar
+      const tier = freeSlugs.includes(comp.slug) ? 'FREE' : 'VIP'
+      const disponivel = isPremium || tier === 'FREE'
+      const finalizada = finishedSlugs.includes(comp.slug)
 
-    return {
-      nome: comp.name,
-      slug: comp.slug,
-      pais: comp.country,
-      logoUrl: (comp as any).logoUrl ?? null,
-      temporada: season ? season.year : 'N/A',
-      totalJogos,
-      tier: tier as 'FREE' | 'VIP',
-      disponivel,
-      finalizada
-    }
-  })
+      return {
+        nome: comp.name,
+        slug: comp.slug,
+        pais: comp.country,
+        logoUrl: (comp as any).logoUrl ?? null,
+        temporada: season ? season.year : 'N/A',
+        totalJogos,
+        tier: tier as 'FREE' | 'VIP',
+        disponivel,
+        finalizada
+      }
+    })
+    .filter(liga => isPremium || liga.disponivel)
 
-  // Ordenar ligas: FREE primeiro, depois ordem alfabética
+  // Ordenar ligas: Ativas primeiro, finalizadas por último. Dentro de cada grupo: FREE primeiro, depois ordem alfabética.
   ligas.sort((a, b) => {
+    if (a.finalizada && !b.finalizada) return 1;
+    if (!a.finalizada && b.finalizada) return -1;
+    
     if (a.tier === 'FREE' && b.tier === 'VIP') return -1;
     if (a.tier === 'VIP' && b.tier === 'FREE') return 1;
+    
     return a.nome.localeCompare(b.nome);
   });
 

@@ -23,6 +23,14 @@ export type OverUnderSummary = {
   underPercent: number
 }
 
+export type BttsSummary = {
+  yesCount: number
+  noCount: number
+  total: number
+  yesPercent: number
+  noPercent: number
+}
+
 export type TeamMatchStats = {
   teamId: string
   teamName: string
@@ -46,6 +54,7 @@ export type TeamMatchStats = {
   }
   goalsXgShots: Record<string, StatSummary>
   cornersCardsFouls: Record<string, StatSummary>
+  btts: BttsSummary
   overUnder: {
     goalsFT: OverUnderSummary[]
     goalsHT: OverUnderSummary[]

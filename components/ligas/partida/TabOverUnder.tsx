@@ -1,6 +1,6 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { TeamMatchStats, OverUnderSummary } from '@/types/estatisticas'
+import { TeamMatchStats, OverUnderSummary, BttsSummary } from '@/types/estatisticas'
 
 interface TabOverUnderProps {
   homeStats: TeamMatchStats
@@ -107,6 +107,126 @@ function OverUnderTable({ title, homeData, awayData }: { title: string, homeData
   )
 }
 
+function BttsTable({ homeData, awayData }: { homeData: BttsSummary, awayData: BttsSummary }) {
+  if (!homeData || homeData.total === 0) {
+    return (
+      <Card className="shadow-none">
+        <CardHeader className="bg-muted/10 pb-3 border-b">
+          <CardTitle className="text-sm font-bold uppercase">Ambas Marcam (BTTS)</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 text-center text-sm text-muted-foreground">
+          Dados indisponíveis
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const calcFairOdd = (percent: number) => {
+    if (percent === 0) return '-'
+    if (percent === 100) return '1.01'
+    return (100 / percent).toFixed(2)
+  }
+
+  const totalYesCount = homeData.yesCount + awayData.yesCount
+  const totalNoCount = homeData.noCount + awayData.noCount
+  const totalSamples = homeData.total + awayData.total
+  const totalYesPercent = totalSamples > 0 ? (totalYesCount / totalSamples) * 100 : 0
+  const totalNoPercent = totalSamples > 0 ? (totalNoCount / totalSamples) * 100 : 0
+
+  return (
+    <Card className="shadow-none overflow-hidden">
+      <CardHeader className="bg-muted/10 pb-3 border-b">
+        <CardTitle className="text-sm font-bold uppercase">Ambas Marcam (BTTS)</CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-muted/30 border-b">
+                <th className="py-2 px-2 text-left font-semibold text-muted-foreground">Seleção</th>
+                <th className="py-2 px-2 text-center font-semibold text-primary leading-tight">Mandante<br/>(%)</th>
+                <th className="py-2 px-2 text-center font-semibold text-primary leading-tight">Mandante<br/>(Odd)</th>
+                <th className="py-2 px-2 text-center font-semibold text-blue-500 leading-tight">Visitante<br/>(%)</th>
+                <th className="py-2 px-2 text-center font-semibold text-blue-500 leading-tight">Visitante<br/>(Odd)</th>
+                <th className="py-2 px-2 text-center font-semibold text-emerald-500 leading-tight">Total<br/>(%)</th>
+                <th className="py-2 px-2 text-center font-semibold text-emerald-500 leading-tight">Total<br/>(Odd)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              <tr className="hover:bg-muted/10 transition-colors">
+                <td className="py-3 px-2 font-bold text-sm text-left">SIM</td>
+                <td className="py-3 px-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold text-sm">{homeData.yesPercent.toFixed(0)}%</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-muted-foreground">Odd {calcFairOdd(homeData.yesPercent)}</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold text-sm">{awayData.yesPercent.toFixed(0)}%</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-muted-foreground">Odd {calcFairOdd(awayData.yesPercent)}</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center bg-emerald-500/5">
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold text-sm text-emerald-500">{totalYesPercent.toFixed(0)}%</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center bg-emerald-500/5">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-muted-foreground">Odd {calcFairOdd(totalYesPercent)}</span>
+                  </div>
+                </td>
+              </tr>
+              <tr className="hover:bg-muted/10 transition-colors">
+                <td className="py-3 px-2 font-bold text-sm text-left">NÃO</td>
+                <td className="py-3 px-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold text-sm">{homeData.noPercent.toFixed(0)}%</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-muted-foreground">Odd {calcFairOdd(homeData.noPercent)}</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold text-sm">{awayData.noPercent.toFixed(0)}%</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-muted-foreground">Odd {calcFairOdd(awayData.noPercent)}</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center bg-emerald-500/5">
+                  <div className="flex flex-col items-center">
+                    <span className="font-bold text-sm text-emerald-500">{totalNoPercent.toFixed(0)}%</span>
+                  </div>
+                </td>
+                <td className="py-3 px-2 text-center bg-emerald-500/5">
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] text-muted-foreground">Odd {calcFairOdd(totalNoPercent)}</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function TabOverUnder({ homeStats, awayStats }: TabOverUnderProps) {
   if (homeStats.sampleSize === 0 && awayStats.sampleSize === 0) {
     return <div className="text-center p-8 text-muted-foreground">Dados indisponíveis para esta métrica.</div>
@@ -144,6 +264,11 @@ export function TabOverUnder({ homeStats, awayStats }: TabOverUnderProps) {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <BttsTable 
+          homeData={homeStats.btts} 
+          awayData={awayStats.btts} 
+        />
+        
         <OverUnderTable 
           title="Cartões Amarelos FT" 
           homeData={homeStats.overUnder.yellowCardsFT} 

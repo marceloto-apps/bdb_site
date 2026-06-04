@@ -17,9 +17,15 @@ interface PainelOddsMercadoProps {
   onOddsChange: (odds: OddsMercado | null) => void
 }
 
+interface OddsCacheEntry {
+  odds: OddsMercado
+  message: string | null
+  apiMatchInfo: { status?: string; utcDate?: string; round?: number } | null
+}
+
 const linhasOU = ['0.5', '1.5', '2.5', '3.5', '4.5']
 
-const createEmptyOdds = (fonte: 'bet365' | 'pinnacle' | 'manual'): OddsMercado => ({
+const createEmptyOdds = (fonte: 'bet365' | 'pinnacle' | 'betfair-exchange' | 'kambi' | 'manual'): OddsMercado => ({
   fonte,
   x1x2: { home: null, draw: null, away: null },
   btts: { yes: null, no: null },
@@ -27,7 +33,7 @@ const createEmptyOdds = (fonte: 'bet365' | 'pinnacle' | 'manual'): OddsMercado =
 })
 
 export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }: PainelOddsMercadoProps) {
-  const [bookmaker, setBookmaker] = useState<'bet365' | 'pinnacle'>('bet365')
+  const [bookmaker, setBookmaker] = useState<'bet365' | 'pinnacle' | 'betfair-exchange' | 'kambi'>('bet365')
   const [oddsType, setOddsType] = useState<'opening' | 'current'>('current')
   const [isManual, setIsManual] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -38,7 +44,7 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
   const [rawInputs, setRawInputs] = useState<Record<string, string>>({})
 
   // Cache para não refazer fetch à toa
-  const oddsCache = useRef<Record<string, OddsMercado>>({})
+  const oddsCache = useRef<Record<string, OddsCacheEntry>>({})
   
   // Ref para guardar o timeout do debounce
   const debounceRef = useRef<NodeJS.Timeout>()
@@ -60,9 +66,11 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
       // Se já temos no cache, usa do cache
       if (oddsCache.current[cacheKey]) {
         const cached = oddsCache.current[cacheKey]
-        setLocalOdds(cached)
+        setLocalOdds(cached.odds)
+        setMessage(cached.message)
+        setApiMatchInfo(cached.apiMatchInfo)
         if (!isManual) {
-          onOddsChange(cached)
+          onOddsChange(cached.odds)
         }
         return
       }
@@ -87,13 +95,21 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
             btts: json.data.mercados.btts,
             overUnder: json.data.mercados.overUnder,
           }
-          oddsCache.current[cacheKey] = fetchedOdds
           
-          setApiMatchInfo({
+          const matchInfo = {
             status: json.data.status,
             utcDate: json.data.utcDate,
             round: json.data.round
-          })
+          }
+
+          oddsCache.current[cacheKey] = {
+            odds: fetchedOdds,
+            message: null,
+            apiMatchInfo: matchInfo
+          }
+          
+          setApiMatchInfo(matchInfo)
+          setMessage(null)
 
           if (!isManual) {
             setLocalOdds(fetchedOdds)
@@ -102,8 +118,16 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
         } else {
           // Sem odds ou sem jogo
           const empty = createEmptyOdds(bookmaker)
-          oddsCache.current[cacheKey] = empty
-          setMessage(json.message || "Nenhuma odd encontrada")
+          const msg = json.message || "Nenhuma odd encontrada"
+          
+          oddsCache.current[cacheKey] = {
+            odds: empty,
+            message: msg,
+            apiMatchInfo: null
+          }
+          
+          setMessage(msg)
+          setApiMatchInfo(null)
           
           if (!isManual) {
             setLocalOdds(empty)
@@ -155,9 +179,19 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
     } else {
       // Entrando no auto: resgata do cache ou reseta se não tiver
       setRawInputs({})
-      const cached = oddsCache.current[cacheKey] || createEmptyOdds(bookmaker)
-      setLocalOdds(cached)
-      onOddsChange(cached)
+      const cached = oddsCache.current[cacheKey]
+      if (cached) {
+        setLocalOdds(cached.odds)
+        setMessage(cached.message)
+        setApiMatchInfo(cached.apiMatchInfo)
+        onOddsChange(cached.odds)
+      } else {
+        const empty = createEmptyOdds(bookmaker)
+        setLocalOdds(empty)
+        setMessage(null)
+        setApiMatchInfo(null)
+        onOddsChange(empty)
+      }
     }
   }
 
@@ -246,29 +280,31 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
       <CardContent className="p-4 md:p-6 flex flex-col gap-6 overflow-y-auto">
         
         {/* Controles de Fonte */}
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <Tabs 
             value={bookmaker} 
             onValueChange={(v) => setBookmaker(v as any)} 
-            className="w-full max-w-[150px]"
+            className="w-full min-w-[280px] flex-1 max-w-[360px]"
           >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="bet365" disabled={isManual}>Bet365</TabsTrigger>
-              <TabsTrigger value="pinnacle" disabled={isManual}>Pinnacle</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="bet365" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">Bet365</TabsTrigger>
+              <TabsTrigger value="pinnacle" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">Pinnacle</TabsTrigger>
+              <TabsTrigger value="betfair-exchange" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">BetfairEx</TabsTrigger>
+              <TabsTrigger value="kambi" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">Kambi</TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {isLoading && <RefreshCw className="w-4 h-4 animate-spin text-muted-foreground" />}
             
             <Tabs 
               value={oddsType} 
               onValueChange={(v) => setOddsType(v as any)} 
-              className="w-full max-w-[180px]"
+              className="w-full max-w-[160px]"
             >
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="current" disabled={isManual}>Atuais</TabsTrigger>
-                <TabsTrigger value="opening" disabled={isManual}>Abertura</TabsTrigger>
+                <TabsTrigger value="current" disabled={isManual} className="text-xs px-1">Atuais</TabsTrigger>
+                <TabsTrigger value="opening" disabled={isManual} className="text-xs px-1">Abertura</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -409,7 +445,7 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
           {apiMatchInfo?.status === 'SCHEDULED' ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="font-normal border-primary/20 bg-primary/5 text-primary">
-                📡 {bookmaker === 'bet365' ? 'Bet365' : 'Pinnacle'} ({oddsType === 'opening' ? 'Abertura' : 'Atuais'})
+                📡 {bookmaker === 'bet365' ? 'Bet365' : bookmaker === 'pinnacle' ? 'Pinnacle' : bookmaker === 'betfair-exchange' ? 'BetfairEx' : 'Kambi'} ({oddsType === 'opening' ? 'Abertura' : 'Atuais'})
               </Badge>
               <span className="truncate">
                 {apiMatchInfo.utcDate ? new Date(apiMatchInfo.utcDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}

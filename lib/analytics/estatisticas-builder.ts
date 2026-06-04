@@ -85,6 +85,7 @@ export function buildTeamMatchStats(teamId: string, teamName: string, matches: a
   const totalCornersFT: number[] = []
   const totalCornersHT: number[] = []
   const totalYellowCardsFT: number[] = []
+  const bttsResults: boolean[] = []
 
   teamMatches.forEach(m => {
     const isHome = m.homeTeamId === teamId
@@ -122,6 +123,7 @@ export function buildTeamMatchStats(teamId: string, teamName: string, matches: a
 
     if (fthg !== null && ftag !== null) {
       totalGoalsFT.push(fthg + ftag)
+      bttsResults.push(fthg > 0 && ftag > 0)
     }
 
     const hthg = m.hthg
@@ -312,10 +314,23 @@ export function buildTeamMatchStats(teamId: string, teamName: string, matches: a
   const xgConceded2HVal = calculateStatSummary(xgConceded2H)
   const xgDiff2HVal = calculateStatSummary(calcDiff(xg2H, xgConceded2H))
 
+  const totalBtts = bttsResults.length
+  const yesCount = bttsResults.filter(r => r).length
+  const noCount = totalBtts - yesCount
+  const yesPercent = totalBtts > 0 ? (yesCount / totalBtts) * 100 : 0
+  const noPercent = totalBtts > 0 ? (noCount / totalBtts) * 100 : 0
+
   return {
     teamId,
     teamName,
     sampleSize: teamMatches.length,
+    btts: {
+      yesCount,
+      noCount,
+      total: totalBtts,
+      yesPercent,
+      noPercent,
+    },
     odds: {
       home: calculateStatSummary(homeOdds),
       draw: calculateStatSummary(drawOdds),

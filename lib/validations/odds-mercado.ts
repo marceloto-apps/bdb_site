@@ -18,7 +18,7 @@ const overUnderSchema = z.record(
 )
 
 export const oddsMercadoDataSchema = z.object({
-  fonte: z.enum(["bet365", "pinnacle", "manual"]),
+  fonte: z.enum(["bet365", "pinnacle", "betfair-exchange", "kambi", "manual"]),
   matchId: z.string().optional(),
   x1x2: z.object({
     home: oddSchema,

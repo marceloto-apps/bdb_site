@@ -188,6 +188,85 @@ Calcula ROI histórico por faixa de odds usando dados Pinnacle.
 
 ---
 
+## Odds de Mercado
+
+### GET /api/ligas/[slug]/odds-mercado
+
+Busca as odds de mercado mais recentes ou de abertura para um determinado confronto e bookmaker.
+
+**Query params:**
+| Param | Tipo | Default | Descrição |
+|-------|------|---------|-----------|
+| `homeTeamId` | string | — (obrigatório) | ID do time mandante |
+| `awayTeamId` | string | — (obrigatório) | ID do time visitante |
+| `bookmaker` | string | `bet365` | Slug do bookmaker (ex: `bet365`, `pinnacle`, `betfair-exchange`, `kambi`) |
+| `oddsType` | string | `current` | Tipo de odd: `current` (atuais) ou `opening` (abertura) |
+
+**Response 200:**
+```json
+{
+  "data": {
+    "matchId": "clx...",
+    "utcDate": "2026-06-06T02:00:00.000Z",
+    "round": 15,
+    "status": "SCHEDULED",
+    "bookmaker": "bet365",
+    "mercados": {
+      "x1x2": { "home": 1.85, "draw": 3.60, "away": 4.00 },
+      "btts": { "yes": 1.67, "no": 2.10 },
+      "overUnder": {
+        "0.5": { "over": 1.01, "under": 89.57 },
+        "1.5": { "over": 1.07, "under": 16.35 },
+        "2.5": { "over": 1.80, "under": 2.00 },
+        "3.5": { "over": 3.24, "under": 2.92 },
+        "4.5": { "over": 5.76, "under": 1.88 }
+      }
+    }
+  }
+}
+```
+
+---
+
+### GET /api/ligas/[slug]/odds-mercado/historico
+
+Retorna a série temporal histórica das odds movimentadas (`OddsMovement`) desde a abertura até o momento atual para cada mercado.
+
+**Query params:**
+| Param | Tipo | Default | Descrição |
+|-------|------|---------|-----------|
+| `homeTeamId` | string | — (obrigatório) | ID do time mandante |
+| `awayTeamId` | string | — (obrigatório) | ID do time visitante |
+| `bookmaker` | string | `bet365` | Slug do bookmaker |
+
+**Response 200:**
+```json
+{
+  "data": {
+    "matchId": "clx...",
+    "bookmaker": "bet365",
+    "history": {
+      "x1x2": [
+        { "capturedAt": "2026-06-05T10:00:00.000Z", "home": 1.80, "draw": 3.40, "away": 4.20 },
+        { "capturedAt": "2026-06-05T12:00:00.000Z", "home": 1.85, "draw": 3.60, "away": 4.00 }
+      ],
+      "btts": [
+        { "capturedAt": "2026-06-05T10:00:00.000Z", "yes": 1.70, "no": 2.05 },
+        { "capturedAt": "2026-06-05T12:00:00.000Z", "yes": 1.67, "no": 2.10 }
+      ],
+      "overUnder": {
+        "2.5": [
+          { "capturedAt": "2026-06-05T10:00:00.000Z", "over": 1.85, "under": 1.95 },
+          { "capturedAt": "2026-06-05T12:00:00.000Z", "over": 1.80, "under": 2.00 }
+        ]
+      }
+    }
+  }
+}
+```
+
+---
+
 ## Admin
 
 ### POST /api/admin/sync/partidas

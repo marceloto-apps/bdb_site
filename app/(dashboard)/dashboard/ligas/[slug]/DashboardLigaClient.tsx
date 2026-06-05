@@ -436,7 +436,7 @@ export function DashboardLigaClient({
 
           {/* SEÇÃO 3: MERCADOS E VALOR */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-4">
+            <div className="lg:col-span-5">
               <PainelOddsMercado
                 slug={liga.slug}
                 homeTeamId={filtros.homeTeamId}
@@ -444,7 +444,7 @@ export function DashboardLigaClient({
                 onOddsChange={setOddsMercado}
               />
             </div>
-            <div className="lg:col-span-8">
+            <div className="lg:col-span-7">
               <PainelMercados
                 mercados={previsao.mercados}
                 evPorMercado={previsao.evPorMercado}

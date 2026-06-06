@@ -171,17 +171,21 @@ Calcula previsão estatística para um confronto específico.
 
 ### GET /api/ligas/[slug]/mapa-valor
 
-Calcula ROI histórico por faixa de odds usando dados Pinnacle.
+Calcula ROI histórico por faixa de odds para os mercados 1x2, BTTS e Over/Under 2.5 usando dados da Bet365.
 
 **Response 200:**
 ```json
 {
   "data": {
     "casa": [
-      { "faixa": { "label": "1.01-1.20", "min": 1.01, "max": 1.20 }, "totalApostas": 5, "acertos": 4, "roi": 12.5, "lucroPerda": 0.63 }
+      { "faixa": { "label": "1.41-1.70", "min": 1.41, "max": 1.70 }, "totalApostas": 8, "acertos": 3, "roi": -42.2, "lucroPerda": -3.4 }
     ],
     "empate": ["..."],
-    "visitante": ["..."]
+    "visitante": ["..."],
+    "bttsSim": ["..."],
+    "bttsNao": ["..."],
+    "over25": ["..."],
+    "under25": ["..."]
   }
 }
 ```

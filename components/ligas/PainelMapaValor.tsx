@@ -123,92 +123,95 @@ export function PainelMapaValor({ mapaValor }: PainelMapaValorProps) {
       
       <CardContent className="p-4 md:p-6 flex flex-col gap-6">
         
-        {/* Nível 1: Seleção de Mercado */}
-        <div className="flex flex-wrap gap-2">
-          <Button 
-            variant={activeMarket === '1x2' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => handleMarketChange('1x2')}
-            className="text-xs"
-          >
-            Resultado (1x2)
-          </Button>
-          <Button 
-            variant={activeMarket === 'btts' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => handleMarketChange('btts')}
-            className="text-xs"
-          >
-            Ambas Marcam (BTTS)
-          </Button>
-          <Button 
-            variant={activeMarket === 'ou25' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => handleMarketChange('ou25')}
-            className="text-xs"
-          >
-            Over/Under 2.5
-          </Button>
-        </div>
+        {/* Filtros em linha única: Mercado à esquerda, Opções à direita */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          {/* Nível 1: Seleção de Mercado */}
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant={activeMarket === '1x2' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => handleMarketChange('1x2')}
+              className="text-xs"
+            >
+              Resultado (1x2)
+            </Button>
+            <Button 
+              variant={activeMarket === 'btts' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => handleMarketChange('btts')}
+              className="text-xs"
+            >
+              Ambas Marcam (BTTS)
+            </Button>
+            <Button 
+              variant={activeMarket === 'ou25' ? 'default' : 'outline'} 
+              size="sm"
+              onClick={() => handleMarketChange('ou25')}
+              className="text-xs"
+            >
+              Over/Under 2.5
+            </Button>
+          </div>
 
-        {/* Nível 2: Seleção de Opção dentro do Mercado */}
-        <div className="flex flex-wrap gap-2 p-1 bg-slate-900/30 rounded-lg border border-slate-800 w-fit">
-          {activeMarket === '1x2' && (
-            <>
-              <button
-                onClick={() => setActiveSelection('casa')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'casa' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Casa
-              </button>
-              <button
-                onClick={() => setActiveSelection('empate')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'empate' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Empate
-              </button>
-              <button
-                onClick={() => setActiveSelection('visitante')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'visitante' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Visitante
-              </button>
-            </>
-          )}
+          {/* Nível 2: Seleção de Opção dentro do Mercado */}
+          <div className="flex flex-wrap gap-2 p-1 bg-slate-900/30 rounded-lg border border-slate-800 w-fit">
+            {activeMarket === '1x2' && (
+              <>
+                <button
+                  onClick={() => setActiveSelection('casa')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'casa' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Casa
+                </button>
+                <button
+                  onClick={() => setActiveSelection('empate')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'empate' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Empate
+                </button>
+                <button
+                  onClick={() => setActiveSelection('visitante')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'visitante' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Visitante
+                </button>
+              </>
+            )}
 
-          {activeMarket === 'btts' && (
-            <>
-              <button
-                onClick={() => setActiveSelection('bttsSim')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'bttsSim' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Sim (Ambos Marcam)
-              </button>
-              <button
-                onClick={() => setActiveSelection('bttsNao')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'bttsNao' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Não (Ambos Marcam)
-              </button>
-            </>
-          )}
+            {activeMarket === 'btts' && (
+              <>
+                <button
+                  onClick={() => setActiveSelection('bttsSim')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'bttsSim' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Sim (Ambos Marcam)
+                </button>
+                <button
+                  onClick={() => setActiveSelection('bttsNao')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'bttsNao' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Não (Ambos Marcam)
+                </button>
+              </>
+            )}
 
-          {activeMarket === 'ou25' && (
-            <>
-              <button
-                onClick={() => setActiveSelection('over25')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'over25' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Over 2.5
-              </button>
-              <button
-                onClick={() => setActiveSelection('under25')}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'under25' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-              >
-                Under 2.5
-              </button>
-            </>
-          )}
+            {activeMarket === 'ou25' && (
+              <>
+                <button
+                  onClick={() => setActiveSelection('over25')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'over25' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Over 2.5
+                </button>
+                <button
+                  onClick={() => setActiveSelection('under25')}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${activeSelection === 'under25' ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+                >
+                  Under 2.5
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Tabela de Resultados */}

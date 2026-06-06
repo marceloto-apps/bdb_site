@@ -1,6 +1,6 @@
 # Resumo Executivo — Big Data Bet (Fase 1)
 
-**Data de Atualização:** 02/05/2026
+**Data de Atualização:** 05/06/2026
 
 Este documento apresenta um resumo executivo do progresso atual do projeto Big Data Bet (Fase 1), detalhando o passo a passo de tudo que foi construído até o momento, bem como o que está pendente para a conclusão da fase.
 
@@ -517,3 +517,28 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
 **Integração do Ingestor e Schema DB:**
 - Sincronização e ingestão em `PlayerMatchStats` de mais de 35 novos campos de métricas refinadas de passes, finalizações, duelos e goleiro fornecidas pela *TheStatsAPI*, garantindo a consistência das estatísticas detalhadas no site.
 
+### 31. Incorporação do Gráfico de Histórico de Odds (Fase 2) — Junho/2026
+
+**Backend (API de Histórico):**
+- Criação da nova rota de API `/api/ligas/[slug]/odds-mercado/historico` para retornar a série temporal de odds movimentadas (`OddsMovement`) desde a abertura até o valor atual.
+- Implementação de algoritmo de **Forward Fill** para preencher valores ausentes no tempo (gaps de crawl), garantindo linhas de gráfico contínuas e sem fragmentação no frontend.
+
+**Painel e Gráfico Recharts (`PainelOddsMercado.tsx`):**
+- Inclusão do gráfico de linha `LineChart` usando a biblioteca `recharts` para o mercado selecionado, com tooltip estilizado e design escuro premium integrado ao Manual da Marca.
+- Exibição de uma tabela de resumo contendo as odds **Mínima**, **Máxima** e **Atual** registradas para cada seleção do mercado.
+- Integração de um dropdown/select para alternar de forma responsiva entre os mercados (`1X2`, `BTTS` e as linhas do `Over/Under` de 0.5 a 4.5), sendo o 1X2 o padrão.
+- Blindagem de filtros: O histórico do gráfico reconecta-se dinamicamente ao trocar de bookmaker, porém ignora o seletor "Atuais/Abertura" (pois exibe o histórico completo).
+- Reajuste do grid de colunas no `DashboardLigaClient.tsx` de `4/8` para `5/7` de largura relativa, conferindo maior espaço e perfeita legibilidade ao gráfico.
+
+### 32. Expansão e Reestruturação do Mapa de Valor (Fase 2) — Junho/2026
+
+**Expansão Analítica (Bet365 e Novos Mercados):**
+- O motor de ROI foi reescrito para consultar as cotações da **Bet365** como base (a cobertura mais completa do banco de dados).
+- A API `/api/ligas/[slug]/mapa-valor` foi expandida para incluir os mercados de **Ambas Marcam (BTTS Sim/Não)** e **Over/Under 2.5 (Over/Under)**, gerando taxas de acertos e ROI por faixas para os 3 mercados.
+- Atualização das interfaces de tipos no arquivo `types/liga.ts` para tipar estritamente o payload estendido com as 7 seleções sem coerções indesejadas de tipo.
+
+**Interface Premium em Linha Única (`PainelMapaValor.tsx`):**
+- Reestruturação da UI adotando navegação em dois níveis de seletores:
+  - **Nível 1 (Mercado)**: Resultado (1x2), Ambas Marcam (BTTS) e Over/Under 2.5, posicionados à **esquerda**.
+  - **Nível 2 (Opções)**: Seleções dinâmicas de acordo com o mercado (Ex: Casa/Empate/Visitante, Sim/Não, Over/Under), posicionadas à **direita**.
+- No desktop, os seletores de nível 1 e 2 alinham-se horizontalmente na mesma linha (otimizando espaço vertical), empilhando-se de forma flexível em telas mobile.

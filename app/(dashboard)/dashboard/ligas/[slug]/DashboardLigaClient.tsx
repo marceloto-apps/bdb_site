@@ -457,7 +457,7 @@ export function DashboardLigaClient({
 
           {mapaValor && (
             <div className="w-full">
-              <PainelMapaValor mapaValor={mapaValor as any} />
+              <PainelMapaValor mapaValor={mapaValor} />
             </div>
           )}
 

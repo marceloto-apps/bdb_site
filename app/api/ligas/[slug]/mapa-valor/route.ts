@@ -37,7 +37,7 @@ export async function GET(
       return NextResponse.json({ error: 'NO_ACTIVE_SEASON', message: 'Nenhuma temporada ativa encontrada' }, { status: 404 })
     }
 
-    // Buscar partidas finalizadas com odds Pinnacle
+    // Buscar partidas finalizadas com odds Bet365 para 1x2, BTTS e Over/Under 2.5
     const partidas = await prisma.match.findMany({
       where: {
         seasonId: activeSeason.id,
@@ -49,21 +49,42 @@ export async function GET(
       include: {
         odds: {
           where: {
-            bookmaker: { name: 'bet365' }, // ou isSharp: false/true
-            market: { key: 'match_odds' }
+            bookmaker: {
+              OR: [
+                { slug: 'bet365' },
+                { name: 'Bet365' }
+              ]
+            },
+            OR: [
+              { market: { key: { in: ['match_odds', '1x2'] } } },
+              { market: { key: 'btts' } },
+              {
+                market: { key: { in: ['over_under', 'total_goals', 'total_goals_2_5'] } },
+                line: 2.5
+              }
+            ]
+          },
+          include: {
+            market: true
           }
         }
       }
     })
 
     const jogosComOdds = partidas.map(p => {
-      let ftr = 'D'
+      let ftr: 'H' | 'D' | 'A' = 'D'
       if (p.fthg! > p.ftag!) ftr = 'H'
       else if (p.ftag! > p.fthg!) ftr = 'A'
 
-      const oddHome = p.odds.find((o: any) => o.selection === 'home')?.odds
-      const oddDraw = p.odds.find((o: any) => o.selection === 'draw')?.odds
-      const oddAway = p.odds.find((o: any) => o.selection === 'away')?.odds
+      const oddHome = p.odds.find((o: any) => (o.market.key === 'match_odds' || o.market.key === '1x2') && o.selection === 'home')?.odds || null
+      const oddDraw = p.odds.find((o: any) => (o.market.key === 'match_odds' || o.market.key === '1x2') && o.selection === 'draw')?.odds || null
+      const oddAway = p.odds.find((o: any) => (o.market.key === 'match_odds' || o.market.key === '1x2') && o.selection === 'away')?.odds || null
+
+      const oddBttsYes = p.odds.find((o: any) => o.market.key === 'btts' && o.selection === 'yes')?.odds || null
+      const oddBttsNo = p.odds.find((o: any) => o.market.key === 'btts' && o.selection === 'no')?.odds || null
+
+      const oddOver25 = p.odds.find((o: any) => ['over_under', 'total_goals', 'total_goals_2_5'].includes(o.market.key) && o.line === 2.5 && o.selection === 'over')?.odds || null
+      const oddUnder25 = p.odds.find((o: any) => ['over_under', 'total_goals', 'total_goals_2_5'].includes(o.market.key) && o.line === 2.5 && o.selection === 'under')?.odds || null
 
       return {
         fthg: p.fthg!,
@@ -71,9 +92,13 @@ export async function GET(
         ftr,
         oddHome,
         oddDraw,
-        oddAway
+        oddAway,
+        oddBttsYes,
+        oddBttsNo,
+        oddOver25,
+        oddUnder25
       }
-    }).filter(j => j.oddHome && j.oddDraw && j.oddAway) // Apenas jogos com odds válidas
+    }).filter(j => j.oddHome !== null || j.oddBttsYes !== null || j.oddOver25 !== null)
 
     const mapaValor = calcularMapaValor(jogosComOdds as any)
 

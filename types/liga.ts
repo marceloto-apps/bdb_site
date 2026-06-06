@@ -101,17 +101,19 @@ export interface PrevisaoResponse {
 export type PrevisaoState = PrevisaoResponse
 
 export interface MapaValorFaixa {
-  id: string
-  label: string
-  probabilidadeBase: number
-  probabilidadeAjustada: number
-  oddJusta: number
-  oddMercado: number
-  ev: number
+  faixa: { label: string; min: number; max: number }
+  totalApostas: number
+  acertos: number
+  roi: number
+  lucroPerda: number
 }
 
 export interface MapaValorResponse {
   casa: MapaValorFaixa[]
   empate: MapaValorFaixa[]
   visitante: MapaValorFaixa[]
+  bttsSim: MapaValorFaixa[]
+  bttsNao: MapaValorFaixa[]
+  over25: MapaValorFaixa[]
+  under25: MapaValorFaixa[]
 }

@@ -32,11 +32,19 @@ export function calcularMapaValor(
     oddHome: number | null
     oddDraw: number | null
     oddAway: number | null
+    oddBttsYes: number | null
+    oddBttsNo: number | null
+    oddOver25: number | null
+    oddUnder25: number | null
   }>
 ): {
   casa: ResultadoFaixa[]
   empate: ResultadoFaixa[]
   visitante: ResultadoFaixa[]
+  bttsSim: ResultadoFaixa[]
+  bttsNao: ResultadoFaixa[]
+  over25: ResultadoFaixa[]
+  under25: ResultadoFaixa[]
 } {
   const initFaixas = () =>
     FAIXAS_ODDS.map((faixa) => ({
@@ -50,8 +58,16 @@ export function calcularMapaValor(
   const resultadosCasa = initFaixas()
   const resultadosEmpate = initFaixas()
   const resultadosVisitante = initFaixas()
+  const resultadosBttsSim = initFaixas()
+  const resultadosBttsNao = initFaixas()
+  const resultadosOver25 = initFaixas()
+  const resultadosUnder25 = initFaixas()
 
   for (const jogo of jogos) {
+    const totalGols = jogo.fthg + jogo.ftag
+    const isBtts = jogo.fthg > 0 && jogo.ftag > 0
+    const isOver25 = totalGols > 2.5
+
     // Processar Casa
     if (jogo.oddHome) {
       const idx = FAIXAS_ODDS.findIndex((f) => jogo.oddHome! >= f.min && jogo.oddHome! <= f.max)
@@ -93,6 +109,62 @@ export function calcularMapaValor(
         }
       }
     }
+
+    // Processar BTTS Sim
+    if (jogo.oddBttsYes) {
+      const idx = FAIXAS_ODDS.findIndex((f) => jogo.oddBttsYes! >= f.min && jogo.oddBttsYes! <= f.max)
+      if (idx !== -1) {
+        resultadosBttsSim[idx].totalApostas += 1
+        if (isBtts) {
+          resultadosBttsSim[idx].acertos += 1
+          resultadosBttsSim[idx].lucroPerda += jogo.oddBttsYes - 1
+        } else {
+          resultadosBttsSim[idx].lucroPerda -= 1
+        }
+      }
+    }
+
+    // Processar BTTS Não
+    if (jogo.oddBttsNo) {
+      const idx = FAIXAS_ODDS.findIndex((f) => jogo.oddBttsNo! >= f.min && jogo.oddBttsNo! <= f.max)
+      if (idx !== -1) {
+        resultadosBttsNao[idx].totalApostas += 1
+        if (!isBtts) {
+          resultadosBttsNao[idx].acertos += 1
+          resultadosBttsNao[idx].lucroPerda += jogo.oddBttsNo - 1
+        } else {
+          resultadosBttsNao[idx].lucroPerda -= 1
+        }
+      }
+    }
+
+    // Processar Over 2.5
+    if (jogo.oddOver25) {
+      const idx = FAIXAS_ODDS.findIndex((f) => jogo.oddOver25! >= f.min && jogo.oddOver25! <= f.max)
+      if (idx !== -1) {
+        resultadosOver25[idx].totalApostas += 1
+        if (isOver25) {
+          resultadosOver25[idx].acertos += 1
+          resultadosOver25[idx].lucroPerda += jogo.oddOver25 - 1
+        } else {
+          resultadosOver25[idx].lucroPerda -= 1
+        }
+      }
+    }
+
+    // Processar Under 2.5
+    if (jogo.oddUnder25) {
+      const idx = FAIXAS_ODDS.findIndex((f) => jogo.oddUnder25! >= f.min && jogo.oddUnder25! <= f.max)
+      if (idx !== -1) {
+        resultadosUnder25[idx].totalApostas += 1
+        if (!isOver25) {
+          resultadosUnder25[idx].acertos += 1
+          resultadosUnder25[idx].lucroPerda += jogo.oddUnder25 - 1
+        } else {
+          resultadosUnder25[idx].lucroPerda -= 1
+        }
+      }
+    }
   }
 
   // Calcular ROI para cada faixa
@@ -105,10 +177,18 @@ export function calcularMapaValor(
   resultadosCasa.forEach(calcularRoi)
   resultadosEmpate.forEach(calcularRoi)
   resultadosVisitante.forEach(calcularRoi)
+  resultadosBttsSim.forEach(calcularRoi)
+  resultadosBttsNao.forEach(calcularRoi)
+  resultadosOver25.forEach(calcularRoi)
+  resultadosUnder25.forEach(calcularRoi)
 
   return {
     casa: resultadosCasa,
     empate: resultadosEmpate,
     visitante: resultadosVisitante,
+    bttsSim: resultadosBttsSim,
+    bttsNao: resultadosBttsNao,
+    over25: resultadosOver25,
+    under25: resultadosUnder25,
   }
 }

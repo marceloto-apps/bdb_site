@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Big Data Bet (BDB) — Plataforma
 
-## Getting Started
+Este repositório contém a plataforma web da **Big Data Bet (BDB)**, desenvolvida com Next.js, TypeScript, TailwindCSS, Prisma ORM e MySQL.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🛠️ Tecnologias e Dependências Principais
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Core**: Next.js 14 (App Router) + React 18
+- **Idioma/Estilos**: TypeScript strict + TailwindCSS + shadcn/ui
+- **Banco de Dados**: Prisma ORM + MySQL (Produção Hostgator / Testes Docker)
+- **Autenticação**: Auth.js (NextAuth v5)
+- **Email**: Brevo API
+- **Analytics/Telemetria**: PostHog
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚀 Como Executar o Projeto Localmente
 
-## Learn More
+1. **Instalar dependências**:
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+2. **Configurar variáveis de ambiente**:
+   Crie um arquivo `.env.local` na raiz e preencha as credenciais correspondentes (veja `.env.example` como guia).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+3. **Gerar o Prisma Client**:
+   ```bash
+   npx prisma generate
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+4. **Rodar o servidor de desenvolvimento**:
+   ```bash
+   npm run dev
+   ```
+   Acesse [http://localhost:3000](http://localhost:3000) no seu navegador.
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🧪 Ambiente de Testes (Isolado via Docker)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Para evitar qualquer escrita ou alteração indesejada no banco de dados de produção (Hostgator), a suíte de testes locais roda obrigatoriamente em um container Docker isolado.
+
+### ⚠️ Trava de Segurança
+O arquivo `vitest.setup.ts` possui uma trava de segurança atômica que aborta os testes imediatamente se a `DATABASE_URL` não apontar estritamente para o host local e banco de testes (`127.0.0.1:3307/bdb_test`).
+
+### Como rodar os testes:
+
+1. **Iniciar o container MySQL local**:
+   Certifique-se de que o Docker Desktop está ativo na sua máquina e execute:
+   ```bash
+   npm run test:db:up
+   ```
+   *Isso subirá um container chamado `bdb-test-mysql` mapeado na porta `3307`.*
+
+2. **Executar as migrations no banco de testes vazio**:
+   ```powershell
+   $env:DATABASE_URL="mysql://root:testpwd@127.0.0.1:3307/bdb_test"; npx prisma migrate deploy
+   ```
+
+3. **Executar a suíte de testes**:
+   - Para rodar **todos os testes** (incluindo os testes de integração do banco de dados):
+     ```bash
+     npm run test
+     ```
+   - Para rodar **apenas os testes unitários** (sem depender do container ativo):
+     ```bash
+     npx vitest run --exclude tests/points/domain.test.ts --exclude tests/api/previsao-route.test.ts
+     ```
+
+4. **Derrubar e remover o container**:
+   ```bash
+   npm run test:db:down
+   ```
+
+---
+
+## 📂 Estrutura de Diretórios Recentes (Onda A)
+
+- `lib/points/`: Camada de domínio do sistema de pontos (saldo event-sourced, status de fidelidade, controle FIFO e expiração).
+- `lib/courses/`: Controle e server actions da estrutura de cursos.
+- `app/api/points/`: Endpoints de balance, histórico, rewards e resgate.
+- `app/(dashboard)/dashboard/bdb-points/`: Área do usuário para gamificação.
+- `app/(cms)/cms/admin/points/` & `/courses/`: Painel CMS do administrador.
+- `scripts/_local/`: Diretório ignorado pelo git contendo scripts locais de auditoria e limpeza.

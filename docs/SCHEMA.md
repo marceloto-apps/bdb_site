@@ -1106,6 +1106,99 @@ model RewardOption {
 }
 ```
 
+### Modelos do Bolão (Copa 2026)
+
+Modelos adicionados para a feature de Bolão da Copa do Mundo 2026, integrando com as tabelas de partidas (`Match`) e usuários (`User`).
+
+#### Enums
+
+```prisma
+enum BolaoStatus {
+  ABERTO
+  ENCERRADO
+}
+
+enum PalpiteOverUnder {
+  OVER   // mais de 2.5 gols
+  UNDER  // menos de 2.5 gols
+}
+```
+
+#### `Bolao`
+Representa um bolão ativo ou encerrado para uma competição e temporada específica.
+```prisma
+model Bolao {
+  id            String         @id @default(uuid())
+  nome          String
+  competitionId String         // ex: comp_6107
+  seasonId      String         // ex: sn_118868
+  status        BolaoStatus    @default(ABERTO)
+  premiacao     Json?
+  palpites      BolaoPalpite[]
+  scores        BolaoScore[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("boloes")
+}
+```
+
+#### `BolaoPalpite`
+Armazena os palpites individuais dos usuários para cada partida do bolão.
+```prisma
+model BolaoPalpite {
+  id               String           @id @default(uuid())
+  bolaoId          String
+  userId           String
+  matchId          String           // FK -> tabela matches existente
+
+  golsMandante     Int
+  golsVisitante    Int
+  palpiteOverUnder PalpiteOverUnder // manual, independente do placar
+
+  pontos           Int              @default(0)
+  acertouPlacar    Boolean          @default(false)
+  acertouResultado Boolean          @default(false)
+  acertouOverUnder Boolean          @default(false)
+  avaliado         Boolean          @default(false)
+
+  lockedAt         DateTime         // utc_date - 1h, congelado na criação
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  bolao            Bolao            @relation(fields: [bolaoId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match            Match            @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([bolaoId, userId, matchId])
+  @@index([matchId])
+  @@index([bolaoId, userId])
+  @@map("bolao_palpites")
+}
+```
+
+#### `BolaoScore`
+Consolida a pontuação total e estatísticas de acerto de cada usuário por bolão.
+```prisma
+model BolaoScore {
+  id               String   @id @default(uuid())
+  bolaoId          String
+  userId           String
+  pontosTotal      Int      @default(0)
+  acertosPlacar    Int      @default(0)
+  acertosResultado Int      @default(0)
+  acertosOverUnder Int      @default(0)
+  updatedAt        DateTime @updatedAt
+
+  bolao            Bolao    @relation(fields: [bolaoId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bolaoId, userId])
+  @@index([bolaoId, pontosTotal, acertosPlacar, acertosResultado, acertosOverUnder])
+  @@map("bolao_scores")
+}
+```
+
 ### Regras Críticas e Decisões de Design (Onda A)
 1. **User.plan é Cache/Fallback:** O campo `User.plan` funciona nesta fase apenas como um cache e fallback para determinar o cap mensal de pontos por plano. Na Onda B, a fonte de verdade para assinaturas passará a ser o modelo `Subscription`.
 2. **Convenção de Sinal do Amount:** 

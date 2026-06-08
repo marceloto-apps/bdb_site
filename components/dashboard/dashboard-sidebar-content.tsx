@@ -76,13 +76,10 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/analises')} tooltip="Análises">
-              <Link href="/dashboard/analises" className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <LineChart />
-                  <span>Análises</span>
-                </div>
-                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Em breve</span>
+            <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/bolao')} tooltip="Bolão Copa 2026">
+              <Link href="/dashboard/bolao">
+                <Trophy className="text-amber-500 animate-pulse" />
+                <span>Bolão Copa 2026</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

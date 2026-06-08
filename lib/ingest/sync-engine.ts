@@ -95,6 +95,7 @@ export async function syncLeague(options: SyncOptions): Promise<SyncResult> {
           where: { externalId: apiMatch.id.toString() }
         })
 
+        const prevStatus = existingMatch?.status
         const mappedMatch = mapApiMatchToMatch(apiMatch, season.id)
         let matchId = ''
 
@@ -116,6 +117,13 @@ export async function syncLeague(options: SyncOptions): Promise<SyncResult> {
           })
           matchId = created.id
           result.matchesCreated++
+        }
+
+        // Chamar avaliação de palpites na transição para FINISHED
+        const isTransitionToFinished = prevStatus !== 'FINISHED' && mappedMatch.status === 'FINISHED'
+        if (isTransitionToFinished && mappedMatch.fthg !== null && mappedMatch.fthg !== undefined && mappedMatch.ftag !== null && mappedMatch.ftag !== undefined) {
+          const { avaliarPalpitesDePartida } = await import('@/lib/bolao/avaliarPalpite')
+          await avaliarPalpitesDePartida(matchId, mappedMatch.fthg, mappedMatch.ftag)
         }
 
         const matchRecord = await prisma.match.findUnique({

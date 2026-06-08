@@ -332,3 +332,163 @@ Retorna uso atual da API-Football. **ADMIN only.**
   }
 }
 ```
+
+---
+
+## Bolão (Copa 2026)
+
+Módulo de bolão esportivo voltado para a Copa do Mundo 2026.
+
+### GET /api/bolao/[bolaoId]
+
+Retorna os metadados do bolão, a lista de partidas associadas da temporada correspondente e a pontuação consolidada do usuário logado.
+Se o `bolaoId` for `"copa-2026"`, a rota realiza uma auto-inicialização segura no banco de dados (inserindo a competição, temporada e o bolão caso ainda não existam).
+
+**Params:**
+- `bolaoId` (path) — ID identificador do bolão (ex: `copa-2026`)
+
+**Response 200:**
+```json
+{
+  "bolao": {
+    "id": "copa-2026",
+    "nome": "Bolão Copa do Mundo 2026",
+    "competitionId": "comp_6107",
+    "seasonId": "sn_118868",
+    "status": "ABERTO",
+    "premiacao": null,
+    "createdAt": "2026-06-08T16:40:00.000Z",
+    "updatedAt": "2026-06-08T16:40:00.000Z"
+  },
+  "matches": [
+    {
+      "id": "match_1",
+      "seasonId": "sn_118868",
+      "round": 1,
+      "status": "SCHEDULED",
+      "utcDate": "2026-06-11T20:00:00.000Z",
+      "fthg": null,
+      "ftag": null,
+      "homeTeam": { "id": "t_1", "name": "Estados Unidos", "shortName": "USA", "logoUrl": null },
+      "awayTeam": { "id": "t_2", "name": "México", "shortName": "MEX", "logoUrl": null }
+    }
+  ],
+  "userScore": {
+    "id": "score_1",
+    "bolaoId": "copa-2026",
+    "userId": "usr_1",
+    "pontosTotal": 12,
+    "acertosPlacar": 2,
+    "acertosResultado": 3,
+    "acertosOverUnder": 4
+  }
+}
+```
+
+---
+
+### GET /api/bolao/[bolaoId]/palpites
+
+Retorna todos os palpites que o usuário logado realizou para as partidas pertencentes àquele bolão.
+
+**Response 200:**
+```json
+[
+  {
+    "id": "palpite_1",
+    "bolaoId": "copa-2026",
+    "userId": "usr_1",
+    "matchId": "match_1",
+    "golsMandante": 2,
+    "golsVisitante": 1,
+    "palpiteOverUnder": "OVER",
+    "pontos": 0,
+    "avaliado": false,
+    "lockedAt": "2026-06-11T19:00:00.000Z",
+    "createdAt": "2026-06-08T17:00:00.000Z",
+    "updatedAt": "2026-06-08T17:00:00.000Z"
+  }
+]
+```
+
+---
+
+### POST /api/bolao/[bolaoId]/palpite
+
+Cria ou atualiza (upsert) um palpite para uma partida específica.
+O envio do palpite é bloqueado se a partida já iniciou, se o status não for `SCHEDULED` ou se estiver a menos de 1 hora do horário de início da partida (`utcDate`).
+
+**Body:**
+```json
+{
+  "matchId": "match_1",
+  "golsMandante": 2,
+  "golsVisitante": 1,
+  "palpiteOverUnder": "OVER"
+}
+```
+
+**Response 200:**
+```json
+{
+  "id": "palpite_1",
+  "bolaoId": "copa-2026",
+  "userId": "usr_1",
+  "matchId": "match_1",
+  "golsMandante": 2,
+  "golsVisitante": 1,
+  "palpiteOverUnder": "OVER",
+  "pontos": 0,
+  "avaliado": false,
+  "lockedAt": "2026-06-11T19:00:00.000Z",
+  "createdAt": "2026-06-08T17:00:00.000Z",
+  "updatedAt": "2026-06-08T17:00:00.000Z"
+}
+```
+
+**Errors:** 400 (corpo inválido), 401 (não autenticado), 403 (palpites encerrados), 404 (partida não encontrada)
+
+---
+
+### GET /api/bolao/[bolaoId]/ranking
+
+Retorna a tabela de classificação geral de pontos dos participantes do bolão com paginação.
+A ordenação segue rigidamente as seguintes regras:
+1. Maior pontuação total (`pontosTotal`)
+2. Mais acertos de placar exato (`acertosPlacar`)
+3. Mais acertos de resultado 1X2 (`acertosResultado`)
+4. Mais acertos de linha Over/Under (`acertosOverUnder`)
+5. Data de criação da conta de usuário mais antiga (`user.createdAt` ASC) (critério de desempate)
+
+**Query params:**
+| Param | Tipo | Default | Descrição |
+|-------|------|---------|-----------|
+| `page` | number | 1 | Página de resultados |
+| `limit` | number | 20 | Itens por página |
+
+**Response 200:**
+```json
+{
+  "ranking": [
+    {
+      "id": "score_1",
+      "bolaoId": "copa-2026",
+      "userId": "usr_1",
+      "pontosTotal": 15,
+      "acertosPlacar": 3,
+      "acertosResultado": 2,
+      "acertosOverUnder": 4,
+      "user": {
+        "name": "Marcelo",
+        "email": "marcelo@example.com",
+        "image": null,
+        "createdAt": "2026-05-01T10:00:00.000Z"
+      }
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "limit": 20,
+  "pages": 1
+}
+```

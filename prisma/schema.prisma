@@ -84,6 +84,8 @@ model User {
   quizAttempts      QuizAttempt[]
   pointTransactions PointTransaction[]
   coupons           Coupon[]
+  bolaoPalpites     BolaoPalpite[]
+  bolaoScores       BolaoScore[]
 
   @@map("users")
 }
@@ -482,6 +484,7 @@ model Match {
   oddsMovements   OddsMovement[]
   playerStats     PlayerMatchStats[]
   shots           Shot[]
+  bolaoPalpites   BolaoPalpite[]
 
   @@index([seasonId, utcDate])
   @@index([seasonId, round])
@@ -1147,5 +1150,78 @@ model RewardOption {
   couponValidityDays Int     @default(15)
   active             Boolean @default(true)
   order              Int     @default(0)
+}
+
+enum BolaoStatus {
+  ABERTO
+  ENCERRADO
+}
+
+enum PalpiteOverUnder {
+  OVER   // mais de 2.5 gols
+  UNDER  // menos de 2.5 gols
+}
+
+model Bolao {
+  id            String         @id @default(uuid())
+  nome          String
+  competitionId String         // ex: comp_6107
+  seasonId      String         // ex: sn_118868
+  status        BolaoStatus    @default(ABERTO)
+  premiacao     Json?
+  palpites      BolaoPalpite[]
+  scores        BolaoScore[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("boloes")
+}
+
+model BolaoPalpite {
+  id               String           @id @default(uuid())
+  bolaoId          String
+  userId           String
+  matchId          String           // FK -> tabela matches existente
+
+  golsMandante     Int
+  golsVisitante    Int
+  palpiteOverUnder PalpiteOverUnder // manual, independente do placar
+
+  pontos           Int              @default(0)
+  acertouPlacar    Boolean          @default(false)
+  acertouResultado Boolean          @default(false)
+  acertouOverUnder Boolean          @default(false)
+  avaliado         Boolean          @default(false)
+
+  lockedAt         DateTime         // utc_date - 1h, congelado na criação
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  bolao            Bolao            @relation(fields: [bolaoId], references: [id], onDelete: Cascade)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  match            Match            @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([bolaoId, userId, matchId])
+  @@index([matchId])
+  @@index([bolaoId, userId])
+  @@map("bolao_palpites")
+}
+
+model BolaoScore {
+  id               String   @id @default(uuid())
+  bolaoId          String
+  userId           String
+  pontosTotal      Int      @default(0)
+  acertosPlacar    Int      @default(0)
+  acertosResultado Int      @default(0)
+  acertosOverUnder Int      @default(0)
+  updatedAt        DateTime @updatedAt
+
+  bolao            Bolao    @relation(fields: [bolaoId], references: [id], onDelete: Cascade)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([bolaoId, userId])
+  @@index([bolaoId, pontosTotal, acertosPlacar, acertosResultado, acertosOverUnder])
+  @@map("bolao_scores")
 }
 

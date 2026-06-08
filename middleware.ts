@@ -48,8 +48,8 @@ export default auth((req) => {
     }
   }
 
-  // --- APIs protegidas da Fase 2 ---
-  if (pathname.startsWith('/api/ligas') || pathname.startsWith('/api/admin')) {
+  // --- APIs protegidas da Fase 2 e do Bolão ---
+  if (pathname.startsWith('/api/ligas') || pathname.startsWith('/api/admin') || pathname.startsWith('/api/bolao')) {
     if (!session) {
       return NextResponse.json(
         { error: 'UNAUTHORIZED', message: 'Autenticação necessária' },
@@ -68,5 +68,6 @@ export const config = {
     '/api/artigos/:path*',
     '/api/ligas/:path*',
     '/api/admin/:path*',
+    '/api/bolao/:path*',
   ],
 }

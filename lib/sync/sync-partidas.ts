@@ -64,6 +64,8 @@ export async function sincronizarPartidas(seasonId: string): Promise<SyncResult>
         }
 
         const matchExists = await prisma.match.findUnique({ where: { externalId: String(fixture.fixture.id) } })
+        const prevStatus = matchExists?.status
+        let matchId = matchExists ? matchExists.id : ''
 
         if (matchExists) {
           await prisma.match.update({
@@ -72,13 +74,21 @@ export async function sincronizarPartidas(seasonId: string): Promise<SyncResult>
           })
           result.updated++
         } else {
-          await prisma.match.create({
+          const created = await prisma.match.create({
             data: {
               ...matchData,
               externalId: String(fixture.fixture.id)
             }
           })
+          matchId = created.id
           result.created++
+        }
+
+        // Chamar avaliação de palpites na transição para FINISHED
+        const isTransitionToFinished = prevStatus !== 'FINISHED' && matchData.status === 'FINISHED'
+        if (isTransitionToFinished && matchData.fthg !== null && matchData.fthg !== undefined && matchData.ftag !== null && matchData.ftag !== undefined && matchId) {
+          const { avaliarPalpitesDePartida } = await import('@/lib/bolao/avaliarPalpite')
+          await avaliarPalpitesDePartida(matchId, matchData.fthg, matchData.ftag)
         }
       } catch (err: any) {
         result.errors.push(`Erro na fixture ${fixture.fixture.id}: ${err.message}`)

@@ -210,7 +210,7 @@ export default function PointsAdminPage() {
         <div>
           <h1 className="text-2xl font-black text-white flex items-center gap-2">
             <Coins className="text-amber-500 h-6 w-6" />
-            Painel BDB Points Admin
+            Painel BDB Bônus Admin
           </h1>
           <p className="text-zinc-500 text-xs mt-1">
             Configure regras de acúmulo, crie recompensas e aplique ajustes manuais.

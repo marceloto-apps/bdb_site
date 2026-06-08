@@ -1049,6 +1049,48 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
 - [x] **3G.9** — Build sem erros TypeScript strict ou ESLint
 - [x] **3G.10** — Deploy em produção validado
 
+# TASKS — Onda A: Estrutura de Cursos e BDB Bônus (Gamificação)
+
+> **Status:** 🟢 Concluída — Cursos e BDB Bônus implementados com testes de integração e segurança.
+> **Notas:** Motor de gamificação, loja de recompensas, modelos de cursos, dashboards administrativos no CMS e testes integrados no Docker concluídos.
+
+## Subtasks
+
+- [x] **A.1 — Modelagem do Banco de Dados (Prisma Schema)**
+  - [x] Atualizar enum `Plan` para `{ FREE, VIP_BASICO, VIP_PRO }` no [schema.prisma](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/prisma/schema.prisma) e migrar dados legados
+  - [x] Adicionar enums `CourseAccess` e `PointTxType`
+  - [x] Criar modelos `Course`, `Module`, `Lesson`, `LessonProgress`, `Quiz` e `QuizAttempt` no [schema.prisma](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/prisma/schema.prisma)
+  - [x] Criar modelos `PointRule`, `PointTransaction`, `Coupon` e `RewardOption`
+  - [x] Rodar migrations e validar no banco de dados local/produção
+
+- [x] **A.2 — Camada de Domínio de Pontos (lib/points/)**
+  - [x] Implementar configurações e limites de plano em [config.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/config.ts)
+  - [x] Implementar cálculo de saldo por Event Sourcing em [balance.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/balance.ts)
+  - [x] Implementar lógica FIFO para expiração de pontos em [fifo.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/fifo.ts) e [expire.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/expire.ts)
+  - [x] Implementar concessão de pontos com controle de cap e idempotência em [award.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/award.ts)
+  - [x] Implementar resgate de cupons de recompensa com controle de estoque e saldo em [redeem.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/redeem.ts)
+  - [x] Implementar cálculo de status móvel de fidelidade de 12 meses em [status.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/status.ts)
+
+- [x] **A.3 — Rotas de API e Server Actions**
+  - [x] Criar endpoints `/api/points/balance`, `/api/points/history`, `/api/points/redeem` e `/api/points/rewards`
+  - [x] Implementar server action `awardOnAccountEvents` em [auth.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/actions/auth.ts)
+  - [x] Conectar triggers de concessão de pontos à criação de conta (`CRIAR_CONTA`) e completação de perfil (`COMPLETAR_PERFIL`)
+
+- [x] **A.4 — Painéis e Interface do Usuário (UI/UX)**
+  - [x] Desenvolver o dashboard de pontos do usuário em [page.tsx](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/app/(dashboard)/dashboard/bdb-points/page.tsx) (saldo, progresso de nível, recompensas e histórico)
+  - [x] Desenvolver o CMS de administração de pontos em [page.tsx](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/app/(cms)/cms/admin/points/page.tsx) (CRUD de regras, recompensas, ajuste manual e auditoria)
+  - [x] Desenvolver o CMS de administração de cursos em [page.tsx](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/app/(cms)/cms/admin/courses/page.tsx) (CRUD de cursos, módulos, aulas e quizzes)
+  - [x] Atualizar sidebar de navegação do usuário e painel administrativo do CMS
+
+- [x] **A.5 — Segurança e Isolamento de Testes**
+  - [x] Desenvolver script de limpeza transacional para resíduos em produção e deletar a PointRule `TEST_ACTION` com segurança
+  - [x] Configurar Docker MySQL de testes isolado na porta `3307` e criar arquivo `.env.test`
+  - [x] Implementar trava anti-produção em [vitest.setup.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/vitest.setup.ts) e configurar [vitest.config.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/vitest.config.ts) para carregar `.env.test`
+  - [x] Refatorar testes unitários e de integração de domínio para rodar de forma isolada e paralela
+  - [x] Rodar suíte completa de testes de integração e validar build de produção sem erros
+
+---
+
 # TASKS — Fase 4: Multi-Liga + Pagamentos
 > **Status:** ⚪ Pendente — depende da Fase 2
 

@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import type { User } from 'next-auth'
-import { Star, History, User as UserIcon, CreditCard, LogOut } from 'lucide-react'
+import { Star, History, User as UserIcon, CreditCard, LogOut, Coins } from 'lucide-react'
 
 interface DashboardUserMenuProps {
   user: User
@@ -71,6 +71,12 @@ export function DashboardUserMenu({ user }: DashboardUserMenuProps) {
           <Link href="/dashboard/perfil" className="cursor-pointer w-full flex items-center gap-2">
             <UserIcon className="w-4 h-4" />
             <span>Perfil</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/dashboard/bdb-points" className="cursor-pointer w-full flex items-center gap-2">
+            <Coins className="w-4 h-4" />
+            <span>BDB Bônus</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>

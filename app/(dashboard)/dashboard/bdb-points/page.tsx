@@ -180,10 +180,10 @@ export default function BdbPointsPage() {
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
             <Coins className="text-amber-500 h-8 w-8 animate-pulse" />
-            BDB Points
+            BDB Bônus
           </h1>
           <p className="text-zinc-400 mt-1">
-            Acumule pontos lendo análises, completando desafios e troque por cupons exclusivos.
+            Acumule bônus lendo análises, completando desafios e troque por cupons exclusivos.
           </p>
         </div>
       </div>
@@ -380,7 +380,7 @@ export default function BdbPointsPage() {
       <div className="space-y-4">
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <History className="h-5 w-5 text-amber-500" />
-          Histórico de Pontos
+          Histórico de Bônus
         </h2>
 
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 overflow-hidden">
@@ -444,7 +444,7 @@ export default function BdbPointsPage() {
                 ) : (
                   <tr>
                     <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
-                      Nenhuma transação de pontos registrada ainda.
+                      Nenhuma transação de bônus registrada ainda.
                     </td>
                   </tr>
                 )}

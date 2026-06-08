@@ -1,6 +1,6 @@
 # Resumo Executivo — Big Data Bet (Fase 1)
 
-**Data de Atualização:** 05/06/2026
+**Data de Atualização:** 08/06/2026
 
 Este documento apresenta um resumo executivo do progresso atual do projeto Big Data Bet (Fase 1), detalhando o passo a passo de tudo que foi construído até o momento, bem como o que está pendente para a conclusão da fase.
 
@@ -365,7 +365,7 @@ A base do sistema atinge seu ápice de estabilidade técnica. Os testes de build
 
 ---
 
-## Estado Atual do Projeto (04/05/2026)
+## Estado Atual do Projeto (08/06/2026)
 
 | Fase | Status |
 |------|--------|
@@ -375,6 +375,7 @@ A base do sistema atinge seu ápice de estabilidade técnica. Os testes de build
 | Fase 2 — Refatoração Schema Normalizado (Bloco 7) | 100% concluido |
 | Fase 2 — UI Dashboard de Ligas | 100% concluido |
 | Fase 3 — Ferramentas Analiticas | 100% concluida |
+| Onda A — Estrutura de Cursos e BDB Bônus (Gamificação) | 100% concluída (com suíte de testes de integração e higiene de produção) |
 
 ### 23. Desenvolvimento da UI do Dashboard (Fase 2, Blocos Finais) — Maio/2026
 
@@ -542,3 +543,59 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
   - **Nível 1 (Mercado)**: Resultado (1x2), Ambas Marcam (BTTS) e Over/Under 2.5, posicionados à **esquerda**.
   - **Nível 2 (Opções)**: Seleções dinâmicas de acordo com o mercado (Ex: Casa/Empate/Visitante, Sim/Não, Over/Under), posicionadas à **direita**.
 - No desktop, os seletores de nível 1 e 2 alinham-se horizontalmente na mesma linha (otimizando espaço vertical), empilhando-se de forma flexível em telas mobile.
+
+### 33. Onda A — Estrutura de Cursos e BDB Bônus (Gamificação) — 07/06/2026
+
+**Modelagem do Banco de Dados (Prisma Schema):**
+- **Enum Plan Atualizado:** Atualização do enum de planos para `{ FREE, VIP_BASICO, VIP_PRO }` no [schema.prisma](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/prisma/schema.prisma) com migração segura de dados executada manualmente em três etapas.
+- **Novos Enums de Domínio:** Introdução dos enums `CourseAccess` (tipo de acesso a cursos) e `PointTxType` (crédito/débito/expiração).
+- **Tabelas de Cursos:** Implementação dos modelos `Course`, `Module`, `Lesson`, `LessonProgress` (progresso do aluno por aula), `Quiz` e `QuizAttempt` para suporte ao portal de aulas.
+- **Tabelas de Pontuação:** Criação de `PointRule` (configuração de regras de ganho de pontos), `PointTransaction` (extrato de transações), `Coupon` (cupons de desconto ou prêmios resgatados) e `RewardOption` (opções de recompensas físicas/digitais).
+
+**Regras de Negócio e Domínio de Pontos (`lib/points/`):**
+- **Configuração (`config.ts`):** Estabelecidas as faixas de status de fidelidade (`'Bronze' | 'Prata' | 'Ouro' | 'Diamante'`) com base nos pontos acumulados nos últimos 12 meses e limites/tetos mensais de acúmulo parametrizados por plano em [config.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/config.ts).
+- **Saldo e Expiração (`balance.ts`, `fifo.ts`, `expire.ts`):** Implementada a função `getBalance` (no [balance.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/balance.ts)) para somar pontos via Event Sourcing direto e o motor `getRemainingBalances` (no [fifo.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/fifo.ts)) usando a lógica PEPS (FIFO - Primeiro a Entrar, Primeiro a Sair) para controle de expiração rigorosa em janela de 60 dias (no [expire.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/expire.ts)).
+- **Concessão e Idempotência (`award.ts`):** Concessão de pontos controlada em [award.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/award.ts) com proteção contra ganhos duplicados através da chave composta de idempotência (`idempotencyKey`), controle de limite diário (cap) e truncamento caso exceda o teto mensal da conta.
+- **Resgate de Prêmios (`redeem.ts`):** Fluxo transacional `redeemReward` em [redeem.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/redeem.ts) contendo travas de estoque, limite de uso por usuário, expiração da recompensa e débito instantâneo no saldo de pontos.
+
+**APIs e Integrações:**
+- **Endpoints de Pontos:** Criadas as rotas de API `/api/points/balance`, `/api/points/history`, `/api/points/redeem` e `/api/points/rewards`.
+- **Gatilhos de Ações (Server Action):** Implementada a action `awardOnAccountEvents` em [auth.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/points/actions/auth.ts) acoplada aos fluxos de criação de conta (`CRIAR_CONTA`) por credenciais/OAuth e edição do perfil do usuário (`COMPLETAR_PERFIL`).
+
+**Painéis de Interface (UI/UX) e Administração:**
+- **Área do Usuário (/dashboard/bdb-points):** Desenvolvimento do painel completo [page.tsx](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/app/(dashboard)/dashboard/bdb-points/page.tsx) com visualização do progresso de nível, barra de fidelidade, histórico detalhado de pontos ganhos/resgatados e vitrine de cupons de recompensa.
+- **CMS Administrativo de Pontos (/cms/admin/points):** Interface administrativa [page.tsx](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/app/(cms)/cms/admin/points/page.tsx) permitindo aos administradores criar/editar regras de pontuação, gerenciar estoque de recompensas, realizar ajustes de saldo manuais e auditar transações do sistema.
+- **CMS de Cursos (/cms/admin/courses):** CRUD completo em [page.tsx](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/app/(cms)/cms/admin/courses/page.tsx) para gerenciar cursos, módulos estruturados, vídeo-aulas e a criação de quizzes interativos (perguntas e respostas com validação).
+
+### 34. Correções Pós-Onda A — Higienização, Isolamento de Testes e Rotação de Senha — 08/06/2026
+
+**Higiene do Repositório (git):**
+- Os scripts e arquivos temporários de teste na raiz do projeto (`get-slugs.js`, `test-groupby.ts` e `validate.js`) foram devidamente removidos do cache do Git (`git rm --cached`) e inseridos nas regras de exclusão do `.gitignore` para manter a limpeza do repositório.
+- Atualizado o `.gitignore` para cobrir de forma robusta `.env.test`, a pasta temporária de auditoria `/scripts/_local/` e todos os arquivos de log (`*.log`).
+- Realizada auditoria de segurança sob o histórico e arquivos do repositório em busca de chaves ou credenciais vazadas. O resultado foi limpo.
+
+**Remoção de Resíduos na Produção:**
+- Identificada a regra de pontos temporária `TEST_ACTION` (ID: `cmq3zc441000110im6br7nd0y`) no banco de produção.
+- Desenvolvido e executado o script `scripts/_local/cleanup-test-residue.ts` encapsulado em transação Prisma (`prisma.$transaction`) com uma trava que abortaria o processo caso alguma transação estivesse associada à regra. A PointRule foi removida com sucesso (0 transações associadas detectadas).
+
+**Validação de Migration do Enum Plan:**
+- O comando `migrate deploy` foi executado no banco MySQL de testes do Docker totalmente do zero, validando de forma concluiva toda a sequência de DDL de migração e a transição segura do enum `Plan` (a-b-c-d) em `users` e `articles`.
+
+**Ambiente de Testes Isolado (Docker):**
+- Criada a configuração local `docker-compose.test.yml` na porta `3307` e o arquivo `.env.test` de conexão de testes locais (`127.0.0.1:3307/bdb_test`).
+- O arquivo `vitest.setup.ts` foi estendido com um ganho de segurança (`beforeAll`) para bloquear a execução se a `DATABASE_URL` não apontar para a porta de teste `3307` no host local, prevenindo qualquer escrita acidental em bancos de produção.
+- Refatorado `tests/points/domain.test.ts` para abolir os `upserts` defensivos que sobreviviam a resíduos, adotando criação direta com actions prefixed de teste (`__TEST_CAPPED__` e `__TEST_BIG__`) e limpeza sistemática de tabelas antes de cada teste (`beforeEach`).
+- Adicionado teste integrado concorrente com `Promise.all` simulando chamadas paralelas para provar a idempotência estrita da ação `COMPLETAR_PERFIL`.
+- Todos os 6 testes de integração de pontos passaram com sucesso no Docker em apenas 493ms.
+
+**Validação de Rotação de Senha:**
+- Após o usuário efetuar a rotação da senha de produção no cPanel Hostgator e atualizar os arquivos `.env`/`.env.local` locais e as variáveis de ambiente da Vercel, o script `scripts/_local/check-conn.ts` validou com sucesso a conexão (`Conexão de produção: OK`). O script de validação foi removido após o teste.
+
+**Auditoria e Tipagem de Domínio:**
+- O cálculo de saldo em tempo real no `lib/points/balance.ts` foi validado como Event Sourcing puro via `SUM` agregado (sem FIFO redundante).
+- O tipo de retorno de fidelidade `getStatus` foi refatorado para tipagem estrita com união de strings literais `'Bronze' | 'Prata' | 'Ouro' | 'Diamante'` (tipo `BDBStatus`).
+- A PointRule `CONFIRMAR_EMAIL` foi validada como regra legítima de seed e placeholder de desenvolvimento, sendo adicionado um comentário `// TODO` na rota de cadastro e atualizado em `docs/SPECS.md`.
+
+**Build e Testes Unitários de Produção:**
+- Rodada a suíte completa de testes unitários que não dependem do banco de dados (25 arquivos, 113 testes), com todos eles passando com sucesso.
+- O build de produção (`npm run build`) compilou com sucesso na Vercel e localmente sem qualquer erro de tipagem.

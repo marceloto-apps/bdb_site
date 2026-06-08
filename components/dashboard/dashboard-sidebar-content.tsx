@@ -60,14 +60,7 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/bdb-points'} tooltip="BDB Points">
-              <Link href="/dashboard/bdb-points">
-                <Coins />
-                <span>BDB Points</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+
         </SidebarMenu>
       </SidebarGroup>
 
@@ -260,10 +253,10 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/points')} tooltip="Points Admin">
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/points')} tooltip="Bônus Admin">
                 <Link href="/cms/admin/points">
                   <Coins />
-                  <span>Points Admin</span>
+                  <span>Bônus Admin</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

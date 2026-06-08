@@ -59,6 +59,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
      * Envia email de boas-vindas.
      */
     async createUser({ user }) {
+      if (user.id) {
+        try {
+          const { awardPoints } = await import('@/lib/points/award')
+          await awardPoints(user.id, 'CRIAR_CONTA')
+        } catch (err) {
+          console.error('[Auth] Erro ao conceder pontos de boas-vindas (Google):', err)
+        }
+      }
       if (user.email) {
         const { subject, htmlContent } = welcomeEmailTemplate({
           name: user.name ?? 'usuário',

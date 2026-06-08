@@ -26,7 +26,8 @@ import {
   Tags,
   LineChart,
   RefreshCw,
-  Gauge
+  Gauge,
+  Coins
 } from 'lucide-react'
 
 interface DashboardSidebarContentProps {
@@ -56,6 +57,14 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
               <Link href="/dashboard">
                 <LayoutDashboard />
                 <span>Visão Geral</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === '/dashboard/bdb-points'} tooltip="BDB Points">
+              <Link href="/dashboard/bdb-points">
+                <Coins />
+                <span>BDB Points</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -247,6 +256,22 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
                 <Link href="/dashboard/admin/quota">
                   <Gauge />
                   <span>Quota API</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/points')} tooltip="Points Admin">
+                <Link href="/cms/admin/points">
+                  <Coins />
+                  <span>Points Admin</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/courses')} tooltip="Cursos Admin">
+                <Link href="/cms/admin/courses">
+                  <GraduationCap />
+                  <span>Cursos Admin</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

@@ -89,26 +89,3 @@ ALTER TABLE `Season`
   ADD COLUMN `syncStatus` VARCHAR(50) NULL;
 
 
--- ============================================================
--- S.4 — Registrar migration no Prisma
--- ============================================================
-
-INSERT INTO `_prisma_migrations` (
-  `id`,
-  `checksum`,
-  `finished_at`,
-  `migration_name`,
-  `logs`,
-  `rolled_back_at`,
-  `started_at`,
-  `applied_steps_count`
-) VALUES (
-  UUID(),
-  'manual_fase_s_ingest_infra_20260507',
-  NOW(3),
-  '20260507_fase_s_ingest_infrastructure',
-  NULL,
-  NULL,
-  NOW(3),
-  1
-);

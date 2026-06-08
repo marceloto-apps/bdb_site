@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { atualizarPerfilSchema, excluirContaSchema } from '@/lib/schemas/perfil'
+import { awardPoints } from '@/lib/points/award'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { Prisma } from '@prisma/client'
@@ -21,6 +22,13 @@ export async function PATCH(req: Request) {
       },
       select: { name: true, image: true },
     })
+
+    // Conceder pontos por completar/atualizar perfil (idempotente)
+    try {
+      await awardPoints(user.id, 'COMPLETAR_PERFIL')
+    } catch (err) {
+      console.error('[Dashboard Perfil API] Erro ao conceder pontos de perfil:', err)
+    }
 
     return NextResponse.json({ ok: true, user: updatedUser })
   } catch (error) {

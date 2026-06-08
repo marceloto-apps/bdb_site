@@ -2232,6 +2232,44 @@ const FERRAMENTAS = [
 - `__tests__/ferramentas/distribuicao/` — gram-charlier.test.ts, medidas-centrais.test.ts
 - Testar edge cases: inputs extremos, banca zero, odds 1.01, desvio padrão mínimo
 
+# SPECS — Onda A: Cursos e BDB Points
+
+## 1. BDB Points (Sistema de Gamificação)
+
+### Regras de Negócio e Domínio
+- **Modelagem Event Sourcing Puro:** Nenhuma coluna ou tabela armazena o "saldo acumulado" dos usuários. O saldo é calculado sob demanda somando o valor de `amount` em todas as transações vigentes (`expiresAt IS NULL OR expiresAt > now()`).
+- **Sinal das Transações:**
+  - Valores positivos (`amount > 0`): `GANHO` e `AJUSTE` positivo.
+  - Valores negativos (`amount < 0`): `RESGATE`, `EXPIRACAO`, `ESTORNO` e `AJUSTE` negativo.
+- **Auditoria de Estornos:** O campo `reverted` serve exclusivamente para controle de auditoria de estornos de transações. Ele não afeta o cálculo do saldo do usuário. Um estorno de transação passada é representado lançando uma nova transação com tipo `ESTORNO` e `amount` negativo.
+- **Validação de Nível e Status:**
+  - Níveis calculados somando apenas transações de tipo `GANHO` com `createdAt >= now() - 12 meses` (critério móvel de 12 meses).
+  - Escalonamento: Bronze (0+ pts), Prata (500+ pts), Ouro (2000+ pts), Diamante (5000+ pts).
+- **Expiração de Pontos:**
+  - Pontos do tipo `GANHO` expiram em 12 meses a partir da data de criação (`createdAt`).
+  - O cálculo da expiração é processado de forma FIFO. O saldo remanescente de um ganho expirado é debitado gerando uma transação do tipo `EXPIRACAO` com valor negativo.
+- **Garantia de Idempotência:** Controlada por `idempotencyKey` única no banco (ex: `CRIAR_CONTA:userId` ou `RESGATE:userId:rewardOptionId:txId`). Erros Prisma `P2002` no insert são capturados e tratados como no-op.
+- **Limites de Acúmulo:**
+  - `dailyCap` e `monthlyCap` limitam a quantidade de transações geradas por regra.
+  - O teto mensal por plano limita a soma dos pontos ganhos no mês corrente: `FREE` (300 pts), `VIP_BASICO` (1000 pts), `VIP_PRO` (2500 pts). Pontos que extrapolam o limite são truncados.
+- **Fluxo de Confirmação de E-mail (TODO):** O fluxo de verificação de e-mail não existe no aplicativo atual. A regra de pontuação `CONFIRMAR_EMAIL` já está semeada e ativa no banco de dados (20 pontos), aguardando o trigger do disparo. Quando a confirmação de e-mail for implementada (por exemplo, via link mágico ou código de verificação), deverá acoplar o método `awardPoints(userId, 'CONFIRMAR_EMAIL')` com chave de idempotência exclusiva para garantir que os pontos de confirmação sejam concedidos apenas uma única vez por usuário.
+
+
+### Endpoints da API
+- `GET /api/points/balance`: Retorna saldo, status atual, próximo status, pontos restantes para progressão e quantidade de pontos expirando em 60 dias.
+- `GET /api/points/history`: Retorna o histórico de transações de pontos paginado e validado com Zod.
+- `POST /api/points/redeem`: Recebe o ID da recompensa, recalcula o saldo transacionalmente no banco, valida e debita os pontos criando o cupom correspondente com prazo de validade configurado.
+- `GET /api/points/rewards`: Retorna a lista de recompensas ativas no catálogo.
+
+## 2. Cursos e Avaliações (Metadados)
+
+### Estrutura
+- **Course -> Module -> Lesson -> Quiz -> QuizAttempt**
+- Admins gerenciam os metadados no CMS Admin (`/cms/admin/courses`), ordenando os módulos e as aulas de forma manual.
+- Suporta a anexação de Quizzes em aulas, com definição de pontuação mínima para aprovação e banco de questões em formato JSON.
+
+---
+
 # SPECS — Fase 4: Multi-Liga + Pagamentos
 # SPECS — Fase 5: Curso + Backtest
 # SPECS — Fase 6: Automações

@@ -13,7 +13,9 @@
     "test:poisson": "vitest run tests/ferramentas/over-under-25/poisson-25.test.ts",
     "test:juice": "vitest run tests/ferramentas/over-under-25/juice-25.test.ts",
     "test:ui": "vitest --ui",
-    "db:seed:leagues": "tsx prisma/seed-leagues.ts"
+    "db:seed:leagues": "tsx prisma/seed-leagues.ts",
+    "test:db:up": "docker compose -f docker-compose.test.yml up -d",
+    "test:db:down": "docker compose -f docker-compose.test.yml down -v"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

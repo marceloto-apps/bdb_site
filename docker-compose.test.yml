@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  mysql-test:
+    image: mysql:8.0
+    container_name: bdb-test-mysql
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: testpwd
+      MYSQL_DATABASE: bdb_test
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ptestpwd"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

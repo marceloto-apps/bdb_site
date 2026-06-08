@@ -293,8 +293,19 @@ Todo dado buscado na API é imediatamente salvo no banco. Buscas subsequentes l�
 
 ---
 
+# Onda A: Estrutura de Cursos e BDB Points (Gamificação)
+
+**Objetivo:** Implementar o motor de gamificação por acúmulo de pontos (BDB Points) e a modelagem estrutural (metadados) para cursos e quizzes.
+
+## Componentes da Onda A
+1. **Gamificação (BDB Points):** Event sourcing puro para saldo e status móvel de 12 meses, expiração FIFO, controle de concorrência e idempotência.
+2. **Loja de Recompensas:** Troca de pontos acumulados por cupons de desconto para assinaturas e cursos.
+3. **Estrutura de Cursos:** Modelos de Curso, Módulo, Aula e Quiz (perguntas/respostas) para a área de membros.
+4. **Painéis Administrativos:** Gerenciamento de regras de pontos, opções de recompensa e estrutura de cursos diretamente no CMS.
+
+---
+
 # Fase 6: Automações + Bases Históricas
-- Bull + Redis para fila de processamento
 - Ingestão automática football-data via cron
 - Bases históricas para múltiplas temporadas
 - Otimização de índices para queries de larga escala

@@ -1,0 +1,49 @@
+=== RELATÓRIO DE AUDITORIA E LIMPEZA DE RESÍDUOS ===
+
+--------------------------------------------------
+ESTADO ANTERIOR (AUDITORIA INICIAL - 07/06/2026)
+--------------------------------------------------
+> Total de usuários no banco: 117
+
+> PointRules de teste encontradas (1):
+  - ID: cmq3zc441000110im6br7nd0y | Action: TEST_ACTION | Points: 100 | Active: true
+
+> Todas as PointRules no banco (7):
+  - Action: COMPLETAR_PERFIL | Points: 30 | Active: true
+  - Action: CONFIRMAR_EMAIL | Points: 20 | Active: true
+  - Action: CRIAR_CONTA | Points: 50 | Active: true
+  - Action: FAVORITAR_CONTEUDO | Points: 5 | Active: true
+  - Action: LER_ANALISE | Points: 10 | Active: true
+  - Action: LER_ESTUDO | Points: 10 | Active: true
+  - Action: TEST_ACTION | Points: 100 | Active: true
+
+> PointTransactions de teste encontradas (0)
+> Users de teste encontrados (0)
+
+--------------------------------------------------
+AÇÃO DE LIMPEZA EXECUTADA (07/06/2026)
+--------------------------------------------------
+- Executado: scripts/_local/cleanup-test-residue.ts
+- Transação Prisma: Atômica (prisma.$transaction)
+- Trava de Segurança: Confirmado 0 transações associadas antes de deletar.
+- Resultado: PointRule 'TEST_ACTION' (ID: cmq3zc441000110im6br7nd0y) deletada com sucesso.
+
+--------------------------------------------------
+ESTADO ATUAL (PÓS-LIMPEZA - 07/06/2026)
+--------------------------------------------------
+> Total de usuários no banco: 117
+
+> PointRules de teste encontradas (0):
+
+> Todas as PointRules no banco (6):
+  - Action: COMPLETAR_PERFIL | Points: 30 | Active: true
+  - Action: CONFIRMAR_EMAIL | Points: 20 | Active: true
+  - Action: CRIAR_CONTA | Points: 50 | Active: true
+  - Action: FAVORITAR_CONTEUDO | Points: 5 | Active: true
+  - Action: LER_ANALISE | Points: 10 | Active: true
+  - Action: LER_ESTUDO | Points: 10 | Active: true
+
+> PointTransactions de teste encontradas (0)
+> Users de teste encontrados (0)
+
+=== FIM DO RELATÓRIO ===

@@ -24,6 +24,7 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
 
 # local env files (PROTEÇÃO COMPLETA)
 .env
@@ -56,3 +57,10 @@ tsc_output.txt
 
 # OS
 Thumbs.db
+
+# Ambiente de Teste e Scripts Locais
+.env.test
+/scripts/_local/
+get-slugs.js
+test-groupby.ts
+validate.js

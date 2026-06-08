@@ -27,9 +27,8 @@ enum Role {
 // Planos de assinatura disponíveis
 enum Plan {
   FREE
-  BASICO
-  PRO
-  PREMIUM
+  VIP_BASICO
+  VIP_PRO
 }
 
 // Status do workflow de artigos no CMS
@@ -73,14 +72,18 @@ model User {
   newsletterOptIn Boolean           @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  accounts        Account[]
-  revisions       ArticleRevision[]
-  articles        Article[]         @relation("ArticleAuthor")
-  favorites       Favorite[]
-  matchImports    MatchImport[]
-  readHistory     ReadHistory[]
-  sessions        Session[]
-  subscription    Subscription?
+  accounts          Account[]
+  revisions         ArticleRevision[]
+  articles          Article[]         @relation("ArticleAuthor")
+  favorites         Favorite[]
+  matchImports      MatchImport[]
+  readHistory       ReadHistory[]
+  sessions          Session[]
+  subscription      Subscription?
+  lessonProgress    LessonProgress[]
+  quizAttempts      QuizAttempt[]
+  pointTransactions PointTransaction[]
+  coupons           Coupon[]
 
   @@map("users")
 }
@@ -983,3 +986,166 @@ model IngestJob {
   @@index([competitionId, seasonId])
   @@map("ingest_jobs")
 }
+
+// ══════════════════════════════════════════
+// CURSOS — Fase 5 (estrutura)
+// ══════════════════════════════════════════
+
+enum CourseAccess {
+  GRATIS
+  INCLUSO_BASICO
+  INCLUSO_PRO
+  AVULSO
+}
+
+model Course {
+  id               String       @id @default(cuid())
+  slug             String       @unique
+  title            String
+  description      String?      @db.Text
+  coverUrl         String?
+  access           CourseAccess
+  priceCents       Int?         // preço avulso em centavos (apenas se AVULSO)
+  pointsUnlockCost Int?         // custo em BDB Points para desbloquear (opcional)
+  published        Boolean      @default(false)
+  order            Int          @default(0)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  modules          Module[]
+
+  @@index([published])
+}
+
+model Module {
+  id        String   @id @default(cuid())
+  courseId  String
+  title     String
+  order     Int      @default(0)
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons   Lesson[]
+
+  @@index([courseId])
+}
+
+model Lesson {
+  id          String           @id @default(cuid())
+  moduleId    String
+  title       String
+  order       Int              @default(0)
+  videoUrl    String?          // preenchido na Onda C (player)
+  contentHtml String?          @db.Text
+  durationSec Int?
+  module      Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress    LessonProgress[]
+  quiz        Quiz?
+
+  @@index([moduleId])
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String
+  watchedPct  Float     @default(0)   // 0 a 100
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+}
+
+model Quiz {
+  id        String        @id @default(cuid())
+  lessonId  String        @unique
+  passScore Int           @default(70) // % mínimo para aprovação
+  questions Json          // [{ pergunta, opcoes[], indiceCorreto }]
+  lesson    Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  attempts  QuizAttempt[]
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  quizId    String
+  score     Int      // % acertos
+  passed    Boolean
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([userId, quizId])
+}
+
+// ══════════════════════════════════════════
+// BDB POINTS — Fase 5.5 (estrutura)
+// ══════════════════════════════════════════
+
+enum PointTxType {
+  GANHO
+  RESGATE
+  EXPIRACAO
+  ESTORNO
+  AJUSTE
+}
+
+model PointRule {
+  id          String   @id @default(cuid())
+  action      String   @unique
+  label       String
+  points      Int
+  dailyCap    Int?
+  monthlyCap  Int?
+  countsToCap Boolean  @default(true)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model PointTransaction {
+  id             String      @id @default(cuid())
+  userId         String
+  type           PointTxType
+  amount         Int         // positivo para GANHO; NEGATIVO para RESGATE/EXPIRACAO/ESTORNO
+  reason         String
+  refType        String?
+  refId          String?
+  expiresAt      DateTime?   // preenchido apenas em GANHO (createdAt + 12 meses)
+  reverted       Boolean     @default(false) // APENAS auditoria — não usar no cálculo
+  idempotencyKey String?     @unique // ex.: "CRIAR_CONTA:userId", "ESTORNO:txId"
+  createdAt      DateTime    @default(now())
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([userId, type])
+}
+
+model Coupon {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  userId         String
+  discountPct    Int
+  appliesTo      String
+  pointsCost     Int
+  expiresAt      DateTime
+  usedAt         DateTime?
+  stripeCouponId String?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model RewardOption {
+  id                 String  @id @default(cuid())
+  label              String
+  pointsCost         Int
+  discountPct        Int
+  appliesTo          String
+  couponValidityDays Int     @default(15)
+  active             Boolean @default(true)
+  order              Int     @default(0)
+}
+

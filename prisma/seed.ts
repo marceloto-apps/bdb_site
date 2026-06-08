@@ -31,16 +31,65 @@ async function main() {
   // Usuário Admin (mesmo email do OAuth)
   await prisma.user.upsert({
     where: { email: "captariatech@gmail.com" },
-    update: { role: "ADMIN", plan: "PREMIUM" },
+    update: { role: "ADMIN", plan: "VIP_PRO" },
     create: {
       email: "captariatech@gmail.com",
       name: "Marcelo",
       role: "ADMIN",
-      plan: "PREMIUM",
+      plan: "VIP_PRO",
     },
   });
 
-  console.log("✅ Admin criado");
+  console.log("✅ Admin criado/atualizado com plano VIP_PRO");
+
+  // 1. Regras de Pontos
+  const pointRules = [
+    { action: "CRIAR_CONTA", label: "Criar conta", points: 50, dailyCap: null, monthlyCap: null, countsToCap: true },
+    { action: "CONFIRMAR_EMAIL", label: "Confirmar e-mail", points: 20, dailyCap: null, monthlyCap: null, countsToCap: true },
+    { action: "COMPLETAR_PERFIL", label: "Completar perfil", points: 30, dailyCap: null, monthlyCap: null, countsToCap: true },
+    { action: "LER_ESTUDO", label: "Ler estudo", points: 10, dailyCap: 5, monthlyCap: null, countsToCap: true },
+    { action: "LER_ANALISE", label: "Ler análise", points: 10, dailyCap: 5, monthlyCap: null, countsToCap: true },
+    { action: "FAVORITAR_CONTEUDO", label: "Favoritar conteúdo", points: 5, dailyCap: 10, monthlyCap: null, countsToCap: true }
+  ];
+
+  for (const rule of pointRules) {
+    await prisma.pointRule.upsert({
+      where: { action: rule.action },
+      update: {
+        label: rule.label,
+        points: rule.points,
+        dailyCap: rule.dailyCap,
+        monthlyCap: rule.monthlyCap,
+        countsToCap: rule.countsToCap,
+      },
+      create: rule,
+    });
+  }
+  console.log("✅ Regras de pontos criadas/atualizadas");
+
+  // 2. Opções de Recompensa
+  const rewardOptions = [
+    { label: "10% off na assinatura", pointsCost: 500, discountPct: 10, appliesTo: "SUBSCRIPTION", couponValidityDays: 15, active: true },
+    { label: "20% off na assinatura", pointsCost: 1200, discountPct: 20, appliesTo: "SUBSCRIPTION", couponValidityDays: 15, active: true },
+    { label: "15% off em curso avulso", pointsCost: 800, discountPct: 15, appliesTo: "COURSE", couponValidityDays: 30, active: true }
+  ];
+
+  for (const reward of rewardOptions) {
+    const existing = await prisma.rewardOption.findFirst({
+      where: { label: reward.label }
+    });
+    if (existing) {
+      await prisma.rewardOption.update({
+        where: { id: existing.id },
+        data: reward,
+      });
+    } else {
+      await prisma.rewardOption.create({
+        data: reward,
+      });
+    }
+  }
+  console.log("✅ Opções de recompensa criadas/atualizadas");
 
   // Tags
   const tags = [

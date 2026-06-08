@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth-helpers'
 import { prisma } from '@/lib/prisma'
 import { atualizarPerfilSchema } from '@/lib/validations/usuario'
+import { awardPoints } from '@/lib/points/award'
 import { z } from 'zod'
 
 export async function PATCH(req: Request) {
@@ -21,6 +22,13 @@ export async function PATCH(req: Request) {
         image: true,
       },
     })
+
+    // Conceder pontos por completar/atualizar perfil (idempotente)
+    try {
+      await awardPoints(user.id, 'COMPLETAR_PERFIL')
+    } catch (err) {
+      console.error('[Perfil API] Erro ao conceder pontos de perfil:', err)
+    }
 
     return NextResponse.json({ success: true, user: updatedUser })
   } catch (error) {

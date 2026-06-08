@@ -921,30 +921,199 @@ model ApiQuotaLog {
 
 ---
 
-## Modelos Reservados — Fase 4 (Não Implementar Ainda)
+## Modelos de Cursos e BDB Points — Onda A
 
-> ⚠️ **Aviso:** Os modelos abaixo estão documentados apenas para preservar a consistência das relações já adicionadas ao `User`. **Não criar migration nem implementar até a Fase 4 ser oficialmente iniciada.**
+### Cursos
 
-### `LegacyAccess`
-
-Flag de acesso vitalício para assinantes legados do Hubla. Garante que usuários que assinaram o produto vitalício antes da migração para Stripe nunca percam o acesso.
-
+#### `Course`
+Estrutura dos cursos da plataforma (metadados).
 ```prisma
-model LegacyAccess {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  source    String   // "hubla" (futuramente outras origens)
-  grantedAt DateTime @default(now())
-  notes     String?  @db.Text
+model Course {
+  id               String           @id @default(cuid())
+  slug             String           @unique
+  title            String
+  description      String?          @db.Text
+  coverUrl         String?
+  access           CourseAccess
+  priceCents       Int?
+  pointsUnlockCost Int?
+  published        Boolean          @default(false)
+  order            Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  modules          Module[]
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([source])
+  @@index([published])
 }
 ```
 
-**Regras de negócio (a serem aplicadas na Fase 4):**
-- Registro imutável após criação
-- Importação inicial via script admin a partir de lista de e-mails do Hubla
-- Middleware deve verificar `LegacyAccess` antes de exigir plano pago
-- Cancelamento de assinatura Stripe **não** afeta `LegacyAccess`
+#### `Module`
+Módulos do curso.
+```prisma
+model Module {
+  id       String   @id @default(cuid())
+  courseId String
+  title    String
+  order    Int      @default(0)
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons  Lesson[]
+
+  @@index([courseId])
+}
+```
+
+#### `Lesson`
+Aulas de cada módulo.
+```prisma
+model Lesson {
+  id             String           @id @default(cuid())
+  moduleId       String
+  title          String
+  order          Int              @default(0)
+  videoUrl       String?
+  contentHtml    String?          @db.Text
+  durationSec    Int?
+  module         Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress       LessonProgress[]
+  quiz           Quiz?
+
+  @@index([moduleId])
+}
+```
+
+#### `LessonProgress`
+Progresso de aula por usuário.
+```prisma
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String
+  watchedPct  Double    @default(0)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@unique([userId, lessonId])
+}
+```
+
+#### `Quiz`
+Quiz associado a uma aula.
+```prisma
+model Quiz {
+  id          String        @id @default(cuid())
+  lessonId    String        @unique
+  passScore   Int           @default(70)
+  questions   Json
+  lesson      Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  attempts    QuizAttempt[]
+}
+```
+
+#### `QuizAttempt`
+Tentativa de quiz por usuário.
+```prisma
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  quizId    String
+  score     Int
+  passed    Boolean
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz      Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([userId, quizId])
+}
+```
+
+### BDB Points
+
+#### `PointRule`
+Regras de concessão de pontos por ações na plataforma.
+```prisma
+model PointRule {
+  id          String   @id @default(cuid())
+  action      String   @unique
+  label       String
+  points      Int
+  dailyCap    Int?
+  monthlyCap  Int?
+  countsToCap Boolean  @default(true)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+```
+
+#### `PointTransaction`
+Transações de pontos do usuário (Event Sourcing puro).
+```prisma
+model PointTransaction {
+  id             String      @id @default(cuid())
+  userId         String
+  type           PointTxType
+  amount         Int
+  reason         String
+  refType        String?
+  refId          String?
+  expiresAt      DateTime?
+  reverted       Boolean     @default(false)
+  idempotencyKey String?     @unique
+  createdAt      DateTime    @default(now())
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([userId, type])
+}
+```
+
+#### `Coupon`
+Cupons gerados a partir do resgate de recompensas.
+```prisma
+model Coupon {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  userId         String
+  discountPct    Int
+  appliesTo      String
+  pointsCost     Int
+  expiresAt      DateTime
+  usedAt         DateTime?
+  stripeCouponId String?
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+```
+
+#### `RewardOption`
+Catálogo de opções de recompensa para troca por pontos.
+```prisma
+model RewardOption {
+  id                 String  @id @default(cuid())
+  label              String
+  pointsCost         Int
+  discountPct        Int
+  appliesTo          String
+  couponValidityDays Int     @default(15)
+  active             Boolean @default(true)
+  order              Int     @default(0)
+}
+```
+
+### Regras Críticas e Decisões de Design (Onda A)
+1. **User.plan é Cache/Fallback:** O campo `User.plan` funciona nesta fase apenas como um cache e fallback para determinar o cap mensal de pontos por plano. Na Onda B, a fonte de verdade para assinaturas passará a ser o modelo `Subscription`.
+2. **Convenção de Sinal do Amount:** 
+   - `GANHO` e `AJUSTE` positivo gravam `amount > 0`.
+   - `RESGATE`, `EXPIRACAO`, `ESTORNO` e `AJUSTE` negativo gravam `amount < 0`.
+   - O saldo do usuário é obtido através de `SUM(amount)` de todas as transações ativas, de forma direta e sem ramificação.
+3. **reverted é Apenas Auditoria:** O campo `reverted` serve exclusivamente para auditoria. Ele **NÃO** entra nos cálculos de saldo ou status. A neutralização de transações passadas ocorre puramente pelo lançamento de uma nova transação do tipo `ESTORNO` com valor negativo correspondente.
+4. **Critérios Divergentes:**
+   - **Saldo:** Soma de todas as transações do usuário onde `expiresAt IS NULL OR expiresAt > now()`.
+   - **Status:** Soma apenas de transações do tipo `GANHO` onde `createdAt >= now() - 12 meses`.
+5. **Garantia de Idempotência:** Controlada no banco através do campo `idempotencyKey` único e tratamento de erro de violação de restrição única `P2002` no Prisma, impedindo duplicidades.

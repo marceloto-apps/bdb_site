@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { cadastroSchema } from '@/lib/validations/auth'
+import { awardPoints } from '@/lib/points/award'
 import { sendEmail } from '@/lib/email/brevo'
 import { welcomeEmailTemplate } from '@/lib/email/templates/welcome'
 
@@ -56,6 +57,17 @@ export async function POST(req: NextRequest) {
         plan: 'FREE',
       },
     })
+
+    // Conceder pontos de criação de conta (idempotente)
+    try {
+      await awardPoints(user.id, 'CRIAR_CONTA')
+    } catch (err) {
+      console.error('[Cadastro] Erro ao conceder pontos de boas-vindas:', err)
+    }
+
+    // TODO: Quando o fluxo de confirmação de e-mail for implementado no sistema,
+    // acoplar a concessão de pontos: await awardPoints(user.id, 'CONFIRMAR_EMAIL')
+
 
     // 5. Enviar email de boas-vindas (assíncrono, não bloqueia)
     if (user.email) {

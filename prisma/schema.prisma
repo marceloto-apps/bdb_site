@@ -1208,20 +1208,21 @@ model BolaoPalpite {
 }
 
 model BolaoScore {
-  id               String   @id @default(uuid())
-  bolaoId          String
-  userId           String
-  pontosTotal      Int      @default(0)
-  acertosPlacar    Int      @default(0)
-  acertosResultado Int      @default(0)
-  acertosOverUnder Int      @default(0)
-  updatedAt        DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  bolaoId            String
+  userId             String
+  pontosTotal        Float    @default(0) // Mudado para Float para média simples
+  quantidadePalpites Int      @default(0) // Quantidade de palpites avaliados
+  acertosPlacar      Int      @default(0)
+  acertosResultado   Int      @default(0)
+  acertosOverUnder   Int      @default(0)
+  updatedAt          DateTime @updatedAt
 
   bolao            Bolao    @relation(fields: [bolaoId], references: [id], onDelete: Cascade)
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([bolaoId, userId])
-  @@index([bolaoId, pontosTotal, acertosPlacar, acertosResultado, acertosOverUnder])
+  @@index([bolaoId, pontosTotal, quantidadePalpites, acertosPlacar, acertosResultado])
   @@map("bolao_scores")
 }
 

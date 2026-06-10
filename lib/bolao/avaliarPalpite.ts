@@ -33,13 +33,12 @@ export function avaliarPalpite(
   const acertouResultado =
     resultadoDe(p.golsMandante, p.golsVisitante) === resultadoDe(real.home, real.away);
 
-  const ouReal: PalpiteOverUnder = real.home + real.away > 2.5 ? "OVER" : "UNDER";
-  const acertouOverUnder = p.palpiteOverUnder === ouReal;
+  // Over/under desativado do processo conforme solicitação do usuário
+  const acertouOverUnder = false;
 
   let pontos = 0;
   if (acertouPlacar) pontos += 4;
   else if (acertouResultado) pontos += 2;
-  if (acertouOverUnder) pontos += 1;
 
   return { pontos, acertouPlacar, acertouResultado, acertouOverUnder };
 }
@@ -133,16 +132,19 @@ export async function avaliarPalpitesDePartida(
         });
 
         // Reduz em memória de forma agregada
+        const totalGuesses = historicoPalpites.length;
         const scoreAgregado = historicoPalpites.reduce(
           (acc, val) => {
-            acc.pontosTotal += val.pontos;
+            acc.somaPontos += val.pontos;
             if (val.acertouPlacar) acc.acertosPlacar++;
             if (val.acertouResultado) acc.acertosResultado++;
             if (val.acertouOverUnder) acc.acertosOverUnder++;
             return acc;
           },
-          { pontosTotal: 0, acertosPlacar: 0, acertosResultado: 0, acertosOverUnder: 0 }
+          { somaPontos: 0, acertosPlacar: 0, acertosResultado: 0, acertosOverUnder: 0 }
         );
+
+        const pontosTotal = totalGuesses > 0 ? scoreAgregado.somaPontos / totalGuesses : 0.0;
 
         // Upsert do score consolidado
         await tx.bolaoScore.upsert({
@@ -153,7 +155,8 @@ export async function avaliarPalpitesDePartida(
             },
           },
           update: {
-            pontosTotal: scoreAgregado.pontosTotal,
+            pontosTotal,
+            quantidadePalpites: totalGuesses,
             acertosPlacar: scoreAgregado.acertosPlacar,
             acertosResultado: scoreAgregado.acertosResultado,
             acertosOverUnder: scoreAgregado.acertosOverUnder,
@@ -161,7 +164,8 @@ export async function avaliarPalpitesDePartida(
           create: {
             bolaoId,
             userId,
-            pontosTotal: scoreAgregado.pontosTotal,
+            pontosTotal,
+            quantidadePalpites: totalGuesses,
             acertosPlacar: scoreAgregado.acertosPlacar,
             acertosResultado: scoreAgregado.acertosResultado,
             acertosOverUnder: scoreAgregado.acertosOverUnder,

@@ -374,6 +374,7 @@ A base do sistema atinge seu ápice de estabilidade técnica. Os testes de build
 | Fase 2 — Onda 2, Bloco 1 (Sync Inicial Brasileirão) | 100% concluido |
 | Fase 2 — Refatoração Schema Normalizado (Bloco 7) | 100% concluido |
 | Fase 2 — UI Dashboard de Ligas | 100% concluido |
+| Fase 2 — Feature Bolão (Copa 2026) | 100% concluida |
 | Fase 3 — Ferramentas Analiticas | 100% concluida |
 | Onda A — Estrutura de Cursos e BDB Bônus (Gamificação) | 100% concluída (com suíte de testes de integração e higiene de produção) |
 
@@ -599,3 +600,32 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
 **Build e Testes Unitários de Produção:**
 - Rodada a suíte completa de testes unitários que não dependem do banco de dados (25 arquivos, 113 testes), com todos eles passando com sucesso.
 - O build de produção (`npm run build`) compilou com sucesso na Vercel e localmente sem qualquer erro de tipagem.
+
+### 35. Implementação da Feature Bolão (Copa 2026) — 08/06/2026
+
+**Modelagem do Banco de Dados (Prisma Schema):**
+- Adicionados os modelos `Bolao`, `BolaoPalpite` e `BolaoScore` no `schema.prisma` mapeados para as tabelas `boloes`, `bolao_palpites` e `bolao_scores`.
+- Adicionados os enums `BolaoStatus` e `PalpiteOverUnder`.
+- Aplicada a migração `20260608164000_add_bolao_models` no banco de dados.
+
+**Engine de Pontuação e Avaliação Transacional:**
+- Criado o módulo `lib/bolao/avaliarPalpite.ts` contendo:
+  - Função pura de pontuação: Placar exato (4 pts) e Apenas Resultado (2 pts). Over/Under 2.5 gols desativado do processo (0 pt).
+  - Função `avaliarPalpitesDePartida` processada em chunks de 50 registros para mitigar condições de corrida concorrente através de `updateMany({ where: { id, avaliado: false } })` e atualização atômica de ranking (`BolaoScore`). O score agora acumula a **média simples de pontos** dos jogos palpitados e a **quantidade de palpites feitos** pelo participante.
+
+**Integração com Motores de Sincronização:**
+- Integrado o gancho de avaliação automática de palpites no momento exato em que uma partida transiciona de `!= FINISHED` para `FINISHED` nos motores `lib/ingest/sync-engine.ts` e `lib/sync/sync-partidas.ts`.
+
+**APIs e Validação (App Router & Zod):**
+- Implementados os endpoints:
+  - `GET /api/bolao/[bolaoId]`: Retorna metadados, lista de partidas e pontuação do usuário logado (com auto-inicialização segura se `bolaoId === "copa-2026"`).
+  - `GET /api/bolao/[bolaoId]/palpites`: Obtém os palpites do usuário.
+  - `POST /api/bolao/[bolaoId]/palpite`: Salva/atualiza palpites com trava rígida de 1 hora antes do horário do jogo (`utcDate`), sendo o campo `palpiteOverUnder` opcional e com valor padrão `"UNDER"`.
+  - `GET /api/bolao/[bolaoId]/ranking`: Leaderboard paginado com a ordenação atualizada: 1º Média de Pontos, 2º Quantidade de Palpites Feitos (primeiro desempate), 3º Placar Exato, 4º Resultado 1x2 e 5º Data de criação da conta.
+
+**Dashboard e Regulamento (UI/UX Premium):**
+- Desenvolvimento da página de visualização `/dashboard/bolao` com visual escuro premium e abas organizadas:
+  - **Partidas**: Exibição dos confrontos agrupados por rodadas com cards de palpites e o horário limite destacando `   |   🔒 Limite: DD/MM, HH:MM (BRT)`.
+  - **Ranking Geral**: Classificação dinâmica com exibição de Média de Pontos formatada com 2 casas decimais, nova coluna exibindo a quantidade de Palpites Feitos e sinalização visual ("Sem mínimo (10)") para participantes com menos de 10 jogos palpitados.
+  - **Regulamento & Regras**: Explicação detalhada da média simples de pontos (se não palpitar, o jogo não conta), a regra de elegibilidade a prêmios exigindo **no mínimo 10 palpites avaliados**, a ordenação atualizada de critérios de desempate e a tabela de premiação expandida (1º: 1500 pontos/30% OFF; 2º: 1000 pontos/20% OFF; 3º: 500 pontos/10% OFF; 4º-5º: 300 pontos/6% OFF; 6º-10º: 100 pontos/2% OFF), com indicação de que os pontos podem ser resgatados por módulos de cursos, ferramentas e ligas adicionais.
+- Atualizado o sidebar global do dashboard (`DashboardSidebarContent`) direcionando para `/dashboard/bolao` com ícone de troféu animado (`Trophy`).

@@ -39,9 +39,9 @@ export async function GET(
         },
         orderBy: [
           { pontosTotal: "desc" },
-          { acertosPlacar: "desc" },
-          { acertosResultado: "desc" },
-          { acertosOverUnder: "desc" },
+          { quantidadePalpites: "desc" }, // 1º critério de desempate
+          { acertosPlacar: "desc" },      // 2º critério de desempate
+          { acertosResultado: "desc" },  // 3º critério de desempate
           { user: { createdAt: "asc" } }, // 4º critério de desempate
         ],
         skip,

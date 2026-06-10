@@ -7,7 +7,7 @@ const palpiteSchema = z.object({
   matchId: z.string(),
   golsMandante: z.number().int().min(0, "Gols do mandante devem ser maiores ou iguais a 0"),
   golsVisitante: z.number().int().min(0, "Gols do visitante devem ser maiores ou iguais a 0"),
-  palpiteOverUnder: z.enum(["OVER", "UNDER"]),
+  palpiteOverUnder: z.enum(["OVER", "UNDER"]).optional().default("UNDER"),
 });
 
 export async function POST(

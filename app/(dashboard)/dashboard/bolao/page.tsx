@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { 
-  Trophy, Lock, CheckCircle2, AlertTriangle, Info,
+  Trophy, Lock, CheckCircle2, AlertTriangle,
   ShieldAlert, Award, Star, RefreshCw, Check,
   Calendar, ChevronLeft, ChevronRight, BookOpen, Edit3, Target, Scale, Gift
 } from "lucide-react";
@@ -39,6 +39,7 @@ interface Match {
 
 interface UserScore {
   pontosTotal: number;
+  quantidadePalpites: number;
   acertosPlacar: number;
   acertosResultado: number;
   acertosOverUnder: number;
@@ -55,6 +56,7 @@ interface RankingRow {
   id: string;
   userId: string;
   pontosTotal: number;
+  quantidadePalpites: number;
   acertosPlacar: number;
   acertosResultado: number;
   acertosOverUnder: number;
@@ -339,30 +341,35 @@ export default function BolaoPage() {
             {bolao?.nome || "Bolão Copa do Mundo 2026"}
           </h1>
           <p className="text-muted-foreground">
-            Palpite nos placares, acerte a linha Over/Under 2.5 e concorra com outros membros!
+            Palpite nos placares, crave o resultado e concorra com outros membros!
           </p>
         </div>
 
         {userScore && (
-          <div className="flex flex-wrap items-center gap-3 bg-card border border-border/80 px-4 py-3 rounded-lg shadow-sm">
+          <div className="flex flex-wrap items-center gap-4 bg-card border border-border/80 px-4 py-3 rounded-lg shadow-sm">
             <div className="flex items-center gap-2 border-r border-border/60 pr-3">
               <Award className="text-amber-500 w-5 h-5" />
               <div className="text-sm">
-                <span className="text-muted-foreground block text-[11px] uppercase tracking-wider font-semibold">Seus Pontos</span>
-                <span className="font-bold text-lg text-amber-500">{userScore.pontosTotal} pts</span>
+                <span className="text-muted-foreground block text-[11px] uppercase tracking-wider font-semibold">Média de Pontos</span>
+                <span className="font-bold text-lg text-amber-500">{Number(userScore.pontosTotal).toFixed(2)} pts</span>
               </div>
             </div>
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <div>
+                <span className="font-semibold text-foreground block">{userScore.quantidadePalpites}</span> Palpites
+              </div>
               <div>
                 <span className="font-semibold text-foreground block">{userScore.acertosPlacar}</span> Placar Exato (4pt)
               </div>
               <div>
                 <span className="font-semibold text-foreground block">{userScore.acertosResultado}</span> Resultado (2pt)
               </div>
-              <div>
-                <span className="font-semibold text-foreground block">{userScore.acertosOverUnder}</span> Over/Under (+1pt)
-              </div>
             </div>
+            {userScore.quantidadePalpites < 10 && (
+              <div className="text-[10px] text-amber-400 bg-amber-400/10 px-2.5 py-1 rounded border border-amber-400/20 max-w-xs leading-tight sm:ml-auto">
+                ⚠️ Mínimo de 10 palpites avaliados para ter direito aos prêmios.
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -536,57 +543,14 @@ export default function BolaoPage() {
                         </div>
                       </div>
 
-                      {/* Over/Under Toggle */}
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border/40 pt-4">
-                        <div className="flex items-center gap-1.5">
-                          <Info className="w-3.5 h-3.5 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">Linha Over/Under 2.5:</span>
-                        </div>
-
-                        <div className="flex items-center gap-1 bg-muted/30 p-0.5 rounded-lg border border-border/40">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={locked}
-                            onClick={() => setInputs(prev => ({
-                              ...prev,
-                              [match.id]: { ...prev[match.id], palpiteOverUnder: "OVER" }
-                            }))}
-                            className={`h-7 px-3.5 text-xs font-semibold rounded-md transition-all ${
-                              input.palpiteOverUnder === "OVER"
-                                ? "bg-primary text-primary-foreground shadow-sm"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                            }`}
-                          >
-                            Mais de 2.5
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={locked}
-                            onClick={() => setInputs(prev => ({
-                              ...prev,
-                              [match.id]: { ...prev[match.id], palpiteOverUnder: "UNDER" }
-                            }))}
-                            className={`h-7 px-3.5 text-xs font-semibold rounded-md transition-all ${
-                              input.palpiteOverUnder === "UNDER"
-                                ? "bg-primary text-primary-foreground shadow-sm"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
-                            }`}
-                          >
-                            Menos de 2.5
-                          </Button>
-                        </div>
-                      </div>
-
                       {/* Botão de Ação / Placar Oficial se finalizado */}
-                      <div className="flex items-center justify-between gap-4 border-t border-border/20 pt-4">
+                      <div className="flex items-center justify-between gap-4 border-t border-border/40 pt-4">
                         <div>
                           {match.status === "FINISHED" && (
                             <div className="text-xs">
                               <span className="text-muted-foreground">Placar Oficial: </span>
                               <span className="font-bold text-foreground">
-                                {match.fthg} x {match.ftag} ({(match.fthg || 0) + (match.ftag || 0) > 2.5 ? "OVER" : "UNDER"})
+                                {match.fthg} x {match.ftag}
                               </span>
                             </div>
                           )}
@@ -631,10 +595,10 @@ export default function BolaoPage() {
           <Card className="border border-border/80 shadow-sm bg-card">
             <CardHeader>
               <CardTitle className="text-xl font-bold flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-amber-500" /> Classificação Geral
+                <Trophy className="w-5 h-5 text-amber-500" /> Classificação
               </CardTitle>
               <CardDescription>
-                Tabela de classificação ordenada pelos acertos. Critérios de desempate: 1º Placar Exato, 2º Resultado (1x2), 3º Over/Under, 4º Cadastro mais antigo.
+                Tabela de classificação ordenada pela média de pontos. Critérios de desempate: 1º Palpites Feitos, 2º Placar Exato, 3º Resultado (1x2), 4º Cadastro mais antigo. (*) Necessário mínimo de 10 palpites para elegibilidade à premiação.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -656,10 +620,10 @@ export default function BolaoPage() {
                         <TableRow>
                           <TableHead className="w-16 text-center font-bold">Pos</TableHead>
                           <TableHead>Participante</TableHead>
-                          <TableHead className="text-center font-bold text-foreground">Pontos</TableHead>
+                          <TableHead className="text-center font-bold text-foreground">Média de Pontos</TableHead>
+                          <TableHead className="text-center font-bold text-foreground">Palpites</TableHead>
                           <TableHead className="text-center">Placares Exatos</TableHead>
                           <TableHead className="text-center">Resultados (1X2)</TableHead>
-                          <TableHead className="text-center">Over/Under 2.5</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -687,15 +651,26 @@ export default function BolaoPage() {
                                     </AvatarFallback>
                                   </Avatar>
                                   <div className="flex flex-col">
-                                    <span className="font-semibold text-sm leading-none">{row.user.name || "Membro"}</span>
+                                    <span className="font-semibold text-sm leading-none flex items-center gap-1.5">
+                                      {row.user.name || "Membro"}
+                                      {row.quantidadePalpites < 10 && (
+                                        <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1 py-0.2 rounded font-normal">
+                                          Sem mínimo (10)
+                                        </span>
+                                      )}
+                                    </span>
                                     <span className="text-[10px] text-muted-foreground">{row.user.email}</span>
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="text-center font-bold text-amber-500 text-sm">{row.pontosTotal}</TableCell>
+                              <TableCell className="text-center font-bold text-amber-500 text-sm">
+                                {Number(row.pontosTotal).toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-center text-xs text-muted-foreground font-semibold">
+                                {row.quantidadePalpites}
+                              </TableCell>
                               <TableCell className="text-center text-xs text-muted-foreground">{row.acertosPlacar}</TableCell>
                               <TableCell className="text-center text-xs text-muted-foreground">{row.acertosResultado}</TableCell>
-                              <TableCell className="text-center text-xs text-muted-foreground">{row.acertosOverUnder}</TableCell>
                             </TableRow>
                           );
                         })}
@@ -750,13 +725,21 @@ export default function BolaoPage() {
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed font-normal">
                 <p>
-                  Palpitar é simples: basta preencher o placar esperado para cada partida e escolher se o jogo terá mais de 2.5 gols (OVER) ou menos de 2.5 gols (UNDER) na linha respectiva.
+                  Palpitar é simples: basta preencher o placar esperado para cada partida (gols do time mandante e do time visitante) antes do encerramento do prazo.
                 </p>
-                <div className="bg-muted/20 border border-border/40 rounded-lg p-3 flex gap-2.5 items-start">
-                  <Lock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-foreground">
-                    <strong>Horário Limite:</strong> Os palpites de cada jogo são congelados individualmente exatamente <strong>1 hora antes</strong> do horário oficial de início da partida (BRT).
-                  </p>
+                <div className="bg-muted/20 border border-border/40 rounded-lg p-3 flex flex-col gap-2.5">
+                  <div className="flex gap-2.5 items-start">
+                    <Lock className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-foreground">
+                      <strong>Horário Limite:</strong> Os palpites são congelados individualmente exatamente <strong>1 hora antes</strong> do horário oficial de início da partida (BRT).
+                    </p>
+                  </div>
+                  <div className="flex gap-2.5 items-start border-t border-border/40 pt-2.5">
+                    <Award className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-xs text-foreground">
+                      <strong>Mínimo para Premiação:</strong> É necessário ter no mínimo **10 jogos com palpites avaliados** para ter direito a receber prêmios (caso esteja na zona de premiação).
+                    </p>
+                  </div>
                 </div>
                 <p>
                   Você pode salvar e <strong>alterar seus palpites quantas vezes quiser</strong> antes do encerramento do prazo. Lembre-se de sempre clicar no botão <strong>&quot;Salvar Palpite&quot;</strong> de cada partida para registrar suas previsões.
@@ -773,7 +756,7 @@ export default function BolaoPage() {
               </CardHeader>
               <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed font-normal">
                 <p>
-                  Seu sucesso é determinado pela precisão das suas previsões. A pontuação por jogo é calculada acumulando os seguintes acertos:
+                  Seu sucesso é determined pela precisão das suas previsões. A pontuação final é composta pela **média simples dos pontos feitos** nos jogos em que você palpitou (se não palpitar, o jogo não conta). Cada partida pode render:
                 </p>
                 <ul className="space-y-2.5">
                   <li className="flex gap-2 items-start">
@@ -785,34 +768,56 @@ export default function BolaoPage() {
                     <span><strong>Apenas Resultado (1X2):</strong> Se você acertar apenas quem venceu ou o empate, errando o placar exato (ex: apostou 3x0 e terminou 1x0).</span>
                   </li>
                   <li className="flex gap-2 items-start">
-                    <span className="text-emerald-500 font-bold shrink-0">📈 +1 pt</span>
-                    <span><strong>Over/Under 2.5:</strong> Acerto independente se a partida terá mais de 2.5 gols (soma dos gols &ge; 3) ou menos (soma dos gols &le; 2).</span>
+                    <span className="text-muted-foreground font-bold shrink-0">❌ 0 pt</span>
+                    <span><strong>Erro total:</strong> Se errar tanto o placar exato quanto o vencedor/empate da partida.</span>
                   </li>
                 </ul>
                 <div className="border-t border-border/40 pt-3 text-xs flex justify-between font-semibold text-foreground">
                   <span>Pontuação Mínima por jogo: 0 pts</span>
-                  <span>Pontuação Máxima por jogo: 5 pts</span>
+                  <span>Pontuação Máxima por jogo: 4 pts</span>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Critérios de Desempate */}
+            {/* Regras de Apuração & Desempate */}
             <Card className="border border-border/80 shadow-sm bg-card">
               <CardHeader>
                 <CardTitle className="text-lg font-bold flex items-center gap-2">
-                  <Scale className="w-5 h-5 text-amber-500" /> Critérios de Desempate
+                  <Scale className="w-5 h-5 text-amber-500" /> Regras de Apuração & Desempate
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-muted-foreground leading-relaxed font-normal">
-                <p>
-                  Havendo igualdade na pontuação total acumulada entre dois ou mais participantes no ranking, a classificação será decidida de acordo com os seguintes critérios:
-                </p>
-                <ol className="space-y-2 list-decimal list-inside text-xs text-foreground">
-                  <li>Maior número de acertos de <strong>Placar Exato</strong>.</li>
-                  <li>Maior número de acertos de <strong>Resultado Correto (1x2)</strong>.</li>
-                  <li>Maior número de acertos de <strong>Over/Under 2.5 Gols</strong>.</li>
-                  <li>Data de criação de conta mais antiga na plataforma (<strong>Membro Pioneiro</strong>).</li>
-                </ol>
+              <CardContent className="space-y-4 text-sm text-muted-foreground leading-relaxed font-normal">
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">1. Apuração por Média Simples</h4>
+                  <p className="text-xs text-muted-foreground">
+                    A pontuação geral do participante é a **média simples** de pontos dos jogos em que ele enviou palpite. Jogos não palpitados não contam e não penalizam a média. Cada jogo vale:
+                  </p>
+                  <ul className="list-disc list-inside text-xs pl-1.5 space-y-1 text-muted-foreground">
+                    <li><strong>4 pontos:</strong> Acerto do Placar Exato.</li>
+                    <li><strong>2 pontos:</strong> Acerto de apenas o vencedor/empate (Resultado 1x2).</li>
+                    <li><strong>0 pontos:</strong> Erro total do confronto.</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2 border-t border-border/40 pt-3">
+                  <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">2. Elegibilidade à Premiação</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Para ter direito a receber prêmios (caso termine nas posições premiadas do ranking), o participante precisa obrigatoriamente ter acumulado **no mínimo 10 jogos com palpites avaliados** ao final do torneio.
+                  </p>
+                </div>
+
+                <div className="space-y-2 border-t border-border/40 pt-3">
+                  <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">3. Critérios de Desempate</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Havendo igualdade na média de pontos entre dois ou mais participantes no ranking final, o desempate para as colocações obedecerá rigidamente à seguinte ordem:
+                  </p>
+                  <ol className="space-y-1.5 list-decimal list-inside text-xs text-foreground">
+                    <li>Maior <strong>quantidade de palpites feitos</strong> no bolão.</li>
+                    <li>Maior número de acertos de <strong>Placar Exato</strong>.</li>
+                    <li>Maior número de acertos de <strong>Resultado Correto (1x2)</strong>.</li>
+                    <li>Data de criação de conta mais antiga na plataforma (<strong>Membro Pioneiro</strong>).</li>
+                  </ol>
+                </div>
               </CardContent>
             </Card>
 
@@ -831,43 +836,75 @@ export default function BolaoPage() {
                       : JSON.stringify(bolao.premiacao, null, 2)}
                   </div>
                 ) : (
-                  <div className="space-y-3.5">
-                    <p className="text-sm text-muted-foreground">
-                      Os vencedores do ranking ao final do torneio serão premiados conforme as posições estabelecidas. Os prêmios oficiais serão definidos e divulgados em breve.
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted-foreground">
+                      Os vencedores da classificação ao final do torneio serão premiados com pontos BDB Bônus conforme a tabela abaixo:
                     </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                       <div className="border border-border/40 rounded-lg p-3 bg-muted/10 text-center flex flex-col items-center justify-center">
                         <span className="text-2xl">🥇</span>
                         <h4 className="font-bold text-sm mt-1 text-amber-400">1º Colocado</h4>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">A definir</p>
+                        <p className="text-xs font-bold text-foreground mt-1">1.500 pontos</p>
                       </div>
                       <div className="border border-border/40 rounded-lg p-3 bg-muted/10 text-center flex flex-col items-center justify-center">
                         <span className="text-2xl">🥈</span>
                         <h4 className="font-bold text-sm mt-1 text-slate-300">2º Colocado</h4>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">A definir</p>
+                        <p className="text-xs font-bold text-foreground mt-1">1.000 pontos</p>
                       </div>
                       <div className="border border-border/40 rounded-lg p-3 bg-muted/10 text-center flex flex-col items-center justify-center">
                         <span className="text-2xl">🥉</span>
                         <h4 className="font-bold text-sm mt-1 text-amber-700">3º Colocado</h4>
-                        <p className="text-[10px] text-muted-foreground mt-0.5">A definir</p>
+                        <p className="text-xs font-bold text-foreground mt-1">500 pontos</p>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="border border-border/40 rounded-lg p-3 bg-muted/5 flex items-center justify-between px-4">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">🌟</span>
                           <span className="font-bold text-xs text-foreground">4º e 5º Colocados</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">A definir</span>
+                        <span className="text-xs font-bold text-foreground">300 pontos (cada)</span>
                       </div>
                       <div className="border border-border/40 rounded-lg p-3 bg-muted/5 flex items-center justify-between px-4">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">🏅</span>
                           <span className="font-bold text-xs text-foreground">6º ao 10º Colocados</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">A definir</span>
+                        <span className="text-xs font-bold text-foreground">100 pontos (cada)</span>
                       </div>
+                    </div>
+
+                    <div className="border-t border-border/40 pt-4 mt-4 space-y-2">
+                      <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Equivalência & Troca de Pontos</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Os pontos obtidos podem ser trocados na aba <strong>BDB Bônus</strong> por descontos diretos em assinaturas/serviços ou no curso completo, na seguinte proporção:
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 text-center">
+                        <div className="bg-muted/30 border border-border/40 rounded p-2 text-xs">
+                          <div className="font-bold text-amber-400">1.500 pts</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">30% OFF</div>
+                        </div>
+                        <div className="bg-muted/30 border border-border/40 rounded p-2 text-xs">
+                          <div className="font-bold text-slate-300">1.000 pts</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">20% OFF</div>
+                        </div>
+                        <div className="bg-muted/30 border border-border/40 rounded p-2 text-xs">
+                          <div className="font-bold text-amber-700">500 pts</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">10% OFF</div>
+                        </div>
+                        <div className="bg-muted/30 border border-border/40 rounded p-2 text-xs">
+                          <div className="font-bold text-foreground/80">300 pts</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">6% OFF</div>
+                        </div>
+                        <div className="bg-muted/30 border border-border/40 rounded p-2 text-xs col-span-2 sm:col-span-1">
+                          <div className="font-bold text-foreground/80">100 pts</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">2% OFF</div>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground pt-1.5">
+                        💡 <strong>Vantagens extras:</strong> Além dos descontos na assinatura ou curso completo, você pode trocar seus pontos por módulos individuais de cursos, curso inicial de apostas, ferramentas analíticas de risco, ou liberação de mais ligas de futebol no painel de análises por período determinado.
+                      </p>
                     </div>
                   </div>
                 )}

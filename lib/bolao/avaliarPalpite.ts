@@ -137,7 +137,7 @@ export async function avaliarPalpitesDePartida(
           (acc, val) => {
             acc.somaPontos += val.pontos;
             if (val.acertouPlacar) acc.acertosPlacar++;
-            if (val.acertouResultado) acc.acertosResultado++;
+            if (val.acertouResultado && !val.acertouPlacar) acc.acertosResultado++;
             if (val.acertouOverUnder) acc.acertosOverUnder++;
             return acc;
           },

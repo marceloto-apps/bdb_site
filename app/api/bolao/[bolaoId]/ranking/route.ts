@@ -31,7 +31,6 @@ export async function GET(
           user: {
             select: {
               name: true,
-              email: true,
               image: true,
               createdAt: true,
             },

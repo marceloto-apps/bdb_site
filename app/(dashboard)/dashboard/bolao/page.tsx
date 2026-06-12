@@ -629,7 +629,7 @@ export default function BolaoPage() {
                       <TableBody>
                         {ranking.map((row, index) => {
                           const position = (rankingPage - 1) * 20 + index + 1;
-                          const name = row.user.name || row.user.email || "Usuário";
+                          const name = row.user.name || "Membro";
                           return (
                             <TableRow key={row.id} className="hover:bg-muted/10 transition-colors">
                               <TableCell className="text-center font-bold text-sm">
@@ -659,7 +659,6 @@ export default function BolaoPage() {
                                         </span>
                                       )}
                                     </span>
-                                    <span className="text-[10px] text-muted-foreground">{row.user.email}</span>
                                   </div>
                                 </div>
                               </TableCell>

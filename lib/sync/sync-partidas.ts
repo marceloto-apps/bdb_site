@@ -84,9 +84,8 @@ export async function sincronizarPartidas(seasonId: string): Promise<SyncResult>
           result.created++
         }
 
-        // Chamar avaliação de palpites na transição para FINISHED
-        const isTransitionToFinished = prevStatus !== 'FINISHED' && matchData.status === 'FINISHED'
-        if (isTransitionToFinished && matchData.fthg !== null && matchData.fthg !== undefined && matchData.ftag !== null && matchData.ftag !== undefined && matchId) {
+        // Chamar avaliação de palpites para qualquer partida finalizada que tenha placar
+        if (matchData.status === 'FINISHED' && matchData.fthg !== null && matchData.fthg !== undefined && matchData.ftag !== null && matchData.ftag !== undefined && matchId) {
           const { avaliarPalpitesDePartida } = await import('@/lib/bolao/avaliarPalpite')
           await avaliarPalpitesDePartida(matchId, matchData.fthg, matchData.ftag)
         }

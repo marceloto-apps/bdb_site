@@ -119,9 +119,8 @@ export async function syncLeague(options: SyncOptions): Promise<SyncResult> {
           result.matchesCreated++
         }
 
-        // Chamar avaliação de palpites na transição para FINISHED
-        const isTransitionToFinished = prevStatus !== 'FINISHED' && mappedMatch.status === 'FINISHED'
-        if (isTransitionToFinished && mappedMatch.fthg !== null && mappedMatch.fthg !== undefined && mappedMatch.ftag !== null && mappedMatch.ftag !== undefined) {
+        // Chamar avaliação de palpites para qualquer partida finalizada que tenha placar
+        if (mappedMatch.status === 'FINISHED' && mappedMatch.fthg !== null && mappedMatch.fthg !== undefined && mappedMatch.ftag !== null && mappedMatch.ftag !== undefined) {
           const { avaliarPalpitesDePartida } = await import('@/lib/bolao/avaliarPalpite')
           await avaliarPalpitesDePartida(matchId, mappedMatch.fthg, mappedMatch.ftag)
         }

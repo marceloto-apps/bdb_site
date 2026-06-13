@@ -2,6 +2,8 @@
 
 import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
+import { aulaSchema } from "@/lib/validations/aula"
+import { quizQuestionsSchema } from "@/lib/validations/quiz"
 
 /**
  * Helper para verificar privilégios de administrador
@@ -147,6 +149,30 @@ export async function saveLesson(data: {
 }) {
   await requireAdmin()
   const { id, moduleId, title, order, videoUrl, contentHtml, durationSec, quiz } = data
+
+  // 1. Validação dos dados da Aula via Zod
+  const parsedAula = aulaSchema.safeParse({
+    title,
+    videoUrl: videoUrl || undefined,
+    contentHtml: contentHtml || undefined,
+    durationSec: durationSec !== undefined && durationSec !== null ? Number(durationSec) : undefined,
+  })
+
+  if (!parsedAula.success) {
+    throw new Error(
+      `Dados da aula inválidos: ${parsedAula.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")}`
+    )
+  }
+
+  // 2. Validação das questões do Quiz via Zod se existir
+  if (quiz && quiz.questions) {
+    const parsedQuiz = quizQuestionsSchema.safeParse(quiz.questions)
+    if (!parsedQuiz.success) {
+      throw new Error(
+        `Questões do quiz inválidas: ${parsedQuiz.error.errors.map((e) => `${e.path.join(".")}: ${e.message}`).join(", ")}`
+      )
+    }
+  }
 
   const payload = {
     moduleId,

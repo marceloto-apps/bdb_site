@@ -258,14 +258,66 @@ export default function CoursesAdminPage() {
     }
   }
 
+  // Normalizar quiz de formatos antigos no cliente ao editar
+  const startEditingLesson = (lesson: any) => {
+    let normalizedQuiz = null
+    if (lesson.quiz) {
+      const rawQuestions = Array.isArray(lesson.quiz.questions) ? lesson.quiz.questions : []
+      const questions = rawQuestions.map((q: any) => {
+        // Se já está no formato novo
+        if (q.enunciado !== undefined && q.opcoes !== undefined) {
+          return q
+        }
+        // Se for o formato legado
+        const questionText = q.question || ""
+        const legacyOptions = Array.isArray(q.options) ? q.options : []
+        const answerIdx = typeof q.answerIndex === "number" ? q.answerIndex : 0
+        
+        const opcoes = legacyOptions.map((opt: any, idx: number) => {
+          const idStr = String.fromCharCode(97 + idx) // a, b, c, d
+          return {
+            id: idStr,
+            texto: typeof opt === "string" ? opt : (opt?.texto || "")
+          }
+        })
+        const respostaCorreta = opcoes[answerIdx]?.id || "a"
+        
+        return {
+          id: q.id || `q-${Date.now()}-${Math.random()}`,
+          enunciado: questionText,
+          tipo: "multipla_escolha",
+          opcoes,
+          respostaCorreta,
+          explicacao: q.explicacao || ""
+        }
+      })
+      
+      normalizedQuiz = {
+        ...lesson.quiz,
+        questions
+      }
+    }
+    setEditingLesson({
+      ...lesson,
+      quiz: normalizedQuiz
+    })
+  }
+
   // Helper para Quiz
   const handleAddQuestion = () => {
     const currentQuestions = editingLesson.quiz?.questions || []
     const newQuestion = {
-      id: Date.now().toString(),
-      question: "Nova Pergunta?",
-      options: ["Opção A", "Opção B", "Opção C", "Opção D"],
-      answerIndex: 0
+      id: `q-${Date.now()}`,
+      enunciado: "Nova Pergunta?",
+      tipo: "multipla_escolha",
+      opcoes: [
+        { id: "a", texto: "Opção A" },
+        { id: "b", texto: "Opção B" },
+        { id: "c", texto: "Opção C" },
+        { id: "d", texto: "Opção D" }
+      ],
+      respostaCorreta: "a",
+      explicacao: ""
     }
     setEditingLesson({
       ...editingLesson,
@@ -706,7 +758,7 @@ export default function CoursesAdminPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button 
-                      onClick={() => setEditingLesson(lesson)}
+                      onClick={() => startEditingLesson(lesson)}
                       className="p-1.5 bg-zinc-850 hover:bg-zinc-800 hover:text-white rounded text-zinc-400 transition-colors"
                       title="Editar Aula e Quiz"
                     >
@@ -863,23 +915,23 @@ export default function CoursesAdminPage() {
                           <input
                             type="text"
                             required
-                            value={q.question || ""}
-                            onChange={(e) => handleQuestionChange(q.id, "question", e.target.value)}
+                            value={q.enunciado || ""}
+                            onChange={(e) => handleQuestionChange(q.id, "enunciado", e.target.value)}
                             className="w-full text-sm bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-zinc-100"
                           />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                          {q.options.map((opt: string, optIdx: number) => (
-                            <div key={optIdx} className="flex items-center gap-2">
+                          {(q.opcoes || []).map((opt: any, optIdx: number) => (
+                            <div key={opt.id || optIdx} className="flex items-center gap-2">
                               <span className="text-xs font-bold text-zinc-500">{String.fromCharCode(65 + optIdx)})</span>
                               <input
                                 type="text"
                                 required
-                                value={opt}
+                                value={opt.texto || ""}
                                 onChange={(e) => {
-                                  const opts = [...q.options]
-                                  opts[optIdx] = e.target.value
-                                  handleQuestionChange(q.id, "options", opts)
+                                  const opts = [...q.opcoes]
+                                  opts[optIdx] = { ...opts[optIdx], texto: e.target.value }
+                                  handleQuestionChange(q.id, "opcoes", opts)
                                 }}
                                 className="w-full text-xs bg-zinc-950 border border-zinc-800 rounded px-2 py-1.5 text-zinc-150"
                               />
@@ -889,16 +941,25 @@ export default function CoursesAdminPage() {
                         <div>
                           <label className="block text-xs text-zinc-400 mb-1">Opção Correta</label>
                           <select
-                            value={q.answerIndex}
-                            onChange={(e) => handleQuestionChange(q.id, "answerIndex", parseInt(e.target.value) || 0)}
+                            value={q.respostaCorreta || ""}
+                            onChange={(e) => handleQuestionChange(q.id, "respostaCorreta", e.target.value)}
                             className="text-xs bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1 text-zinc-150"
                           >
-                            {q.options.map((_: any, oIdx: number) => (
-                              <option key={oIdx} value={oIdx}>
-                                Opção {String.fromCharCode(65 + oIdx)}
+                            {(q.opcoes || []).map((opt: any, oIdx: number) => (
+                              <option key={opt.id || oIdx} value={opt.id}>
+                                Opção {String.fromCharCode(65 + oIdx)} ({opt.id})
                               </option>
                             ))}
                           </select>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-zinc-400 mb-1">Explicação / Feedback (Opcional)</label>
+                          <textarea
+                            value={q.explicacao || ""}
+                            onChange={(e) => handleQuestionChange(q.id, "explicacao", e.target.value)}
+                            className="w-full text-xs bg-zinc-950 border border-zinc-800 rounded px-3 py-2 text-zinc-100 h-16"
+                            placeholder="Explicação exibida após o aluno responder..."
+                          />
                         </div>
                       </div>
                     ))

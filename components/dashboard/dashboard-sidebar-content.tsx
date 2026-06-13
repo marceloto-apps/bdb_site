@@ -168,12 +168,9 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === '/curso'} tooltip="Aulas">
-              <Link href="/curso" className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                  <GraduationCap />
-                  <span>Aulas</span>
-                </div>
-                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Em breve</span>
+              <Link href="/curso" className="flex items-center gap-2 w-full">
+                <GraduationCap />
+                <span>Aulas</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

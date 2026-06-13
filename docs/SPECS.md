@@ -2268,6 +2268,21 @@ const FERRAMENTAS = [
 - Admins gerenciam os metadados no CMS Admin (`/cms/admin/courses`), ordenando os módulos e as aulas de forma manual.
 - Suporta a anexação de Quizzes em aulas, com definição de pontuação mínima para aprovação e banco de questões em formato JSON.
 
+### Dicionário do Mercado (Glossário)
+- **Integração de Termos:** Criado um glossário com **99 termos técnicos** de apostas esportivas modelado no arquivo [glossary.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/courses/glossary.ts). Os termos possuem traduções, descrições detalhadas com formatação HTML e classificação em cinco categorias principais: `mercado`, `estatistica`, `risco`, `operacao` e `modelo`.
+- **Interface e Navegação:** Renderização no player do curso através de um item dinâmico "Dicionário do Mercado" fixado imediatamente antes do Módulo 1 na timeline lateral. Fornece busca textual em tempo real e filtros de categorias rápidos. No rodapé, um botão de atalho direciona para a primeira aula do curso.
+
+### Lógica do Player e Inicialização do Curso
+- **Inicialização pelo Histórico:** O player de curso em [CoursePlayerClient.tsx](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/app/%28dashboard%29/curso/CoursePlayerClient.tsx) determina a aula inicial pela função `getStartingLessonId`. 
+  - Se o usuário já iniciou ou completou alguma aula (progresso com `watchedPct > 0` ou `completed == true`), o player abre diretamente na **última aula vista** (ordenada cronologicamente).
+  - Caso contrário, abre por padrão na primeira aula do curso. O player nunca abre automaticamente na tela do glossário.
+- **Navegação Linear:** Botões de "Aula Anterior" e "Próxima Aula" são renderizados dinamicamente na interface da aula. Eles respeitam a cronologia de módulos e aulas e conectam-se de forma transparente ao Glossário caso o usuário retorne a partir da primeira aula.
+- **Sidebar:** Item da barra lateral renomeado de "Aulas" para "Vitrine de Cursos".
+
+### Gamificação de Aulas e Conclusão Automática
+- **Trigger de Conclusão de Aula:** A aula não possui opção manual de conclusão. O sistema marca a aula como concluída automaticamente assim que a porcentagem assistida (`watchedPct`) é maior ou igual a **90%** do tempo total da aula.
+- **Recompensa de Pontos:** Ao completar 90% da aula pela primeira vez, o sistema lança automaticamente transação de **50 pontos BDB** na conta do usuário sob a regra `CONCLUIR_AULA`. O lançamento é protegido por idempotência via chave do tipo `CONCLUIR_AULA:${userId}:${lessonId}` para prevenir ganho duplo na mesma aula.
+
 ---
 
 # SPECS — Fase 4: Multi-Liga + Pagamentos

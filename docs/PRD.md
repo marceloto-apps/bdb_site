@@ -13,7 +13,7 @@
 | **2.5**| **Otimizações Pós-MVP e Backfill** | 🟢 Concluída |
 | **3** | **Ferramentas Gratuitas (Migração Gemini)** | 🟢 Concluída |
 | **4** | **Multi-Liga + Pagamentos (Stripe + Hubla Legacy)** | ⚪ Pendente |
-| **5** | **Curso + Backtest Interativo** | ⚪ Pendente |
+| **5** | **Curso + Backtest Interativo** | 🟡 Em Progresso (Onda A Concluída) |
 | **6** | **Automações + Bases Históricas (Bull + Redis)** | ⚪ Pendente |
 
 ---
@@ -302,6 +302,8 @@ Todo dado buscado na API é imediatamente salvo no banco. Buscas subsequentes l�
 2. **Loja de Recompensas:** Troca de pontos acumulados por cupons de desconto para assinaturas e cursos.
 3. **Estrutura de Cursos:** Modelos de Curso, Módulo, Aula e Quiz (perguntas/respostas) para a área de membros.
 4. **Painéis Administrativos:** Gerenciamento de regras de pontos, opções de recompensa e estrutura de cursos diretamente no CMS.
+5. **Dicionário do Mercado (Glossário):** Integração de um glossário estático contendo 99 termos técnicos com busca em tempo real, filtragem por categorias e navegação linear entre as aulas.
+6. **Lógica de Conclusão e Pontuação de Aulas:** Conclusão automática de aula ao assistir 90% ou mais (concedendo 50 pontos) e inicialização dinâmica no último conteúdo assistido pelo aluno. Renomeação do item de menu para "Vitrine de Cursos".
 
 ---
 

@@ -1,6 +1,6 @@
 # Resumo Executivo — Big Data Bet (Fase 1)
 
-**Data de Atualização:** 08/06/2026
+**Data de Atualização:** 13/06/2026
 
 Este documento apresenta um resumo executivo do progresso atual do projeto Big Data Bet (Fase 1), detalhando o passo a passo de tudo que foi construído até o momento, bem como o que está pendente para a conclusão da fase.
 
@@ -629,3 +629,19 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
   - **Ranking Geral**: Classificação dinâmica com exibição de Média de Pontos formatada com 2 casas decimais, nova coluna exibindo a quantidade de Palpites Feitos e sinalização visual ("Sem mínimo (10)") para participantes com menos de 10 jogos palpitados.
   - **Regulamento & Regras**: Explicação detalhada da média simples de pontos (se não palpitar, o jogo não conta), a regra de elegibilidade a prêmios exigindo **no mínimo 10 palpites avaliados**, a ordenação atualizada de critérios de desempate e a tabela de premiação expandida (1º: 1500 pontos/30% OFF; 2º: 1000 pontos/20% OFF; 3º: 500 pontos/10% OFF; 4º-5º: 300 pontos/6% OFF; 6º-10º: 100 pontos/2% OFF), com indicação de que os pontos podem ser resgatados por módulos de cursos, ferramentas e ligas adicionais.
 - Atualizado o sidebar global do dashboard (`DashboardSidebarContent`) direcionando para `/dashboard/bolao` com ícone de troféu animado (`Trophy`).
+
+### 36. Onda A — Dicionário do Mercado e Otimizações de Cursos — 13/06/2026
+
+**Dicionário do Mercado (Glossário):**
+- **Base de Dados Estática:** Criado o arquivo [glossary.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/courses/glossary.ts) contendo 99 termos técnicos com traduções e definições detalhadas em HTML, classificados em cinco categorias: *Mercado*, *Estatística*, *Risco*, *Operação* e *Modelos*.
+- **Interface de Usuário:** Integração de uma página interna responsiva para busca de termos em tempo real e filtragem rápida por categorias de forma fluida.
+- **Timeline Curricular:** Adicionado o item "Dicionário do Mercado" na barra lateral de navegação curricular, posicionado imediatamente antes do Módulo 1.
+
+**Lógica de Navegação e Inicialização de Cursos:**
+- **Inicialização Dinâmica:** Implementação da função auxiliar `getStartingLessonId` para varrer o progresso do aluno. O player abre diretamente na última aula assistida pelo aluno (com base em `watchedPct > 0` ou `completed` igual a `true`), ou na primeira aula do curso caso ele ainda não tenha começado. O glossário nunca intercepta a inicialização padrão do curso.
+- **Navegação Linear:** Adicionados botões "Próxima Aula" e "Aula Anterior" conectando linearmente as aulas e permitindo a transição fluida entre o glossário e a primeira aula.
+- **Renomeação da Sidebar:** O item correspondente na barra lateral de navegação foi renomeado de "Aulas" para "Vitrine de Cursos".
+
+**Gamificação de Aulas:**
+- **Conclusão Automática:** A aula é marcada automaticamente como concluída (sistemicamente) e o progresso é atualizado para 100% assim que o tempo assistido (`watchedPct`) atinge ou ultrapassa **90%** do tempo total da aula. A opção manual de marcar como concluída foi removida da interface para evitar abusos.
+- **Lançamento de Pontos:** Implementado o ganho automático de **50 pontos BDB** na carteira do aluno ao completar a regra dos 90% de visualização de uma aula, com controle rígido de concorrência e idempotência de transações de pontos.

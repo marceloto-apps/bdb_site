@@ -1095,7 +1095,22 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
 > **Status:** ⚪ Pendente — depende da Fase 2
 
 # TASKS — Fase 5: Curso + Backtest
-> **Status:** ⚪ Pendente — depende da Fase 4
+> **Status:** 🟡 Em Progresso (Onda A - Cursos & Gamificação Concluída)
+
+## Onda A: Cursos & Gamificação — Concluída em 13/06/2026
+
+- [x] **A.6 — Dicionário do Mercado (Glossário)**
+  - [x] Criar base de dados tipada de 99 termos em [glossary.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/courses/glossary.ts)
+  - [x] Integrar card "Dicionário do Mercado" na timeline do player [CoursePlayerClient.tsx](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/app/%28dashboard%29/curso/CoursePlayerClient.tsx)
+  - [x] Implementar busca em tempo real e filtros de categorias (Mercado, Estatística, Risco, Operação, Modelos)
+- [x] **A.7 — Lógica de Player e Navegação**
+  - [x] Implementar a inicialização baseada no histórico de progresso do aluno (última aula vista ou primeira aula)
+  - [x] Implementar botões de navegação linear ("Aula Anterior" e "Próxima Aula") respeitando a grade
+  - [x] Mudar o nome do link da sidebar de "Aulas" para "Vitrine de Cursos"
+- [x] **A.8 — Conclusão Automática e Gamificação**
+  - [x] Remover a opção manual de marcar como concluída no frontend
+  - [x] Adicionar o trigger automático de conclusão ao atingir >= 90% de visualização
+  - [x] Conectar o trigger automático com o ganho de 50 BDB Points e chave de idempotência exclusiva
 
 # TASKS — Fase 6: Automações
 > **Status:** ⚪ Pendente — depende da Fase 5

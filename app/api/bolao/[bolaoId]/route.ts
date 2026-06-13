@@ -77,6 +77,38 @@ export async function GET(
       );
     }
 
+    // --- AVALIAÇÃO ON-THE-FLY DE PARTIDAS FINALIZADAS PENDENTES ---
+    try {
+      const pendingMatches = await prisma.match.findMany({
+        where: {
+          status: "FINISHED",
+          fthg: { not: null },
+          ftag: { not: null },
+          bolaoPalpites: {
+            some: {
+              bolaoId: bolao.id,
+              avaliado: false
+            }
+          }
+        },
+        select: {
+          id: true,
+          fthg: true,
+          ftag: true
+        }
+      });
+
+      if (pendingMatches.length > 0) {
+        const { avaliarPalpitesDePartida } = await import("@/lib/bolao/avaliarPalpite");
+        for (const m of pendingMatches) {
+          await avaliarPalpitesDePartida(m.id, m.fthg!, m.ftag!);
+        }
+      }
+    } catch (err) {
+      console.error("[GET /api/bolao/[bolaoId]] Erro na avaliação on-the-fly:", err);
+    }
+    // -------------------------------------------------------------
+
     // Busca as partidas relacionadas à temporada do bolão
     const matches = await prisma.match.findMany({
       where: {

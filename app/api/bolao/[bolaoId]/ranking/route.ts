@@ -17,6 +17,38 @@ export async function GET(
 
     const { bolaoId } = params;
 
+    // --- AVALIAÇÃO ON-THE-FLY DE PARTIDAS FINALIZADAS PENDENTES ---
+    try {
+      const pendingMatches = await prisma.match.findMany({
+        where: {
+          status: "FINISHED",
+          fthg: { not: null },
+          ftag: { not: null },
+          bolaoPalpites: {
+            some: {
+              bolaoId,
+              avaliado: false
+            }
+          }
+        },
+        select: {
+          id: true,
+          fthg: true,
+          ftag: true
+        }
+      });
+
+      if (pendingMatches.length > 0) {
+        const { avaliarPalpitesDePartida } = await import("@/lib/bolao/avaliarPalpite");
+        for (const m of pendingMatches) {
+          await avaliarPalpitesDePartida(m.id, m.fthg!, m.ftag!);
+        }
+      }
+    } catch (err) {
+      console.error("[GET /api/bolao/[bolaoId]/ranking] Erro na avaliação on-the-fly:", err);
+    }
+    // -------------------------------------------------------------
+
     // Obter parâmetros de paginação da query string
     const searchParams = req.nextUrl.searchParams;
     const page = parseInt(searchParams.get("page") || "1", 10);

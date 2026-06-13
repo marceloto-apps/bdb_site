@@ -224,3 +224,35 @@ export async function deleteLesson(id: string) {
     where: { id }
   })
 }
+
+/**
+ * Marca ou desmarca o progresso de uma aula para o usuário logado
+ */
+export async function toggleLessonProgress(lessonId: string, completed: boolean) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    throw new Error("Acesso negado: Usuário não autenticado.")
+  }
+  const userId = session.user.id
+
+  return await prisma.lessonProgress.upsert({
+    where: {
+      userId_lessonId: {
+        userId,
+        lessonId
+      }
+    },
+    update: {
+      completed,
+      completedAt: completed ? new Date() : null,
+      watchedPct: completed ? 100 : 0
+    },
+    create: {
+      userId,
+      lessonId,
+      completed,
+      completedAt: completed ? new Date() : null,
+      watchedPct: completed ? 100 : 0
+    }
+  })
+}

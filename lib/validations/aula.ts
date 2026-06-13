@@ -15,6 +15,12 @@ export const aulaSchema = z.object({
     .nullable()
     .or(z.literal("")),
   contentHtml: z.string().optional().nullable(),
+  coverUrl: z
+    .string()
+    .url({ message: "A URL da imagem de capa deve ser válida" })
+    .optional()
+    .nullable()
+    .or(z.literal("")),
   durationSec: z
     .number()
     .int()

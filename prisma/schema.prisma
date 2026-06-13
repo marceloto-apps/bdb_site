@@ -1036,6 +1036,7 @@ model Lesson {
   title       String
   order       Int              @default(0)
   videoUrl    String?          // preenchido na Onda C (player)
+  coverUrl    String?          // Capa da aula (Cloudinary)
   contentHtml String?          @db.Text
   durationSec Int?
   module      Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)

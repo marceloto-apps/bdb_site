@@ -29,6 +29,7 @@ import {
   saveLesson, 
   deleteLesson 
 } from "@/lib/courses/actions/admin"
+import { ImageUpload } from "@/components/cms/ImageUpload"
 
 interface Course {
   id: string
@@ -56,6 +57,7 @@ interface Lesson {
   title: string
   order: number
   videoUrl: string | null
+  coverUrl: string | null
   contentHtml: string | null
   durationSec: number | null
   quiz?: {
@@ -510,13 +512,13 @@ export default function CoursesAdminPage() {
                 className="w-full text-sm bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-zinc-100 h-20"
               />
             </div>
-            <div>
-              <label className="block text-xs text-zinc-400 mb-1">Capa (Imagem URL)</label>
-              <input 
-                type="text" 
+            <div className="md:col-span-2 space-y-2">
+              <label className="block text-xs text-zinc-400">Imagem de Capa (Curso)</label>
+              <ImageUpload 
                 value={editingCourse.coverUrl || ""}
-                onChange={(e) => setEditingCourse({...editingCourse, coverUrl: e.target.value})}
-                className="w-full text-sm bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-zinc-100"
+                onChange={(url) => setEditingCourse({...editingCourse, coverUrl: url})}
+                onRemove={() => setEditingCourse({...editingCourse, coverUrl: ""})}
+                buttonText="Fazer upload de capa do curso"
               />
             </div>
             <div>
@@ -828,6 +830,15 @@ export default function CoursesAdminPage() {
                   onChange={(e) => setEditingLesson({...editingLesson, durationSec: e.target.value ? parseInt(e.target.value) : null})}
                   className="w-full text-sm bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-zinc-100"
                   placeholder="ex: 600 para 10 minutos"
+                />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-xs text-zinc-400">Imagem de Capa (Aula)</label>
+                <ImageUpload 
+                  value={editingLesson.coverUrl || ""}
+                  onChange={(url) => setEditingLesson({...editingLesson, coverUrl: url})}
+                  onRemove={() => setEditingLesson({...editingLesson, coverUrl: ""})}
+                  buttonText="Fazer upload de capa da aula"
                 />
               </div>
               <div className="md:col-span-2">

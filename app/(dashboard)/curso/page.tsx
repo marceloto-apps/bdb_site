@@ -61,6 +61,7 @@ export default async function CursoPage() {
           title: lesson.title,
           order: lesson.order,
           durationSec: lesson.durationSec,
+          coverUrl: lesson.coverUrl,
           contentHtml: lesson.contentHtml,
           hasVideo: !!lesson.videoUrl, // Apenas envia a confirmação de que possui vídeo
           completed: progress ? progress.completed : false,

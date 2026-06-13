@@ -16,5 +16,5 @@ export function extrairYoutubeId(url: string): string | null {
  * Utiliza youtube-nocookie.com e remove sugestões de outros canais (rel=0)
  */
 export function gerarEmbedUrl(videoId: string): string {
-  return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1`;
+  return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&enablejsapi=1`;
 }

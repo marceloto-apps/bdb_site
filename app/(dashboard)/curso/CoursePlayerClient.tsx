@@ -7,21 +7,26 @@ import {
   Video, 
   FileText, 
   ChevronRight, 
+  ChevronLeft,
   ChevronDown, 
   Loader2, 
   AlertTriangle,
   GraduationCap,
   ArrowLeft,
   Check,
-  Tv
+  Tv,
+  Search
 } from "lucide-react"
-import { toggleLessonProgress } from "@/lib/courses/actions/admin"
+import { saveLessonProgress } from "@/lib/courses/actions/admin"
+import { GLOSSARY_TERMS, GlossaryTerm } from "@/lib/courses/glossary"
+
 
 interface Lesson {
   id: string
   title: string
   order: number
   durationSec: number | null
+  coverUrl: string | null
   contentHtml: string | null
   hasVideo: boolean
   completed: boolean
@@ -74,6 +79,44 @@ function linkify(text: string): string {
     .join("")
 }
 
+const getCategoryLabel = (cat: string) => {
+  const map: Record<string, string> = {
+    mercado: "Mercado",
+    estatistica: "Estatística",
+    risco: "Risco",
+    operacao: "Operação",
+    modelo: "Modelos",
+  }
+  return map[cat] || cat
+}
+
+const getCategoryColor = (cat: string) => {
+  switch (cat) {
+    case "mercado":
+      return "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+    case "estatistica":
+      return "bg-sky-500/10 text-sky-400 border border-sky-500/20"
+    case "risco":
+      return "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+    case "operacao":
+      return "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+    case "modelo":
+      return "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+    default:
+      return "bg-zinc-500/10 text-zinc-400"
+  }
+}
+
+const getStartingLessonId = (course: Course): string => {
+  const lessons = course.modules.flatMap((m) => m.lessons)
+  if (lessons.length === 0) return "glossario"
+  
+  // Procura a última aula assistida ou concluída do fim para o início
+  const lastWatched = [...lessons].reverse().find((l) => l.watchedPct > 0 || l.completed)
+  return lastWatched ? lastWatched.id : lessons[0].id
+}
+
+
 export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
   // Controle de Visualização Principal: Vitrine vs Player de Curso
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
@@ -86,10 +129,14 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
   const [embedUrl, setEmbedUrl] = useState<string | null>(null)
   const [loadingVideo, setLoadingVideo] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
-  const [completingLessonId, setCompletingLessonId] = useState<string | null>(null)
+  const [lastSavedPct, setLastSavedPct] = useState<number>(0)
 
   // Módulos abertos
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({})
+
+  // Estados do glossário
+  const [glossarySearch, setGlossarySearch] = useState("")
+  const [glossaryCategory, setGlossaryCategory] = useState<string>("todos")
 
   // Encontra o curso ativo
   const activeCourse = coursesState.find((c) => c.id === activeCourseId)
@@ -152,39 +199,68 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
     setActiveCourseId(courseId)
     const course = coursesState.find((c) => c.id === courseId)
     if (course) {
-      if (course.modules.length > 0) {
-        // Expande o primeiro módulo por padrão
-        setExpandedModules({ [course.modules[0].id]: true })
-        if (course.modules[0].lessons.length > 0) {
-          setSelectedLessonId(course.modules[0].lessons[0].id)
-        } else {
-          setSelectedLessonId(null)
+      const startLessonId = getStartingLessonId(course)
+      setSelectedLessonId(startLessonId)
+      
+      // Encontra a qual módulo essa aula pertence para expandi-lo
+      if (startLessonId !== "glossario") {
+        const parentModule = course.modules.find((mod) =>
+          mod.lessons.some((l) => l.id === startLessonId)
+        )
+        if (parentModule) {
+          setExpandedModules({ [parentModule.id]: true })
         }
       } else {
-        setSelectedLessonId(null)
+        if (course.modules.length > 0) {
+          setExpandedModules({ [course.modules[0].id]: true })
+        }
       }
     }
   }
 
-  // Salva a conclusão da aula no banco de dados e atualiza o estado local reativo
-  const handleToggleComplete = async (lessonId: string, currentCompleted: boolean) => {
-    setCompletingLessonId(lessonId)
-    const newCompleted = !currentCompleted
+  // Reseta a porcentagem salva ao trocar de aula
+  useEffect(() => {
+    if (selectedLesson) {
+      setLastSavedPct(selectedLesson.watchedPct || 0)
+    } else {
+      setLastSavedPct(0)
+    }
+  }, [selectedLessonId])
+
+  // Função para tratar atualizações de progresso vindas do player de vídeo
+  const handleProgressPctUpdate = async (pct: number) => {
+    if (!selectedLesson) return
+
+    const roundedPct = Math.round(pct)
+    
+    // Não diminuir progresso já salvo na tela (exceto se mudou de aula)
+    if (roundedPct <= selectedLesson.watchedPct && roundedPct < 90) return
+
+    // Diferença mínima de 5% para atualizar o banco, exceto se bateu 90% (aula concluída)
+    const diff = roundedPct - lastSavedPct
+    const isNowCompleting = roundedPct >= 90 && !selectedLesson.completed
+
+    if (diff < 5 && !isNowCompleting) return
+
+    // Atualiza a última porcentagem enviada para evitar disparos repetidos
+    setLastSavedPct(roundedPct)
+
     try {
-      await toggleLessonProgress(lessonId, newCompleted)
-      
-      // Atualiza o progresso local imediatamente
+      await saveLessonProgress(selectedLesson.id, roundedPct)
+
+      // Atualiza o estado reativo local das aulas do curso
       setCoursesState((prev) =>
         prev.map((course) => ({
           ...course,
           modules: course.modules.map((mod) => ({
             ...mod,
             lessons: mod.lessons.map((lesson) => {
-              if (lesson.id === lessonId) {
+              if (lesson.id === selectedLesson.id) {
+                const completed = roundedPct >= 90 || lesson.completed
                 return {
                   ...lesson,
-                  completed: newCompleted,
-                  watchedPct: newCompleted ? 100 : 0,
+                  watchedPct: roundedPct,
+                  completed
                 }
               }
               return lesson
@@ -193,11 +269,82 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
         }))
       )
     } catch (err) {
-      console.error("[CoursePlayer] Erro ao salvar progresso:", err)
-    } finally {
-      setCompletingLessonId(null)
+      console.error("Erro ao salvar o progresso assistido da aula:", err)
     }
   }
+
+  // Efeito para registrar o listener de progresso do Bunny Stream (Player.js)
+  useEffect(() => {
+    if (!selectedLessonId || !selectedLesson?.hasVideo) return
+
+    const iframe = document.getElementById("course-video-iframe") as HTMLIFrameElement
+    if (!iframe) return
+
+    const setupPlayer = () => {
+      try {
+        iframe.contentWindow?.postMessage(
+          JSON.stringify({ method: "addEventListener", value: "timeupdate" }),
+          "*"
+        )
+      } catch (err) {
+        console.error("Erro ao registrar playerjs listener:", err)
+      }
+    }
+
+    setupPlayer()
+    iframe.onload = setupPlayer
+
+    // Polling a cada 2 segundos para garantir que o player seja registrado se o iframe recarregar
+    const interval = setInterval(setupPlayer, 2000)
+    return () => clearInterval(interval)
+  }, [selectedLessonId, embedUrl])
+
+  // Efeito para escutar as mensagens do iframe (YouTube e Bunny.net)
+  useEffect(() => {
+    if (!selectedLessonId || !selectedLesson?.hasVideo) return
+
+    const handleMessage = async (event: MessageEvent) => {
+      const iframe = document.getElementById("course-video-iframe") as HTMLIFrameElement
+      if (!iframe || event.source !== iframe.contentWindow) return
+
+      try {
+        let data = event.data
+        if (typeof data === "string") {
+          data = JSON.parse(data)
+        }
+
+        let seconds = 0
+        let duration = 0
+        let hasProg = false
+
+        // 1. Caso Bunny Stream (Player.js standard)
+        if (data.event === "timeupdate" && data.value) {
+          seconds = data.value.seconds
+          duration = data.value.duration
+          hasProg = true
+        }
+
+        // 2. Caso YouTube (com enablejsapi=1)
+        if (data.event === "info_delivery" && data.info) {
+          if (typeof data.info.currentTime === "number" && typeof data.info.duration === "number") {
+            seconds = data.info.currentTime
+            duration = data.info.duration
+            hasProg = true
+          }
+        }
+
+        if (hasProg && duration > 0) {
+          const pct = (seconds / duration) * 100
+          await handleProgressPctUpdate(pct)
+        }
+      } catch (err) {
+        // Ignora erros de parsing de mensagens de outras origens
+      }
+    }
+
+    window.addEventListener("message", handleMessage)
+    return () => window.removeEventListener("message", handleMessage)
+  }, [selectedLessonId, lastSavedPct])
 
   const toggleModule = (moduleId: string) => {
     setExpandedModules((prev) => ({ ...prev, [moduleId]: !prev[moduleId] }))
@@ -258,7 +405,7 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:20px_20px] pointer-events-none" />
           <div className="relative space-y-3 max-w-2xl">
             <span className="text-amber-500 font-bold text-xs uppercase tracking-widest flex items-center gap-1.5">
-              <GraduationCap className="h-4 w-4" /> BDB Educação
+              <GraduationCap className="h-4 w-4" /> Cursos BigDataBet
             </span>
             <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none">
               Módulos de Capacitação Esportiva
@@ -298,7 +445,7 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
                     ) : (
                       <div className="text-center p-6 space-y-1.5 select-none">
                         <GraduationCap className="h-10 w-10 text-purple-400/80 mx-auto opacity-70 group-hover:rotate-6 transition-transform" />
-                        <span className="text-[10px] font-black text-zinc-500 tracking-wider uppercase block">BDB EDUCAÇÃO</span>
+                        <span className="text-[10px] font-black text-zinc-500 tracking-wider uppercase block">CURSOS BIGDATABET</span>
                       </div>
                     )}
                     
@@ -358,6 +505,73 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
   const progressPct = activeCourse ? calculateCourseProgress(activeCourse) : 0
   const isLessonCompleted = selectedLesson?.completed || false
 
+  // Lista linear e ordenada de todas as aulas do curso ativo para navegação
+  const flatLessons = activeCourse
+    ? activeCourse.modules.flatMap((mod) =>
+        mod.lessons.map((lesson) => ({
+          ...lesson,
+          moduleId: mod.id,
+          moduleTitle: mod.title,
+        }))
+      )
+    : []
+
+  let prevLesson = null
+  let nextLesson = null
+
+  if (selectedLessonId === "glossario") {
+    prevLesson = null
+    nextLesson = flatLessons.length > 0 ? flatLessons[0] : null
+  } else {
+    const currentLessonIndex = flatLessons.findIndex((l) => l.id === selectedLessonId)
+    if (currentLessonIndex === 0) {
+      prevLesson = { id: "glossario", title: "Dicionário do Mercado", moduleId: "glossario", moduleTitle: "" }
+    } else if (currentLessonIndex > 0) {
+      prevLesson = flatLessons[currentLessonIndex - 1]
+    }
+    
+    if (currentLessonIndex !== -1 && currentLessonIndex < flatLessons.length - 1) {
+      nextLesson = flatLessons[currentLessonIndex + 1]
+    }
+  }
+
+  // Configuração do Glossário
+  const categories = [
+    { id: "todos", label: "Todos" },
+    { id: "mercado", label: "Mercado" },
+    { id: "estatistica", label: "Estatística" },
+    { id: "risco", label: "Risco" },
+    { id: "operacao", label: "Operação" },
+    { id: "modelo", label: "Modelos" },
+  ]
+
+  const filteredTerms = GLOSSARY_TERMS.filter((term) => {
+    const matchesCategory = glossaryCategory === "todos" || term.cat === glossaryCategory
+    const query = glossarySearch.toLowerCase().trim()
+    const matchesSearch = !query || 
+      term.name.toLowerCase().includes(query) ||
+      (term.full && term.full.toLowerCase().includes(query)) ||
+      term.pt.toLowerCase().includes(query) ||
+      term.def.toLowerCase().includes(query)
+    return matchesCategory && matchesSearch
+  })
+
+  const groupedTerms: Record<string, GlossaryTerm[]> = {}
+  filteredTerms.forEach((term) => {
+    const firstLetter = term.name[0].toUpperCase()
+    const letter = /^[A-Z]/.test(firstLetter) ? firstLetter : "#"
+    if (!groupedTerms[letter]) {
+      groupedTerms[letter] = []
+    }
+    groupedTerms[letter].push(term)
+  })
+
+  const sortedLetters = Object.keys(groupedTerms).sort((a, b) => {
+    if (a === "#") return 1
+    if (b === "#") return -1
+    return a.localeCompare(b)
+  })
+
   return (
     <div className="space-y-6 p-6 bg-zinc-950 rounded-xl min-h-screen">
       {/* Cabeçalho do Player */}
@@ -395,9 +609,142 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Coluna da Esquerda: Player de Vídeo e Material */}
         <div className="flex-1 space-y-6">
-          {selectedLesson ? (
+          {selectedLessonId === "glossario" ? (
+            <div className="space-y-6 bg-zinc-900 border border-zinc-850 rounded-2xl p-5 md:p-6 shadow-xl">
+              {/* Header do Glossário */}
+              <div className="space-y-2 border-b border-zinc-850 pb-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-500 uppercase tracking-widest">
+                  <BookOpen className="h-4 w-4" /> Dicionário do Mercado
+                </div>
+                <h3 className="text-lg font-black text-white leading-tight">
+                  Glossário do Mercado Esportivo
+                </h3>
+                <p className="text-xs text-zinc-400">
+                  Consulte os principais termos de mercado, estatística, risco e operação utilizados no treinamento e no mercado geral.
+                </p>
+              </div>
+
+              {/* Filtros e Busca */}
+              <div className="space-y-4">
+                {/* Input de Busca */}
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <input
+                    type="text"
+                    placeholder="Pesquisar termo, tradução ou definição..."
+                    value={glossarySearch}
+                    onChange={(e) => setGlossarySearch(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-700 text-xs transition-colors"
+                  />
+                  {glossarySearch && (
+                    <button
+                      onClick={() => setGlossarySearch("")}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-zinc-500 hover:text-zinc-350 bg-zinc-850 hover:bg-zinc-800 px-2 py-1 rounded"
+                    >
+                      Limpar
+                    </button>
+                  )}
+                </div>
+
+                {/* Chips de Categorias */}
+                <div className="flex flex-wrap gap-2">
+                  {categories.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setGlossaryCategory(cat.id)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                        glossaryCategory === cat.id
+                          ? "bg-amber-500 text-zinc-950 border-amber-500"
+                          : "bg-zinc-950 text-zinc-400 border-zinc-800 hover:border-zinc-755 hover:text-white"
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Contador */}
+                <div className="text-[10px] text-zinc-500 font-semibold uppercase tracking-wider">
+                  {filteredTerms.length} {filteredTerms.length === 1 ? "termo encontrado" : "termos encontrados"}
+                </div>
+              </div>
+
+              {/* Lista de Termos Agrupados */}
+              <div className="space-y-6 pt-2">
+                {filteredTerms.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed border-zinc-800 rounded-xl">
+                    <Search className="h-8 w-8 text-zinc-700 mx-auto mb-2" />
+                    <p className="text-xs text-zinc-500">Nenhum termo encontrado para os filtros aplicados.</p>
+                  </div>
+                ) : (
+                  sortedLetters.map((letter) => (
+                    <div key={letter} className="space-y-3">
+                      {/* Letra Divisor */}
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-black text-amber-500">{letter}</span>
+                        <div className="flex-1 h-[1px] bg-zinc-850" />
+                      </div>
+
+                      {/* Termos da Letra */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {groupedTerms[letter].map((term) => (
+                          <div
+                            key={term.name}
+                            className="bg-zinc-950/40 border border-zinc-850 hover:border-zinc-800 p-4 rounded-xl flex flex-col justify-between space-y-3 transition-colors"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <h5 className="text-xs font-black text-white tracking-tight">
+                                  {term.name}
+                                </h5>
+                                <span className={`text-[8px] px-2 py-0.5 rounded font-bold uppercase tracking-wider ${getCategoryColor(term.cat)}`}>
+                                  {getCategoryLabel(term.cat)}
+                                </span>
+                              </div>
+                              
+                              {term.full && term.full !== term.name && (
+                                <div className="text-[9px] text-zinc-500 italic font-medium leading-none">
+                                  {term.full}
+                                </div>
+                              )}
+
+                              <div className="text-[10px] text-amber-500 font-bold leading-tight">
+                                → {term.pt}
+                              </div>
+                            </div>
+
+                            <div 
+                              className="text-[11px] text-zinc-400 leading-relaxed font-normal pt-1 border-t border-zinc-900/60"
+                              dangerouslySetInnerHTML={{ __html: term.def }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Botão de Próxima Aula no rodapé do glossário */}
+              {nextLesson && (
+                <div className="flex justify-end pt-4 border-t border-zinc-800">
+                  <button
+                    onClick={() => {
+                      setSelectedLessonId(nextLesson.id)
+                      setExpandedModules(prev => ({ ...prev, [nextLesson.moduleId]: true }))
+                    }}
+                    className="px-4 py-2.5 text-xs font-bold rounded-xl flex items-center gap-1.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 transition-colors"
+                    title={`Avançar para: ${nextLesson.title}`}
+                  >
+                    Começar o Treinamento ({nextLesson.title})
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : selectedLesson ? (
             <div className="space-y-6">
-              {/* Vídeo */}
+              {/* Vídeo ou Imagem de Capa */}
               {selectedLesson.hasVideo ? (
                 <div className="w-full aspect-video bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 relative flex items-center justify-center shadow-xl">
                   {loadingVideo && (
@@ -417,12 +764,21 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
 
                   {embedUrl && (
                     <iframe
+                      id="course-video-iframe"
                       src={embedUrl}
                       className="w-full h-full"
                       allowFullScreen
                       allow="autoplay; encrypted-media; picture-in-picture"
                     />
                   )}
+                </div>
+              ) : selectedLesson.coverUrl ? (
+                <div className="w-full aspect-video bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 relative shadow-xl">
+                  <img 
+                    src={selectedLesson.coverUrl} 
+                    alt={selectedLesson.title} 
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               ) : null}
 
@@ -435,26 +791,49 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
                   <h3 className="text-sm font-bold text-white">{selectedLesson.title}</h3>
                 </div>
 
-                <button
-                  onClick={() => handleToggleComplete(selectedLesson!.id, isLessonCompleted)}
-                  disabled={completingLessonId === selectedLesson.id}
-                  className={`px-4 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-2 transition-all shrink-0 ${
-                    isLessonCompleted
-                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20"
-                      : "bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-750"
-                  }`}
-                >
-                  {completingLessonId === selectedLesson.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : isLessonCompleted ? (
-                    <div className="h-4 w-4 rounded-full bg-emerald-500 flex items-center justify-center text-zinc-950">
-                      <Check className="h-2.5 w-2.5 stroke-[3]" />
-                    </div>
-                  ) : (
-                    <div className="h-4 w-4 rounded-full border border-zinc-500" />
+                <div className="flex items-center gap-2.5 shrink-0">
+                  {/* Botão Anterior */}
+                  {prevLesson && (
+                    <button
+                      onClick={() => {
+                        setSelectedLessonId(prevLesson.id)
+                        // Expande o módulo correspondente se estiver colapsado
+                        setExpandedModules(prev => ({ ...prev, [prevLesson.moduleId]: true }))
+                      }}
+                      className="px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1 bg-zinc-800 hover:bg-zinc-750 text-zinc-200 border border-zinc-750 transition-colors"
+                      title={`Voltar para: ${prevLesson.title}`}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                      Anterior
+                    </button>
                   )}
-                  {isLessonCompleted ? "Aula Concluída" : "Marcar como Concluída"}
-                </button>
+
+                  {/* Selo Concluído */}
+                  {isLessonCompleted && (
+                    <div className="px-3.5 py-2 text-xs font-bold rounded-xl flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 select-none">
+                      <div className="h-3.5 w-3.5 rounded-full bg-emerald-500 flex items-center justify-center text-zinc-950">
+                        <Check className="h-2 w-2 stroke-[3]" />
+                      </div>
+                      Concluída
+                    </div>
+                  )}
+
+                  {/* Botão Próximo */}
+                  {nextLesson && (
+                    <button
+                      onClick={() => {
+                        setSelectedLessonId(nextLesson.id)
+                        // Expande o módulo correspondente se estiver colapsado
+                        setExpandedModules(prev => ({ ...prev, [nextLesson.moduleId]: true }))
+                      }}
+                      className="px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1 bg-amber-500 hover:bg-amber-600 text-zinc-950 transition-colors"
+                      title={`Avançar para: ${nextLesson.title}`}
+                    >
+                      Próxima
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Notas de Aula */}
@@ -495,6 +874,34 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
           </h3>
 
           <div className="space-y-3">
+            {/* Dicionário do Mercado (Glossário) */}
+            <div 
+              onClick={() => setSelectedLessonId("glossario")}
+              className={`border rounded-xl p-3.5 cursor-pointer transition-all ${
+                selectedLessonId === "glossario"
+                  ? "border-amber-500 bg-amber-500/5 shadow-lg shadow-amber-950/10"
+                  : "border-zinc-850 bg-zinc-950/40 hover:bg-zinc-850/30 hover:border-zinc-700"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`p-2 rounded-lg transition-colors ${
+                  selectedLessonId === "glossario" ? "bg-amber-500 text-zinc-950" : "bg-zinc-900 text-zinc-400"
+                }`}>
+                  <BookOpen className="h-4 w-4" />
+                </div>
+                <div className="space-y-0.5">
+                  <h4 className={`text-xs font-bold leading-tight ${
+                    selectedLessonId === "glossario" ? "text-amber-400" : "text-zinc-200"
+                  }`}>
+                    Dicionário do Mercado
+                  </h4>
+                  <span className="text-[9px] text-zinc-500 block">
+                    99 termos de apostas esportivas
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {activeCourse?.modules.map((mod) => {
               const isModExpanded = !!expandedModules[mod.id]
               const totalModLessons = mod.lessons.length
@@ -531,21 +938,17 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
                             <div key={lesson.id} className="relative flex gap-3">
                               {/* Timeline Linha e Conector */}
                               <div className="flex flex-col items-center shrink-0 w-5">
-                                <button
-                                  onClick={() => handleToggleComplete(lesson.id, isCompleted)}
-                                  disabled={completingLessonId === lesson.id}
-                                  className="group relative flex items-center justify-center mt-1 focus:outline-none"
-                                >
+                                <div className="relative flex items-center justify-center mt-1">
                                   {isCompleted ? (
-                                    <div className="h-4 w-4 rounded-full bg-emerald-500 border border-emerald-400 flex items-center justify-center text-zinc-950 group-hover:scale-110 transition-transform">
+                                    <div className="h-4 w-4 rounded-full bg-emerald-500 border border-emerald-400 flex items-center justify-center text-zinc-950">
                                       <Check className="h-2.5 w-2.5 stroke-[3]" />
                                     </div>
                                   ) : isSelected ? (
                                     <div className="h-4 w-4 rounded-full bg-amber-500 ring-4 ring-amber-500/20 border border-amber-400" />
                                   ) : (
-                                    <div className="h-4 w-4 rounded-full bg-zinc-900 border border-zinc-700 hover:border-zinc-500" />
+                                    <div className="h-4 w-4 rounded-full bg-zinc-900 border border-zinc-700" />
                                   )}
-                                </button>
+                                </div>
                                 {hasLine && (
                                   <div className="w-[1px] flex-1 border-l border-dashed border-zinc-800 my-1 min-h-[30px]" />
                                 )}

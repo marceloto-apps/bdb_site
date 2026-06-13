@@ -4,6 +4,7 @@ import { auth } from "@/auth"
 import { prisma } from "@/lib/prisma"
 import { aulaSchema } from "@/lib/validations/aula"
 import { quizQuestionsSchema } from "@/lib/validations/quiz"
+import { awardPoints } from "@/lib/points/award"
 
 /**
  * Helper para verificar privilégios de administrador
@@ -140,6 +141,7 @@ export async function saveLesson(data: {
   title: string
   order: number
   videoUrl?: string | null
+  coverUrl?: string | null
   contentHtml?: string | null
   durationSec?: number | null
   quiz?: {
@@ -148,12 +150,13 @@ export async function saveLesson(data: {
   } | null
 }) {
   await requireAdmin()
-  const { id, moduleId, title, order, videoUrl, contentHtml, durationSec, quiz } = data
+  const { id, moduleId, title, order, videoUrl, coverUrl, contentHtml, durationSec, quiz } = data
 
   // 1. Validação dos dados da Aula via Zod
   const parsedAula = aulaSchema.safeParse({
     title,
     videoUrl: videoUrl || undefined,
+    coverUrl: coverUrl || undefined,
     contentHtml: contentHtml || undefined,
     durationSec: durationSec !== undefined && durationSec !== null ? Number(durationSec) : undefined,
   })
@@ -179,15 +182,18 @@ export async function saveLesson(data: {
     title,
     order,
     videoUrl: videoUrl || null,
+    coverUrl: coverUrl || null,
     contentHtml: contentHtml || null,
     durationSec: durationSec || null
   }
 
   let lesson
   if (id) {
+    // Removemos o moduleId no update para evitar erro de validação do Prisma
+    const { moduleId: _, ...updatePayload } = payload
     lesson = await prisma.lesson.update({
       where: { id },
-      data: payload
+      data: updatePayload
     })
   } else {
     lesson = await prisma.lesson.create({
@@ -225,9 +231,6 @@ export async function deleteLesson(id: string) {
   })
 }
 
-/**
- * Marca ou desmarca o progresso de uma aula para o usuário logado
- */
 export async function toggleLessonProgress(lessonId: string, completed: boolean) {
   const session = await auth()
   if (!session?.user?.id) {
@@ -255,4 +258,80 @@ export async function toggleLessonProgress(lessonId: string, completed: boolean)
       watchedPct: completed ? 100 : 0
     }
   })
+}
+
+/**
+ * Salva a porcentagem assistida da aula. Se for >= 90%, marca como concluída e concede 50 pontos.
+ */
+export async function saveLessonProgress(lessonId: string, watchedPct: number) {
+  const session = await auth()
+  if (!session?.user?.id) {
+    throw new Error("Acesso negado: Usuário não autenticado.")
+  }
+  const userId = session.user.id
+
+  // 1. Busca progresso atual
+  const currentProgress = await prisma.lessonProgress.findUnique({
+    where: {
+      userId_lessonId: {
+        userId,
+        lessonId
+      }
+    }
+  })
+
+  // Se o progresso já estiver completo, não regredir a porcentagem nem estado
+  if (currentProgress?.completed && watchedPct < 90) {
+    return currentProgress
+  }
+
+  const isNowCompleted = watchedPct >= 90
+  const shouldAwardPoints = isNowCompleted && !currentProgress?.completed
+
+  const progress = await prisma.lessonProgress.upsert({
+    where: {
+      userId_lessonId: {
+        userId,
+        lessonId
+      }
+    },
+    update: {
+      watchedPct,
+      completed: isNowCompleted || (currentProgress?.completed ?? false),
+      completedAt: isNowCompleted && !currentProgress?.completed ? new Date() : currentProgress?.completedAt
+    },
+    create: {
+      userId,
+      lessonId,
+      watchedPct,
+      completed: isNowCompleted,
+      completedAt: isNowCompleted ? new Date() : null
+    }
+  })
+
+  // 2. Conceder os pontos se acabou de completar a aula (>= 90%)
+  if (shouldAwardPoints) {
+    try {
+      // Garantir que a regra de ponto COMPLETAR_AULA existe
+      await prisma.pointRule.upsert({
+        where: { action: "COMPLETAR_AULA" },
+        update: {},
+        create: {
+          action: "COMPLETAR_AULA",
+          label: "Assistir aula (+90%)",
+          points: 50,
+          countsToCap: true,
+          active: true
+        }
+      })
+
+      // Concede 50 pontos para a aula concluída
+      await awardPoints(userId, "COMPLETAR_AULA", lessonId)
+      console.log(`[saveLessonProgress] Concedido 50 pontos ao usuário ${userId} pela aula ${lessonId}`)
+    } catch (err) {
+      console.error("[saveLessonProgress] Erro ao conceder pontos:", err)
+    }
+  }
+
+  return progress
 }

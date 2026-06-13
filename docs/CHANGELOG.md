@@ -1,5 +1,16 @@
 # Changelog — Big Data Bet
 
+## [Onda A — Dicionário do Mercado] — 2026-06-13
+
+### Adicionado
+- **Dicionário do Mercado**: Integração de um glossário estático contendo 99 termos de apostas esportivas, divididos em 5 categorias: Mercado, Estatística, Risco, Operação e Modelos.
+- **Arquivo de Dados Estáticos**: Novo arquivo [glossary.ts](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/lib/courses/glossary.ts) contendo todos os termos e definições com tags HTML.
+- **Interface de Busca e Filtros**: Campo de pesquisa e botões de filtro na visualização do glossário.
+
+### Alterado
+- **Inicialização do Player**: Atualizado o comportamento em [CoursePlayerClient.tsx](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/app/%28dashboard%29/curso/CoursePlayerClient.tsx) para iniciar na última aula assistida pelo usuário (ou na primeira, se nenhuma tiver progresso) ao invés do glossário.
+- **Timeline Curricular**: Posicionamento do glossário como um item selecionável opcional antes do Módulo 1 na timeline lateral.
+
 ## [Onda A — Correções e Segurança] — 2026-06-08
 
 ### Adicionado

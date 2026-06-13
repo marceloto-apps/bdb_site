@@ -167,10 +167,10 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
         <SidebarGroupLabel>CURSO</SidebarGroupLabel>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/curso'} tooltip="Aulas">
+            <SidebarMenuButton asChild isActive={pathname === '/curso'} tooltip="Vitrine de Cursos">
               <Link href="/curso" className="flex items-center gap-2 w-full">
                 <GraduationCap />
-                <span>Aulas</span>
+                <span>Vitrine de Cursos</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

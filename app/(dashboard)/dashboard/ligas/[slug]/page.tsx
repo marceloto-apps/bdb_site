@@ -20,7 +20,8 @@ export default async function LigaDashboardPage({ params }: { params: { slug: st
   const session = await auth()
   const slug = params.slug
 
-  const isFree = slug === 'brasileirao-serie-a'
+  const { isLeagueFree } = await import('@/lib/auth/free-leagues')
+  const isFree = isLeagueFree(slug)
 
   if (!isFree) {
     if (!session?.user?.id) {

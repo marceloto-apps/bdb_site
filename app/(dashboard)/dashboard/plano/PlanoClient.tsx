@@ -160,7 +160,7 @@ export function PlanoClient({ user }: PlanoClientProps) {
           ) : user.plan === 'FREE' ? (
             <div className="space-y-4">
               <p className="text-zinc-400">
-                No plano gratuito, seu acesso é limitado ao Brasileirão Série A. Para desbloquear todas as 25+ ligas VIP nacionais e internacionais, gráficos avançados de xG, mapas de valor e tendências de odds, assine um dos nossos planos VIP.
+                No plano gratuito, seu acesso é limitado às ligas Brasileirão Série A, Série B e División Profesional (Bolívia). Nossos planos VIP e ferramentas de precificação avançadas estarão disponíveis em breve para liberação de todas as 25+ ligas VIP nacionais e internacionais.
               </p>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
@@ -171,6 +171,8 @@ export function PlanoClient({ user }: PlanoClientProps) {
                   </h4>
                   <ul className="text-xs text-zinc-400 space-y-1.5 list-disc list-inside">
                     <li>Brasileirão Série A</li>
+                    <li>Brasileirão Série B</li>
+                    <li>División Profesional (Bolívia)</li>
                     <li>Estatísticas básicas de times</li>
                     <li>Acesso à comunidade</li>
                   </ul>
@@ -179,7 +181,7 @@ export function PlanoClient({ user }: PlanoClientProps) {
                 <div className="p-4 border border-primary/20 rounded-lg bg-primary/5">
                   <h4 className="font-semibold text-primary flex items-center gap-2 mb-2">
                     <Sparkles className="w-4 h-4 text-primary" />
-                    Recursos VIP
+                    Recursos VIP (Em breve)
                   </h4>
                   <ul className="text-xs text-zinc-300 space-y-1.5 list-disc list-inside">
                     <li>Mais de 25 ligas (Premier, LaLiga, etc.)</li>
@@ -188,12 +190,6 @@ export function PlanoClient({ user }: PlanoClientProps) {
                     <li>Previsão de odds e valor esperado (EV)</li>
                   </ul>
                 </div>
-              </div>
-
-              <div className="pt-4 flex justify-end">
-                <Button asChild size="lg" className="w-full sm:w-auto font-semibold">
-                  <Link href="/planos">Conhecer Planos VIP</Link>
-                </Button>
               </div>
             </div>
           ) : (

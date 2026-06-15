@@ -19,7 +19,8 @@ export async function GET(
 
     const { slug } = params
 
-    const isFree = slug === 'brasileirao-serie-a'
+    const { isLeagueFree } = await import('@/lib/auth/free-leagues')
+    const isFree = isLeagueFree(slug)
     if (!isFree) {
       const { hasVipAccess } = await import('@/lib/auth/check-access')
       const hasAccess = await hasVipAccess(session.user.id)

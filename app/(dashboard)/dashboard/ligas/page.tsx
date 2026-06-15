@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { LigaCard } from '@/components/ligas/LigaCard'
 import { BarChart3 } from 'lucide-react'
 import { auth } from '@/auth'
+import { isLeagueFree } from '@/lib/auth/free-leagues'
 
 export const metadata: Metadata = {
   title: 'Ligas - BDB',
@@ -34,9 +35,6 @@ export default async function LigasPage() {
     orderBy: { name: 'asc' }
   })
 
-  // Apenas Brasileirão Série A é FREE na Fase 4
-  const freeSlugs = ['brasileirao-serie-a']
-  
   // Ligas Finalizadas
   const finishedSlugs = [
     'premier-league', 
@@ -57,7 +55,7 @@ export default async function LigasPage() {
     .map(comp => {
       const season = comp.seasons[0]
       const totalJogos = season ? season._count.matches : 0
-      const tier = freeSlugs.includes(comp.slug) ? 'FREE' : 'VIP'
+      const tier = isLeagueFree(comp.slug) ? 'FREE' : 'VIP'
       const disponivel = isVip || tier === 'FREE'
       const finalizada = finishedSlugs.includes(comp.slug)
 

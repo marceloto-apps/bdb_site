@@ -115,7 +115,7 @@ export default function BolaoPage() {
   const fetchBolaoData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/bolao/copa-2026");
+      const res = await fetch("/api/bolao/copa-2026", { cache: "no-store" });
       if (!res.ok) throw new Error("Erro ao carregar dados do bolão");
       const data = await res.json();
 
@@ -124,7 +124,7 @@ export default function BolaoPage() {
       setUserScore(data.userScore || null);
 
       // Fetch dos palpites salvos do usuário
-      const palpitesRes = await fetch("/api/bolao/copa-2026/palpites");
+      const palpitesRes = await fetch("/api/bolao/copa-2026/palpites", { cache: "no-store" });
       if (palpitesRes.ok) {
         const palpitesData: UserPalpite[] = await palpitesRes.json();
         const mappedPalpites: Record<string, UserPalpite> = {};
@@ -169,7 +169,7 @@ export default function BolaoPage() {
   const fetchRanking = useCallback(async (page: number) => {
     try {
       setRankingLoading(true);
-      const res = await fetch(`/api/bolao/copa-2026/ranking?page=${page}&limit=20`);
+      const res = await fetch(`/api/bolao/copa-2026/ranking?page=${page}&limit=20`, { cache: "no-store" });
       if (!res.ok) throw new Error("Erro ao carregar ranking");
       const data = await res.json();
       setRanking(data.ranking);

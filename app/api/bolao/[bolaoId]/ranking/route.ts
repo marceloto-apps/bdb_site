@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { bolaoId: string } }
@@ -89,6 +92,10 @@ export async function GET(
       page,
       limit,
       pages: Math.ceil(total / limit),
+    }, {
+      headers: {
+        "Cache-Control": "no-store, max-age=0, must-revalidate",
+      }
     });
   } catch (error: any) {
     console.error("[GET /api/bolao/[bolaoId]/ranking] Erro:", error);

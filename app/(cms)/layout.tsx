@@ -1,7 +1,7 @@
 import { auth } from '@/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, PlusCircle, Settings, FileEdit, Tags, RefreshCw, Gauge, Coins, GraduationCap } from 'lucide-react'
+import { FileText, PlusCircle, Settings, FileEdit, Tags, RefreshCw, Gauge, Coins, GraduationCap, CreditCard } from 'lucide-react'
 
 export default async function CmsLayout({
   children,
@@ -70,6 +70,10 @@ export default async function CmsLayout({
                   <Link href="/cms/admin/courses" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
                     <GraduationCap size={18} />
                     <span>Cursos Admin</span>
+                  </Link>
+                  <Link href="/cms/admin/planos" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
+                    <CreditCard size={18} />
+                    <span>Planos Admin</span>
                   </Link>
                 </div>
               </div>

@@ -1248,3 +1248,19 @@ model BolaoScore {
   @@map("bolao_scores")
 }
 
+model PlanConfig {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  priceCents    Int      // ex: 3990 para R$ 39,90
+  stripePriceId String
+  description   String?  @db.Text
+  features      String   @db.Text // JSON string list of features: ["feature 1", "feature 2"]
+  order         Int      @default(0)
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("plan_configs")
+}
+
+

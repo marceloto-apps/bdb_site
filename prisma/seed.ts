@@ -204,6 +204,53 @@ async function main() {
     });
   }
   console.log("✅ Planilhas mock criadas");
+
+  // 3. Planos Padrão (Fase 4 - Dynamic Config)
+  const defaultPlans = [
+    {
+      name: "VIP Básico",
+      priceCents: 3990,
+      stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIP_BASICO || "",
+      description: "Acesso total às análises das ligas VIP",
+      features: JSON.stringify([
+        "Todas as 25+ ligas VIP inclusas",
+        "Previsões Dixon-Coles e NB",
+        "Filtros avançados (Odds, Rodadas, Meses)",
+        "Dados de xG e Mapa de Valor (Expected Value)"
+      ]),
+      order: 1,
+      active: false
+    },
+    {
+      name: "VIP Pro",
+      priceCents: 6990,
+      stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIP_PRO || "",
+      description: "Ferramentas avançadas de precificação",
+      features: JSON.stringify([
+        "Tudo do plano VIP Básico",
+        "Calculadora Poisson-2.5 integrada",
+        "Juice Tracker e ferramentas adicionais",
+        "Suporte prioritário via WhatsApp"
+      ]),
+      order: 2,
+      active: false
+    }
+  ];
+
+  for (const plan of defaultPlans) {
+    await prisma.planConfig.upsert({
+      where: { name: plan.name },
+      update: {
+        priceCents: plan.priceCents,
+        stripePriceId: plan.stripePriceId,
+        description: plan.description,
+        features: plan.features,
+        order: plan.order,
+      },
+      create: plan,
+    });
+  }
+  console.log("✅ Planos padrão criados/atualizados (inativos por padrão)");
 }
 
 main()

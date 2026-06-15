@@ -39,9 +39,25 @@ export default async function PlanosPage() {
     pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_VIP_PRO || '',
   }
 
+  const plans = await prisma.planConfig.findMany({
+    where: { active: true },
+    orderBy: { order: 'asc' }
+  })
+
+  const serializedPlans = plans.map(p => ({
+    id: p.id,
+    name: p.name,
+    priceCents: p.priceCents,
+    stripePriceId: p.stripePriceId,
+    description: p.description,
+    features: p.features,
+    order: p.order,
+    active: p.active
+  }))
+
   return (
     <div className="bg-background min-h-screen text-white">
-      <PlanosClient userSession={userSessionData} priceIds={priceIds} />
+      <PlanosClient userSession={userSessionData} priceIds={priceIds} plans={serializedPlans} />
     </div>
   )
 }

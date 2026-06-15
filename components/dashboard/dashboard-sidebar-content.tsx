@@ -27,7 +27,8 @@ import {
   LineChart,
   RefreshCw,
   Gauge,
-  Coins
+  Coins,
+  CreditCard
 } from 'lucide-react'
 
 interface DashboardSidebarContentProps {
@@ -259,6 +260,14 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
                 <Link href="/cms/admin/courses">
                   <GraduationCap />
                   <span>Cursos Admin</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/planos')} tooltip="Planos Admin">
+                <Link href="/cms/admin/planos">
+                  <CreditCard />
+                  <span>Planos Admin</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

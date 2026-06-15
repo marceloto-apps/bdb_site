@@ -12,7 +12,7 @@
 | **2** | **Dashboards de Liga (MVP Brasileirão A)** | 🟢 Concluída |
 | **2.5**| **Otimizações Pós-MVP e Backfill** | 🟢 Concluída |
 | **3** | **Ferramentas Gratuitas (Migração Gemini)** | 🟢 Concluída |
-| **4** | **Multi-Liga + Pagamentos (Stripe + Hubla Legacy)** | ⚪ Pendente |
+| **4** | **Multi-Liga + Pagamentos (Stripe + Hubla Legacy)** | 🟢 Concluída |
 | **5** | **Curso + Backtest Interativo** | 🟡 Em Progresso (Onda A Concluída) |
 | **6** | **Automações + Bases Históricas (Bull + Redis)** | ⚪ Pendente |
 
@@ -277,12 +277,12 @@ Todo dado buscado na API é imediatamente salvo no banco. Buscas subsequentes l�
 6. UI: badge visual diferenciando "Acesso Vitalício" vs "Assinante Ativo"
 
 ## Critérios de Aceite Fase 4
-- [ ] Lista de assinantes Hubla importada para tabela LegacyAccess
-- [ ] Stripe configurado com plano Básico mensal
-- [ ] Checkout funcional e webhook processando eventos
-- [ ] Ligas VIP visíveis no seletor para usuários habilitados
-- [ ] Usuários sem acesso veem CTA de upgrade
-- [ ] Cancelamento de assinatura revoga acesso (não afeta legacy)
+- [x] Lista de assinantes Hubla importada para tabela LegacyAccess
+- [x] Stripe configurado com plano Básico mensal
+- [x] Checkout funcional e webhook processando eventos
+- [x] Ligas VIP visíveis no seletor para usuários habilitados
+- [x] Usuários sem acesso veem CTA de upgrade
+- [x] Cancelamento de assinatura revoga acesso (não afeta legacy)
 
 ---
 

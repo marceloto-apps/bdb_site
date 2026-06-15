@@ -40,6 +40,12 @@ enum Role {
   MEMBRO   // usuário comum, acesso à área logada
 }
 
+enum Plan {
+  FREE
+  VIP_BASICO
+  VIP_PRO
+}
+
 enum ArticleStatus {
   RASCUNHO   // criado pelo autor, ainda não enviado
   REVISAO    // enviado para revisão
@@ -71,7 +77,9 @@ model User {
   image           String?                    // avatar (URL ou upload)
   password        String?                    // null se autenticação OAuth
   role            Role      @default(MEMBRO)
+  plan            Plan      @default(FREE)     // Fase 4 — plano de acesso
   newsletterOptIn Boolean   @default(false)  // opt-in LGPD
+  stripeCustomerId String?   @unique           // Fase 4 — ID do cliente Stripe
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
@@ -83,6 +91,7 @@ model User {
   favorites       Favorite[]
   readHistory     ReadHistory[]
   matchImports    MatchImport[]   // Fase 2 — auditoria de imports
+  subscription    Subscription?   // Fase 4 — assinatura Stripe ativa
   legacyAccess    LegacyAccess?   // Fase 4 — flag de assinante vitalício Hubla
 }
 ```
@@ -1211,3 +1220,71 @@ model BolaoScore {
    - **Saldo:** Soma de todas as transações do usuário onde `expiresAt IS NULL OR expiresAt > now()`.
    - **Status:** Soma apenas de transações do tipo `GANHO` onde `createdAt >= now() - 12 meses`.
 5. **Garantia de Idempotência:** Controlada no banco através do campo `idempotencyKey` único e tratamento de erro de violação de restrição única `P2002` no Prisma, impedindo duplicidades.
+
+---
+
+### Modelos da Fase 4 (Multi-Liga + Pagamentos)
+
+#### Enums
+
+```prisma
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  TRIALING
+  UNPAID
+}
+```
+
+#### `Subscription`
+Assinatura Stripe vinculada ao usuário para controle de acessos a planos pagos.
+
+```prisma
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  stripeCustomerId     String             @unique
+  stripeSubscriptionId String?            @unique
+  stripePriceId        String?
+  status               SubscriptionStatus @default(INCOMPLETE)
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+```
+
+#### `LegacyAccess`
+Controle de usuários importados da Hubla (sistema legado) que possuem acesso vitalício gratuito às ligas e recursos pagos.
+
+```prisma
+model LegacyAccess {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  userId    String?  @unique
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("legacy_access")
+}
+```
+
+#### `StripeWebhookEvent`
+Registro de eventos de webhook recebidos do Stripe para garantir idempotência e evitar reprocessamento.
+
+```prisma
+model StripeWebhookEvent {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  processed Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("stripe_webhook_events")
+}
+```

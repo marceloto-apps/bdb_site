@@ -1,6 +1,72 @@
-# Deploy Checklist — Fase 2
+# Deploy Checklist
 
-## Pré-deploy
+---
+
+## 🟢 Fase 4 — Multi-Liga + Pagamentos
+
+### Pré-deploy
+
+#### Variáveis de ambiente (Vercel)
+- [ ] `STRIPE_SECRET_KEY` configurada
+- [ ] `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` configurada
+- [ ] `STRIPE_WEBHOOK_SECRET` configurada (gerada no Stripe CLI localmente para testes ou painel do Stripe para prod)
+- [ ] `NEXT_PUBLIC_STRIPE_PRICE_VIP_BASICO` configurada com o Price ID do plano Básico
+- [ ] `NEXT_PUBLIC_STRIPE_PRICE_VIP_PRO` configurada com o Price ID do plano Pro
+
+#### Banco de dados
+- [ ] Realizar backup completo do banco de dados de produção do MySQL Hostgator (responsabilidade do Marcelo antes de rodar comandos DDL)
+- [ ] Rodar `npx prisma migrate deploy` para criar as novas tabelas e colunas (rodará automaticamente via script postinstall/build na Vercel se configurado)
+
+#### Verificações locais
+- [ ] `npx tsc --noEmit` compilando sem qualquer erro
+- [ ] `npm run test` com todas as suítes (incluindo testes de integração) passando com sucesso
+- [ ] `npm run build` completando localmente sem avisos ou falhas
+
+---
+
+### Deploy
+
+#### Vercel
+- [ ] Mesclar as alterações para a branch principal (`main`) para disparar a compilação automática na Vercel
+- [ ] Validar nos logs de compilação da Vercel que o build terminou sem erros e o deploy foi concluído
+
+#### Stripe Dashboard (Produção)
+- [ ] Criar os produtos e preços para os planos Básico e Pro
+- [ ] Adicionar o endpoint de webhook apontando para: `https://bigdatabet.com.br/api/webhook/stripe`
+- [ ] Ativar os seguintes eventos no webhook:
+  - `checkout.session.completed`
+  - `customer.subscription.created` (opcional/segurança)
+  - `customer.subscription.updated`
+  - `customer.subscription.deleted`
+- [ ] Copiar a Signing Secret gerada no dashboard e cadastrar como `STRIPE_WEBHOOK_SECRET` nas envs da Vercel (se ainda não feito)
+
+---
+
+### Pós-deploy
+
+#### Importação de Legados
+- [ ] Executar o script CLI no servidor ou localmente conectado ao banco de produção:
+  `npx ts-node scripts/import-legacy.ts`
+  Passando a lista ou inserindo os e-mails dos assinantes legados do Hubla fornecidos pelo Marcelo.
+- [ ] Validar no phpMyAdmin/Prisma Studio que os registros foram criados na tabela `legacy_access`.
+
+#### Validação Funcional
+- [ ] Efetuar login com uma conta sem acesso VIP.
+- [ ] Acessar `/dashboard/ligas` e verificar que apenas a liga Brasileirão Série A está liberada, enquanto as outras ligas exibem cadeados.
+- [ ] Tentar acessar `/dashboard/ligas/la-liga` e verificar o redirecionamento automático para `/planos`.
+- [ ] Acessar `/planos` e clicar no botão de assinar o plano VIP Básico.
+- [ ] Verificar redirecionamento ao Stripe Checkout e simular um pagamento com sucesso (usando dados de teste do Stripe ou chave de produção).
+- [ ] Após o retorno para `/dashboard/plano`, verificar se o status atual da assinatura é exibido como "Ativa" e o plano do usuário é VIP Básico.
+- [ ] Verificar que as ligas VIP agora estão destrancadas no dashboard.
+- [ ] Acessar o Stripe Customer Portal clicando no botão "Gerenciar Assinatura" e verificar se o redirecionamento é efetuado corretamente.
+- [ ] Testar cancelamento de assinatura no Stripe e verificar se o status do plano do usuário no site retorna a `FREE` (rebaixamento).
+- [ ] Para contas cujo e-mail consta na lista de legados vitalícios, verificar se ao acessar `/dashboard/plano` o badge "Acesso Vitalício" é exibido e as ligas VIP continuam liberadas mesmo se a assinatura do Stripe for cancelada.
+
+---
+
+## 🟢 Fase 2 — Dashboards de Liga
+
+### Pré-deploy
 
 ### Variáveis de ambiente (Vercel)
 - [ ] `API_FOOTBALL_KEY` configurada

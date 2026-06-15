@@ -10,7 +10,12 @@ export const metadata: Metadata = {
 
 export default async function LigasPage() {
   const session = await auth()
-  const isPremium = (session?.user as any)?.plan === 'PREMIUM'
+  
+  let isVip = false
+  if (session?.user?.id) {
+    const { hasVipAccess } = await import('@/lib/auth/check-access')
+    isVip = await hasVipAccess(session.user.id)
+  }
 
   const competicoes = await prisma.competition.findMany({
     where: { active: true },
@@ -29,15 +34,9 @@ export default async function LigasPage() {
     orderBy: { name: 'asc' }
   })
 
-  // Ligas FREE
-  const freeSlugs = [
-    'brasileirao-serie-a',
-    'brasileirao-serie-b',
-    'premier-league',
-    'la-liga',
-    'serie-a',
-    'division-profesional'
-  ]
+  // Apenas Brasileirão Série A é FREE na Fase 4
+  const freeSlugs = ['brasileirao-serie-a']
+  
   // Ligas Finalizadas
   const finishedSlugs = [
     'premier-league', 
@@ -53,14 +52,13 @@ export default async function LigasPage() {
     'pro-league'
   ]
 
-  // Mapear para o formato esperado pelo LigaCard e filtrar se o usuário não for Premium
+  // Mapear para o formato esperado pelo LigaCard (sem ocultar as ligas trancadas)
   const ligas = competicoes
     .map(comp => {
       const season = comp.seasons[0]
       const totalJogos = season ? season._count.matches : 0
-      // Simular o tier no MVP. Você pode checar o campo 'tier' do prisma se ele existir, ou mockar
       const tier = freeSlugs.includes(comp.slug) ? 'FREE' : 'VIP'
-      const disponivel = isPremium || tier === 'FREE'
+      const disponivel = isVip || tier === 'FREE'
       const finalizada = finishedSlugs.includes(comp.slug)
 
       return {
@@ -75,7 +73,6 @@ export default async function LigasPage() {
         finalizada
       }
     })
-    .filter(liga => isPremium || liga.disponivel)
 
   // Ordenar ligas: Ativas primeiro, finalizadas por último. Dentro de cada grupo: FREE primeiro, depois ordem alfabética.
   ligas.sort((a, b) => {

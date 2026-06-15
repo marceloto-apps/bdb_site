@@ -2,7 +2,7 @@
 
 # [TASKS.md](http://tasks.md/) — Big Data Bet
 
-> **Versão:** 2.4 | **Atualizado:** 03/05/2026
+> **Versão:** 2.6 | **Atualizado:** 15/06/2026
 > **Mudanças desde v2.1:**
 > - Adicionada subseção "Ground Truth" em 2B com 4 tasks de validação contra planilha legada
 > - Subtasks de validação adicionadas em 2B.1, 2B.5 e 2B.6
@@ -1092,7 +1092,59 @@ Toda a fundação está em produção. Próximas fases reorganizadas conforme PR
 ---
 
 # TASKS — Fase 4: Multi-Liga + Pagamentos
-> **Status:** ⚪ Pendente — depende da Fase 2
+
+> **Status:** 🟢 Concluída em 15/06/2026 — checkout, webhooks, idempotência, acessos VIP e legados finalizados.
+> **Notas:** Proteção de rotas server-side e redirecionamento de visualização concluídos com paridade para assinantes vitalícios do Hubla (LegacyAccess).
+
+## 4A — Dependência + Schema 🟢
+- [x] 4A.1 — Instalar SDK do Stripe (`npm install stripe`)
+- [x] 4A.2 — Adicionar `stripeCustomerId` no model `User` em `prisma/schema.prisma`
+- [x] 4A.3 — Criar o model `LegacyAccess` em `prisma/schema.prisma`
+- [x] 4A.4 — Criar o model `StripeWebhookEvent` em `prisma/schema.prisma`
+- [x] 4A.5 — Executar migration Prisma de desenvolvimento local e deploy
+- [x] 4A.6 — Atualizar o arquivo `.env.example` com as novas variáveis de ambiente do Stripe
+
+## 4B — Infra Stripe 🟢
+- [x] 4B.1 — Criar utilitário `lib/stripe.ts` para inicialização do cliente
+- [x] 4B.2 — Adicionar helper `createCheckoutSession` em `lib/stripe.ts`
+- [x] 4B.3 — Adicionar helper `createBillingPortalSession` em `lib/stripe.ts`
+
+## 4C — Controle de Acesso 🟢
+- [x] 4C.1 — Criar função utilitária `hasVipAccess(userId: string)` em `lib/auth/check-access.ts`
+- [x] 4C.2 — Desenvolver testes unitários para as regras de acesso em `tests/auth/check-access.test.ts`
+- [x] 4C.3 — Validar que administradores e editores possuem acesso irrestrito
+- [x] 4C.4 — Validar que usuários legados possuem acesso irrestrito independentemente do plano ativo
+
+## 4D — Webhook do Stripe 🟢
+- [x] 4D.1 — Criar a rota do webhook do Stripe `/api/webhook/stripe` com runtime Node.js
+- [x] 4D.2 — Implementar verificação de assinatura utilizando a chave `STRIPE_WEBHOOK_SECRET`
+- [x] 4D.3 — Implementar persistência de ID de eventos no `StripeWebhookEvent` para idempotência
+- [x] 4D.4 — Implementar processamento do evento `checkout.session.completed`
+- [x] 4D.5 — Implementar processamento do evento `customer.subscription.updated`
+- [x] 4D.6 — Implementar processamento do evento `customer.subscription.deleted` (mantendo legacy intacto)
+- [x] 4D.7 — Criar testes de integração para o webhook em `tests/api/stripe-webhook.test.ts`
+
+## 4E — Rotas de Faturamento 🟢
+- [x] 4E.1 — Criar a API `/api/checkout` para redirecionamento para o Stripe Checkout
+- [x] 4E.2 — Criar a API `/api/portal` para redirecionamento para o Stripe Customer Portal
+- [x] 4E.3 — Validar Zod schemas e proteção de rotas nas APIs acima
+
+## 4F — Importador de Legados 🟢
+- [x] 4F.1 — Criar o script CLI `scripts/import-legacy.ts`
+- [x] 4F.2 — Implementar validação e vinculação automática com contas existentes
+- [x] 4F.3 — Testar o import via comando CLI local
+
+## 4G — Interfaces e Bloqueios (UI/UX) 🟢
+- [x] 4G.1 — Criar a página pública `/planos` com comparativo de planos e botões de checkout
+- [x] 4G.2 — Atualizar a página `/dashboard/plano` mostrando plano atual e link de portal (ou Vitalício)
+- [x] 4G.3 — Atualizar `/dashboard/ligas` para exibir VIPs trancadas para usuários FREE
+- [x] 4G.4 — Atualizar `/dashboard/ligas/[slug]` para redirecionar para `/planos` se não houver acesso
+- [x] 4G.5 — Atualizar Route Handlers das APIs `/api/ligas/[slug]/**/*` para retornar 403 se não houver acesso
+
+## 4H — Validação Final 🟢
+- [x] 4H.1 — Executar testes unitários e de integração locais (`npm run test`)
+- [x] 4H.2 — Rodar build de produção local para verificar erros de tipagem/ESLint (`npm run build`)
+- [x] 4H.3 — Validar fluxos de compra E2E com o Stripe CLI local
 
 # TASKS — Fase 5: Curso + Backtest
 > **Status:** 🟡 Em Progresso (Onda A - Cursos & Gamificação Concluída)

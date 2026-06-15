@@ -10,11 +10,25 @@ export async function GET(
 ) {
   try {
     const session = await auth()
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json(
         { error: 'UNAUTHORIZED', message: 'Autenticação necessária' },
         { status: 401 }
       )
+    }
+
+    const { slug } = params
+
+    const isFree = slug === 'brasileirao-serie-a'
+    if (!isFree) {
+      const { hasVipAccess } = await import('@/lib/auth/check-access')
+      const hasAccess = await hasVipAccess(session.user.id)
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'FORBIDDEN', message: 'Acesso VIP necessário.' },
+          { status: 403 }
+        )
+      }
     }
 
     const { searchParams } = new URL(req.url)
@@ -27,7 +41,6 @@ export async function GET(
     }
 
     const query = queryResult.data
-    const { slug } = params
 
     const competition = await prisma.competition.findUnique({
       where: { slug },

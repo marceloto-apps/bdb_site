@@ -2286,5 +2286,110 @@ const FERRAMENTAS = [
 ---
 
 # SPECS — Fase 4: Multi-Liga + Pagamentos
+
+## 1. Configuração do Stripe e Variáveis de Ambiente
+
+Para o funcionamento correto da integração de pagamentos, as seguintes variáveis de ambiente devem ser configuradas:
+- `STRIPE_SECRET_KEY`: Chave secreta de API do Stripe (composta por `sk_live_...` ou `sk_test_...`).
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Chave pública de API do Stripe (`pk_live_...` ou `pk_test_...`).
+- `STRIPE_WEBHOOK_SECRET`: Chave secreta de validação da assinatura digital dos webhooks do Stripe (`whsec_...`).
+- `NEXT_PUBLIC_STRIPE_PRICE_VIP_BASICO`: Price ID do plano Básico no Stripe.
+- `NEXT_PUBLIC_STRIPE_PRICE_VIP_PRO`: Price ID do plano Pro no Stripe.
+
+## 2. Modelagem de Dados
+
+### Subscription
+Representa a assinatura ativa do usuário no Stripe, sincronizada via webhooks.
+- `id` (CUID)
+- `userId` (String, Unique, FK -> User)
+- `stripeCustomerId` (String, Unique)
+- `stripeSubscriptionId` (String, Unique, Nullable)
+- `stripePriceId` (String, Nullable)
+- `status` (SubscriptionStatus Enum: `ACTIVE`, `PAST_DUE`, `CANCELED`, `INCOMPLETE`, `TRIALING`, `UNPAID`)
+- `currentPeriodStart` (DateTime, Nullable)
+- `currentPeriodEnd` (DateTime, Nullable)
+- `cancelAtPeriodEnd` (Boolean)
+
+### LegacyAccess
+Armazena a lista de e-mails de clientes do Hubla (sistema legado) que possuem acesso VIP vitalício.
+- `id` (CUID)
+- `email` (String, Unique)
+- `userId` (String, Unique, Nullable, FK -> User)
+
+### StripeWebhookEvent
+Registra os IDs de eventos de webhook processados para evitar reprocessamento (idempotência).
+- `id` (CUID)
+- `eventId` (String, Unique)
+- `processed` (Boolean, Default: true)
+
+## 3. Endpoints de Checkout e Portal de Clientes
+
+### POST /api/checkout
+Cria uma nova Checkout Session do Stripe para um plano e retorna a URL de redirecionamento.
+- **Segurança:** Autenticação obrigatória (usuário logado).
+- **Body:** `{ priceId: string }`
+- **Validação:** Valida via Zod se o `priceId` é igual ao plano Básico ou Pro configurado.
+- **Fluxo:**
+  1. Busca o e-mail e o `stripeCustomerId` do usuário logado.
+  2. Executa `createCheckoutSession` passando o `stripeCustomerId` (se existir) ou o e-mail (para criar um cliente no Stripe caso seja a primeira compra).
+  3. Envia o `userId` nos metadados da sessão e da assinatura.
+  4. Retorna `{ url: session.url }`.
+
+### POST /api/portal
+Cria uma nova Billing Portal Session do Stripe para gerenciar assinaturas.
+- **Segurança:** Autenticação obrigatória.
+- **Fluxo:**
+  1. Verifica se o usuário tem um `stripeCustomerId` associado. Caso contrário, retorna HTTP 400.
+  2. Executa `createBillingPortalSession` passando o `stripeCustomerId`.
+  3. Retorna `{ url: session.url }`.
+
+## 4. Webhook Handler (/api/webhook/stripe)
+
+Endpoint público configurado no Stripe Dashboard para receber eventos em tempo real.
+- **Runtime:** Configurado estritamente como `nodejs` clássico para permitir a leitura correta do buffer/corpo bruto do request (`req.text()`).
+- **Assinatura:** Validação digital via `stripe.webhooks.constructEvent(body, signature, STRIPE_WEBHOOK_SECRET)`. Se falhar, retorna HTTP 400.
+- **Idempotência:** Antes de processar, realiza o insert do ID do evento na tabela `StripeWebhookEvent`. Em caso de erro de chave única (P2002), ignora o evento e retorna HTTP 200.
+- **Eventos Tratados:**
+  - `checkout.session.completed`:
+    1. Obtém o `userId` via `client_reference_id` ou metadados da sessão.
+    2. Sincroniza o `stripeCustomerId` e atualiza o `plan` do `User` (mapeado a partir do `priceId` do Stripe).
+    3. Cria ou atualiza (`upsert`) a `Subscription` no banco de dados com os dados do Stripe.
+  - `customer.subscription.updated`:
+    1. Localiza a assinatura local por `stripeSubscriptionId`.
+    2. Atualiza o status (`status`), período (`currentPeriodStart`/`currentPeriodEnd`), `cancelAtPeriodEnd` e `stripePriceId` no banco.
+    3. Se o status for `ACTIVE` ou `TRIALING`, atualiza o `plan` do `User` para o plano correspondente.
+    4. Se for qualquer outro status suspensivo, verifica se o usuário é legado via `checkAndLinkLegacy` (por userId ou e-mail na tabela `LegacyAccess`). Caso NÃO seja legado, rebaixa o `plan` do `User` para `FREE`.
+  - `customer.subscription.deleted`:
+    1. Localiza a assinatura por `stripeSubscriptionId` e marca o status local como `CANCELED`.
+    2. Verifica se o usuário possui acesso legado. Caso NÃO seja legado, rebaixa o `plan` do `User` para `FREE`.
+
+## 5. Controle de Acessos VIP (lib/auth/check-access.ts)
+
+A verificação de permissão é feita por meio da função assíncrona `hasVipAccess(userId: string): Promise<boolean>`.
+- **Regras de Liberação:**
+  - Retorna `true` se `user.role` for `ADMIN` ou `EDITOR`.
+  - Retorna `true` se `user.plan` for `VIP_BASICO` ou `VIP_PRO`.
+  - Retorna `true` se o usuário possuir um registro vinculado na tabela `LegacyAccess` ou se houver correspondência pelo e-mail cadastrado na tabela de legados.
+- **Autovinculação:** Se houver correspondência de acesso legado apenas por e-mail, o sistema atualiza o registro na tabela `LegacyAccess` vinculando o `userId` correspondente para otimizar acessos futuros.
+
+## 6. Proteção de Rotas e Telas (UI/UX)
+
+- **Middleware:** O Middleware do Next.js opera em ambiente Edge Runtime e não realiza consultas diretas ao banco via Prisma. O roteamento de proteção é feito por rotas de autenticação geral.
+- **Route Handlers das APIs de Ligas:**
+  As rotas em `/api/ligas/[slug]/**/*` (como `/previsao`, `/times`, `/partidas`, `/mapa-valor`, `/jogadores` e `/estatisticas`) validam o acesso VIP utilizando `hasVipAccess(session.user.id)`. Se retornar `false` e a liga consultada não for `FREE` (Brasileirão A), retorna HTTP 403.
+- **Visualização de Ligas no Dashboard:**
+  - A rota `/dashboard/ligas` exibe um ícone de cadeado trancado nos cards das ligas VIP para usuários sem acesso.
+  - A rota `/dashboard/ligas/[slug]` executa a validação server-side com `hasVipAccess`. Usuários sem acesso são redirecionados automaticamente para a página `/planos`.
+- **Área de Assinatura (/dashboard/plano):**
+  Exibe o plano atual do usuário. Se for assinante Stripe, exibe o status e o botão "Gerenciar Assinatura" que aciona a API de portal. Se possuir acesso legado, exibe o badge "Acesso Vitalício" e omite os botões de faturamento.
+
+## 7. Importador de Legados (scripts/import-legacy.ts)
+
+Script CLI executado via `npx ts-node scripts/import-legacy.ts` que recebe uma lista de e-mails para importação de assinantes legados do Hubla.
+- **Fluxo:**
+  1. Limpa espaços e normaliza os e-mails para minúsculo.
+  2. Para cada e-mail, faz um `upsert` na tabela `LegacyAccess`.
+  3. Tenta localizar um `User` existente com o mesmo e-mail. Se encontrar, vincula o `userId` correspondente ao registro de `LegacyAccess`.
+
 # SPECS — Fase 5: Curso + Backtest
 # SPECS — Fase 6: Automações

@@ -1,6 +1,6 @@
 # Resumo Executivo — Big Data Bet (Fase 1)
 
-**Data de Atualização:** 13/06/2026
+**Data de Atualização:** 15/06/2026
 
 Este documento apresenta um resumo executivo do progresso atual do projeto Big Data Bet (Fase 1), detalhando o passo a passo de tudo que foi construído até o momento, bem como o que está pendente para a conclusão da fase.
 
@@ -365,7 +365,7 @@ A base do sistema atinge seu ápice de estabilidade técnica. Os testes de build
 
 ---
 
-## Estado Atual do Projeto (08/06/2026)
+## Estado Atual do Projeto (15/06/2026)
 
 | Fase | Status |
 |------|--------|
@@ -377,6 +377,7 @@ A base do sistema atinge seu ápice de estabilidade técnica. Os testes de build
 | Fase 2 — Feature Bolão (Copa 2026) | 100% concluida |
 | Fase 3 — Ferramentas Analiticas | 100% concluida |
 | Onda A — Estrutura de Cursos e BDB Bônus (Gamificação) | 100% concluída (com suíte de testes de integração e higiene de produção) |
+| Fase 4 — Multi-Liga + Pagamentos (Stripe + Hubla Legacy) | 100% concluída (checkout, webhooks, idempotência, acessos VIP e legados) |
 
 ### 23. Desenvolvimento da UI do Dashboard (Fase 2, Blocos Finais) — Maio/2026
 
@@ -645,3 +646,23 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
 **Gamificação de Aulas:**
 - **Conclusão Automática:** A aula é marcada automaticamente como concluída (sistemicamente) e o progresso é atualizado para 100% assim que o tempo assistido (`watchedPct`) atinge ou ultrapassa **90%** do tempo total da aula. A opção manual de marcar como concluída foi removida da interface para evitar abusos.
 - **Lançamento de Pontos:** Implementado o ganho automático de **50 pontos BDB** na carteira do aluno ao completar a regra dos 90% de visualização de uma aula, com controle rígido de concorrência e idempotência de transações de pontos.
+
+---
+
+### 37. Fase 4 — Multi-Liga + Pagamentos (Stripe + Hubla Legacy) — 15/06/2026
+
+**Integração do Stripe (Checkout e Portal):**
+- **Checkout de Planos:** Implementação do endpoint `/api/checkout` utilizando o Stripe SDK para criar sessões de pagamento de forma dinâmica. As rotas são validadas com Zod e limitadas aos Price IDs configurados no `.env`.
+- **Portal do Cliente:** Rota `/api/portal` criada para redirecionar os assinantes autenticados ao Billing Portal oficial do Stripe, permitindo o gerenciamento autônomo de formas de pagamento, cancelamentos e upgrades.
+- **Visualização de Plano:** Painel `/dashboard/plano` desenvolvido para exibir o status atual da assinatura, botão para o portal de faturamento e redirecionamentos adequados.
+
+**Segurança e Controle de Acessos (Acesso VIP):**
+- **Motor de Permissão (`hasVipAccess`):** Helper unificado para verificar permissões de acesso a ligas fechadas. Valida se o usuário é Administrador/Editor, se possui plano `VIP_BASICO`/`VIP_PRO` ativo, ou se possui registro de acesso legado vitalício (`LegacyAccess`).
+- **Middleware Serverless-friendly:** Para evitar problemas de conexão com banco de dados em Edge runtimes, a validação de acesso das ligas e previsões foi delegada do Middleware do Next.js para os Route Handlers da API e Server Components individuais.
+- **Proteção Visual:** A visualização de ligas restritas no menu e nas rotas bloqueia acessos de usuários sem permissões, apresentando a tela e o CTA de planos/upgrade.
+
+**Processador de Webhooks e Resiliência:**
+- **Webhook do Stripe:** Handler robusto `/api/webhook/stripe` configurado com runtime `nodejs` clássico para suportar a validação do corpo bruto (*raw body*) e da assinatura digital (`stripe-signature`).
+- **Garantia de Idempotência:** Prevenção de processamento duplicado através de registros únicos no modelo `StripeWebhookEvent`, filtrando retransmissões do Stripe.
+- **Sincronização de Assinatura:** Eventos de `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated` e `customer.subscription.deleted` persistem o estado e os períodos da assinatura no modelo `Subscription`.
+- **Interoperabilidade com Legados:** No cancelamento ou rebaixamento da assinatura do Stripe, o sistema realiza uma verificação por e-mail no modelo `LegacyAccess`. Usuários legados mantêm acesso vitalício e não sofrem rebaixamento para o plano `FREE`.

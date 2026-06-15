@@ -86,7 +86,7 @@ describe('GET /api/aulas/[id]/video', () => {
     
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.embedUrl).toBe('https://www.youtube-nocookie.com/embed/F3D-d5QJ_0g?rel=0&modestbranding=1');
+    expect(json.embedUrl).toBe('https://www.youtube-nocookie.com/embed/F3D-d5QJ_0g?rel=0&modestbranding=1&enablejsapi=1');
   });
 
   it('deve retornar 200 com a URL do embed do Bunny.net correta para parâmetros válidos', async () => {

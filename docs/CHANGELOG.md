@@ -1,5 +1,18 @@
 # Changelog — Big Data Bet
 
+## [Fase 4 — Multi-Liga + Pagamentos] — 2026-06-15
+
+### Adicionado
+- **Mecanismo de Checkout e Portal**: Endpoints `/api/checkout` e `/api/portal` para integração com Stripe Checkout (assinaturas dos planos VIP_BASICO e VIP_PRO) e Stripe Customer Portal (gerenciamento e cancelamento de assinaturas).
+- **Processador de Webhook do Stripe**: Endpoint `/api/webhook/stripe` com validação de assinatura (`stripe-signature`), verificação do corpo bruto (*raw body*), idempotência via tabela `StripeWebhookEvent` e processamento dos eventos `checkout.session.completed`, `customer.subscription.updated` e `customer.subscription.deleted`.
+- **Validador de Acesso VIP**: Função `hasVipAccess` em `lib/auth/check-access.ts` que valida se o usuário possui cargo de `ADMIN`/`EDITOR`, se tem plano pago ativo, ou se possui registro de acesso legado vitalício.
+- **Importador de Usuários Legados**: Script CLI `scripts/import-legacy.ts` para importação massiva de assinantes vitalícios do Hubla para a tabela `LegacyAccess`.
+
+### Alterado
+- **Controle de Acesso de Ligas**: Modificadas as rotas do Dashboard (`/dashboard/ligas/[slug]`) e os Route Handlers das APIs de ligas (`/api/ligas/[slug]/**/*`) para verificar dinamicamente a permissão de acesso via `hasVipAccess`, retornando 403 ou exibindo tela com CTA de planos.
+- **Integração no Dashboard**: Atualizada a sidebar de navegação para mostrar ligas restritas bloqueadas para usuários sem acesso e atualizada a página `/dashboard/plano` com status da assinatura e links de gerenciamento.
+- **Modelagem do Banco**: Adicionadas as tabelas `Subscription`, `LegacyAccess` e `StripeWebhookEvent` e atualizada a tabela `User` com `stripeCustomerId` no [schema.prisma](file:///c:/Users/MASTER/OneDrive/Projetos/Gits/bdb_site/prisma/schema.prisma).
+
 ## [Onda A — Dicionário do Mercado] — 2026-06-13
 
 ### Adicionado

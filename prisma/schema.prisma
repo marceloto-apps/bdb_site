@@ -70,6 +70,7 @@ model User {
   plan            Plan              @default(FREE)
   password        String?
   newsletterOptIn Boolean           @default(false)
+  stripeCustomerId String?           @unique
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   accounts          Account[]
@@ -86,6 +87,7 @@ model User {
   coupons           Coupon[]
   bolaoPalpites     BolaoPalpite[]
   bolaoScores       BolaoScore[]
+  legacyAccess      LegacyAccess?
 
   @@map("users")
 }
@@ -153,6 +155,25 @@ model Subscription {
   user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
+}
+
+model LegacyAccess {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  userId    String?  @unique
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("legacy_access")
+}
+
+model StripeWebhookEvent {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  processed Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@map("stripe_webhook_events")
 }
 
 // ===========================================

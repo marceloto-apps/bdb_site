@@ -6,6 +6,12 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
+vi.mock('@/auth', () => ({
+  auth: vi.fn().mockResolvedValue({
+    user: { id: 'user_123', email: 'test@example.com' },
+  }),
+}))
+
 // Mock do prisma para não bater no banco real
 vi.mock('../../lib/prisma', () => ({
   prisma: {
@@ -15,7 +21,19 @@ vi.mock('../../lib/prisma', () => ({
     match: {
       findFirst: vi.fn(),
       findMany: vi.fn()
-    }
+    },
+    user: {
+      findUnique: vi.fn().mockResolvedValue({
+        id: 'user_123',
+        role: 'MEMBRO',
+        plan: 'VIP_PRO',
+        legacyAccess: null,
+      }),
+    },
+    legacyAccess: {
+      findUnique: vi.fn(),
+      update: vi.fn(),
+    },
   }
 }))
 

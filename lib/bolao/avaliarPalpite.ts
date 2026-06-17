@@ -72,8 +72,11 @@ export async function avaliarPalpitesDePartida(
 
     await prisma.$transaction(async (tx) => {
       const userIdsToRecalculate: string[] = [];
+      const p4Ids: string[] = [];
+      const p2Ids: string[] = [];
+      const p0Ids: string[] = [];
 
-      // Apenas atualiza palpites do lote atual
+      // Apenas avalia palpites do lote atual
       for (const p of chunk) {
         const avaliacao = avaliarPalpite(
           {
@@ -84,54 +87,77 @@ export async function avaliarPalpitesDePartida(
           { home, away }
         );
 
-        // Mitigação real de corrida: apenas atualiza se não tiver sido avaliado ainda
-        // prisma.updateMany retorna a contagem de registros afetados
-        const updateResult = await tx.bolaoPalpite.updateMany({
-          where: {
-            id: p.id,
-            avaliado: false,
-          },
-          data: {
-            pontos: avaliacao.pontos,
-            acertouPlacar: avaliacao.acertouPlacar,
-            acertouResultado: avaliacao.acertouResultado,
-            acertouOverUnder: avaliacao.acertouOverUnder,
-            avaliado: true,
-          },
-        });
+        if (avaliacao.pontos === 4) {
+          p4Ids.push(p.id);
+        } else if (avaliacao.pontos === 2) {
+          p2Ids.push(p.id);
+        } else {
+          p0Ids.push(p.id);
+        }
 
-        // Se realmente atualizou o palpite (count > 0), recalculamos para esse usuário
-        if (updateResult.count > 0) {
-          const pairKey = `${p.bolaoId}:${p.userId}`;
-          if (!userIdsToRecalculate.includes(pairKey)) {
-            userIdsToRecalculate.push(pairKey);
-          }
+        const pairKey = `${p.bolaoId}:${p.userId}`;
+        if (!userIdsToRecalculate.includes(pairKey)) {
+          userIdsToRecalculate.push(pairKey);
         }
       }
 
-      // Se nenhum palpite foi atualizado neste lote (devido a concorrência), prossegue
+      // Executa as atualizações em lote (bulk)
+      if (p4Ids.length > 0) {
+        await tx.bolaoPalpite.updateMany({
+          where: { id: { in: p4Ids }, avaliado: false },
+          data: { pontos: 4, acertouPlacar: true, acertouResultado: true, acertouOverUnder: false, avaliado: true },
+        });
+      }
+      if (p2Ids.length > 0) {
+        await tx.bolaoPalpite.updateMany({
+          where: { id: { in: p2Ids }, avaliado: false },
+          data: { pontos: 2, acertouPlacar: false, acertouResultado: true, acertouOverUnder: false, avaliado: true },
+        });
+      }
+      if (p0Ids.length > 0) {
+        await tx.bolaoPalpite.updateMany({
+          where: { id: { in: p0Ids }, avaliado: false },
+          data: { pontos: 0, acertouPlacar: false, acertouResultado: false, acertouOverUnder: false, avaliado: true },
+        });
+      }
+
+      // Se nenhum usuário foi afetado neste lote, prossegue
       if (userIdsToRecalculate.length === 0) return;
 
-      // Recalcular scores de forma idempotente e agregada a partir da base (histórico completo)
+      // Monta a estrutura para buscar todo o histórico em uma única consulta
+      const userPairs = userIdsToRecalculate.map((pair) => {
+        const [bolaoId, userId] = pair.split(":");
+        return { bolaoId, userId };
+      });
+
+      const allHistories = await tx.bolaoPalpite.findMany({
+        where: {
+          OR: userPairs.map((up) => ({ bolaoId: up.bolaoId, userId: up.userId, avaliado: true })),
+        },
+        select: {
+          bolaoId: true,
+          userId: true,
+          pontos: true,
+          acertouPlacar: true,
+          acertouResultado: true,
+          acertouOverUnder: true,
+        },
+      });
+
+      // Agrupa em memória
+      const groupedByUser: Record<string, typeof allHistories> = {};
+      for (const h of allHistories) {
+        const key = `${h.bolaoId}:${h.userId}`;
+        if (!groupedByUser[key]) groupedByUser[key] = [];
+        groupedByUser[key].push(h);
+      }
+
+      // Recalcular scores de forma idempotente
       for (const pair of userIdsToRecalculate) {
         const [bolaoId, userId] = pair.split(":");
+        const key = `${bolaoId}:${userId}`;
+        const historicoPalpites = groupedByUser[key] || [];
 
-        // Busca o histórico completo de palpites avaliados desse usuário neste bolão
-        const historicoPalpites = await tx.bolaoPalpite.findMany({
-          where: {
-            bolaoId,
-            userId,
-            avaliado: true,
-          },
-          select: {
-            pontos: true,
-            acertouPlacar: true,
-            acertouResultado: true,
-            acertouOverUnder: true,
-          },
-        });
-
-        // Reduz em memória de forma agregada
         const totalGuesses = historicoPalpites.length;
         const scoreAgregado = historicoPalpites.reduce(
           (acc, val) => {

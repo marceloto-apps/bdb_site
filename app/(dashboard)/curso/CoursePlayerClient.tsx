@@ -19,6 +19,8 @@ import {
 } from "lucide-react"
 import { saveLessonProgress } from "@/lib/courses/actions/admin"
 import { GLOSSARY_TERMS, GlossaryTerm } from "@/lib/courses/glossary"
+import { LessonComments } from "@/components/courses/LessonComments"
+
 
 
 interface Lesson {
@@ -51,6 +53,11 @@ interface Course {
 
 interface CoursePlayerClientProps {
   courses: Course[]
+  user: {
+    id: string
+    name: string | null
+    role: string
+  } | null
 }
 
 function linkify(text: string): string {
@@ -117,7 +124,7 @@ const getStartingLessonId = (course: Course): string => {
 }
 
 
-export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
+export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
   // Controle de Visualização Principal: Vitrine vs Player de Curso
   const [activeCourseId, setActiveCourseId] = useState<string | null>(null)
   
@@ -855,6 +862,9 @@ export function CoursePlayerClient({ courses }: CoursePlayerClientProps) {
                   <p className="text-xs text-zinc-550">Esta aula não possui notas textuais ou vídeo cadastrados.</p>
                 </div>
               )}
+
+              {/* Área de Comentários / Dúvidas */}
+              <LessonComments lessonId={selectedLesson.id} currentUser={user} />
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-24 text-center">

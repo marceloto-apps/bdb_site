@@ -44,40 +44,46 @@ export default async function CmsLayout({
             </Link>
           )}
           {isAdmin && (
-            <>
-              <Link href="/cms/categorias" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
-                <Tags size={18} />
-                <span>Categorias</span>
-              </Link>
-              
-              <div className="pt-4 mt-4 border-t border-zinc-800">
-                <p className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
-                  Administração
-                </p>
-                <div className="space-y-1">
-                  <Link href="/dashboard/admin/sync" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
-                    <RefreshCw size={18} />
-                    <span>Sync Dados</span>
-                  </Link>
-                  <Link href="/dashboard/admin/quota" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
-                    <Gauge size={18} />
-                    <span>Quota API</span>
-                  </Link>
-                  <Link href="/cms/admin/points" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
-                    <Coins size={18} />
-                    <span>Bônus Admin</span>
-                  </Link>
-                  <Link href="/cms/admin/courses" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
-                    <GraduationCap size={18} />
-                    <span>Cursos Admin</span>
-                  </Link>
+            <Link href="/cms/categorias" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
+              <Tags size={18} />
+              <span>Categorias</span>
+            </Link>
+          )}
+          
+          {(isAdmin || isEditorPlus) && (
+            <div className="pt-4 mt-4 border-t border-zinc-800">
+              <p className="px-3 text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-2">
+                Administração
+              </p>
+              <div className="space-y-1">
+                {isAdmin && (
+                  <>
+                    <Link href="/dashboard/admin/sync" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
+                      <RefreshCw size={18} />
+                      <span>Sync Dados</span>
+                    </Link>
+                    <Link href="/dashboard/admin/quota" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
+                      <Gauge size={18} />
+                      <span>Quota API</span>
+                    </Link>
+                    <Link href="/cms/admin/points" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
+                      <Coins size={18} />
+                      <span>Bônus Admin</span>
+                    </Link>
+                  </>
+                )}
+                <Link href="/cms/admin/courses" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
+                  <GraduationCap size={18} />
+                  <span>Cursos Admin</span>
+                </Link>
+                {isAdmin && (
                   <Link href="/cms/admin/planos" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-muted text-text-secondary hover:text-text-primary transition-colors">
                     <CreditCard size={18} />
                     <span>Planos Admin</span>
                   </Link>
-                </div>
+                )}
               </div>
-            </>
+            </div>
           )}
         </nav>
         <div className="p-4 border-t">

@@ -227,34 +227,38 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
         </SidebarGroup>
       )}
 
-      {isAdmin && (
+      {(isAdmin || isEditorPlus) && (
         <SidebarGroup>
           <SidebarGroupLabel>ADMINISTRAÇÃO</SidebarGroupLabel>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/sync')} tooltip="Sync Dados">
-                <Link href="/dashboard/admin/sync">
-                  <RefreshCw />
-                  <span>Sync Dados</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/quota')} tooltip="Quota API">
-                <Link href="/dashboard/admin/quota">
-                  <Gauge />
-                  <span>Quota API</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/points')} tooltip="Bônus Admin">
-                <Link href="/cms/admin/points">
-                  <Coins />
-                  <span>Bônus Admin</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {isAdmin && (
+              <>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/sync')} tooltip="Sync Dados">
+                    <Link href="/dashboard/admin/sync">
+                      <RefreshCw />
+                      <span>Sync Dados</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/admin/quota')} tooltip="Quota API">
+                    <Link href="/dashboard/admin/quota">
+                      <Gauge />
+                      <span>Quota API</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/points')} tooltip="Bônus Admin">
+                    <Link href="/cms/admin/points">
+                      <Coins />
+                      <span>Bônus Admin</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
+            )}
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/courses')} tooltip="Cursos Admin">
                 <Link href="/cms/admin/courses">
@@ -263,14 +267,16 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/planos')} tooltip="Planos Admin">
-                <Link href="/cms/admin/planos">
-                  <CreditCard />
-                  <span>Planos Admin</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {isAdmin && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith('/cms/admin/planos')} tooltip="Planos Admin">
+                  <Link href="/cms/admin/planos">
+                    <CreditCard />
+                    <span>Planos Admin</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
           </SidebarMenu>
         </SidebarGroup>
       )}

@@ -7,12 +7,16 @@ import { quizQuestionsSchema } from "@/lib/validations/quiz"
 import { awardPoints } from "@/lib/points/award"
 
 /**
- * Helper para verificar privilégios de administrador
+ * Helper para verificar privilégios de administrador ou editor
  */
-async function requireAdmin() {
+async function requireAdminOrEditor() {
   const session = await auth()
-  if (session?.user?.role !== "ADMIN") {
-    throw new Error("Acesso negado: Apenas administradores.")
+  if (!session?.user) {
+    throw new Error("Acesso negado: Usuário não autenticado.")
+  }
+  const role = session.user.role
+  if (role !== "ADMIN" && role !== "EDITOR") {
+    throw new Error("Acesso negado: Apenas administradores ou editores.")
   }
   return session.user
 }
@@ -22,7 +26,7 @@ async function requireAdmin() {
 // ==========================================
 
 export async function getCourses() {
-  await requireAdmin()
+  await requireAdminOrEditor()
   return await prisma.course.findMany({
     orderBy: { order: "asc" }
   })
@@ -40,7 +44,7 @@ export async function saveCourse(data: {
   published: boolean
   order: number
 }) {
-  await requireAdmin()
+  await requireAdminOrEditor()
   const { id, slug, title, description, coverUrl, access, priceCents, pointsUnlockCost, published, order } = data
 
   const payload = {
@@ -68,7 +72,7 @@ export async function saveCourse(data: {
 }
 
 export async function deleteCourse(id: string) {
-  await requireAdmin()
+  await requireAdminOrEditor()
   return await prisma.course.delete({
     where: { id }
   })
@@ -79,7 +83,7 @@ export async function deleteCourse(id: string) {
 // ==========================================
 
 export async function getModules(courseId: string) {
-  await requireAdmin()
+  await requireAdminOrEditor()
   return await prisma.module.findMany({
     where: { courseId },
     orderBy: { order: "asc" }
@@ -92,7 +96,7 @@ export async function saveModule(data: {
   title: string
   order: number
 }) {
-  await requireAdmin()
+  await requireAdminOrEditor()
   const { id, courseId, title, order } = data
 
   const payload = {
@@ -114,7 +118,7 @@ export async function saveModule(data: {
 }
 
 export async function deleteModule(id: string) {
-  await requireAdmin()
+  await requireAdminOrEditor()
   return await prisma.module.delete({
     where: { id }
   })
@@ -125,7 +129,7 @@ export async function deleteModule(id: string) {
 // ==========================================
 
 export async function getLessons(moduleId: string) {
-  await requireAdmin()
+  await requireAdminOrEditor()
   return await prisma.lesson.findMany({
     where: { moduleId },
     include: {
@@ -149,7 +153,7 @@ export async function saveLesson(data: {
     questions: any // JSON array
   } | null
 }) {
-  await requireAdmin()
+  await requireAdminOrEditor()
   const { id, moduleId, title, order, videoUrl, coverUrl, contentHtml, durationSec, quiz } = data
 
   // 1. Validação dos dados da Aula via Zod
@@ -225,7 +229,7 @@ export async function saveLesson(data: {
 }
 
 export async function deleteLesson(id: string) {
-  await requireAdmin()
+  await requireAdminOrEditor()
   return await prisma.lesson.delete({
     where: { id }
   })

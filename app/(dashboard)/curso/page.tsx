@@ -74,7 +74,14 @@ export default async function CursoPage() {
   return (
     <div className="text-zinc-100 bg-zinc-950 rounded-lg min-h-screen">
       {/* O cabeçalho é gerenciado dentro do CoursePlayerClient para alternar entre Vitrine e Player */}
-      <CoursePlayerClient courses={safeCourses} />
+      <CoursePlayerClient 
+        courses={safeCourses} 
+        user={{
+          id: session.user.id,
+          name: session.user.name ?? null,
+          role: session.user.role
+        }}
+      />
     </div>
   )
 }

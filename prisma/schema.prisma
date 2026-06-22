@@ -88,6 +88,7 @@ model User {
   bolaoPalpites     BolaoPalpite[]
   bolaoScores       BolaoScore[]
   legacyAccess      LegacyAccess?
+  lessonComments    LessonComment[]
 
   @@map("users")
 }
@@ -1063,6 +1064,7 @@ model Lesson {
   module      Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   progress    LessonProgress[]
   quiz        Quiz?
+  comments    LessonComment[]
 
   @@index([moduleId])
 }
@@ -1079,6 +1081,26 @@ model LessonProgress {
 
   @@unique([userId, lessonId])
   @@index([userId])
+}
+
+model LessonComment {
+  id        String          @id @default(cuid())
+  lessonId  String
+  userId    String
+  content   String          @db.Text
+  parentId  String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  lesson    Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent    LessonComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   LessonComment[] @relation("CommentReplies")
+
+  @@index([lessonId])
+  @@index([userId])
+  @@index([parentId])
+  @@map("lesson_comments")
 }
 
 model Quiz {

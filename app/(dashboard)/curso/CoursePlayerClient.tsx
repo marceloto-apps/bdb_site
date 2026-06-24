@@ -289,9 +289,13 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
 
     const setupPlayer = () => {
       try {
-        // Bunny Stream (Player.js)
+        // Bunny Stream (Player.js com context: "player.js" obrigatório)
         iframe.contentWindow?.postMessage(
-          JSON.stringify({ method: "addEventListener", value: "timeupdate" }),
+          JSON.stringify({ 
+            context: "player.js",
+            method: "addEventListener", 
+            value: "timeupdate" 
+          }),
           "*"
         )
         // YouTube (enablejsapi=1)
@@ -331,7 +335,7 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
         let hasProg = false
 
         // 1. Caso Bunny Stream (Player.js standard)
-        if (data.event === "timeupdate" && data.value) {
+        if ((data.event === "timeupdate" || data.method === "timeupdate") && data.value) {
           seconds = data.value.seconds
           duration = data.value.duration
           hasProg = true
@@ -348,6 +352,7 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
 
         if (hasProg && duration > 0) {
           const pct = (seconds / duration) * 100
+          console.log(`[CoursePlayer] Progresso capturado: ${pct.toFixed(2)}% (${seconds}/${duration}s)`)
           await handleProgressPctUpdate(pct)
         }
       } catch (err) {

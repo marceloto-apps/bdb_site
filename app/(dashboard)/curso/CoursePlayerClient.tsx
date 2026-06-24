@@ -289,12 +289,18 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
 
     const setupPlayer = () => {
       try {
+        // Bunny Stream (Player.js)
         iframe.contentWindow?.postMessage(
           JSON.stringify({ method: "addEventListener", value: "timeupdate" }),
           "*"
         )
+        // YouTube (enablejsapi=1)
+        iframe.contentWindow?.postMessage(
+          JSON.stringify({ event: "listening" }),
+          "*"
+        )
       } catch (err) {
-        console.error("Erro ao registrar playerjs listener:", err)
+        console.error("Erro ao registrar playerjs/youtube listener:", err)
       }
     }
 
@@ -332,7 +338,7 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
         }
 
         // 2. Caso YouTube (com enablejsapi=1)
-        if (data.event === "info_delivery" && data.info) {
+        if ((data.event === "infoDelivery" || data.event === "info_delivery") && data.info) {
           if (typeof data.info.currentTime === "number" && typeof data.info.duration === "number") {
             seconds = data.info.currentTime
             duration = data.info.duration
@@ -351,7 +357,7 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
 
     window.addEventListener("message", handleMessage)
     return () => window.removeEventListener("message", handleMessage)
-  }, [selectedLessonId, lastSavedPct])
+  }, [selectedLessonId, selectedLesson, lastSavedPct])
 
   const toggleModule = (moduleId: string) => {
     setExpandedModules((prev) => ({ ...prev, [moduleId]: !prev[moduleId] }))

@@ -100,6 +100,6 @@ describe('GET /api/aulas/[id]/video', () => {
     
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.embedUrl).toBe('https://iframe.mediadelivery.net/embed/682380/d125c4bb-0467-4ecb-ad78-656ca3e0a1ed?autoplay=false&loop=false');
+    expect(json.embedUrl).toBe('https://iframe.mediadelivery.net/embed/682380/d125c4bb-0467-4ecb-ad78-656ca3e0a1ed?autoplay=false&loop=false&playerjs=true');
   });
 });

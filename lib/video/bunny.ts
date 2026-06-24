@@ -28,5 +28,5 @@ export function extrairBunnyId(url: string): BunnyVideoId | null {
  * Gera a URL oficial de embed do Bunny.net.
  */
 export function gerarBunnyEmbedUrl(libraryId: string, videoId: string): string {
-  return `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=false&loop=false`
+  return `https://iframe.mediadelivery.net/embed/${libraryId}/${videoId}?autoplay=false&loop=false&playerjs=true`
 }

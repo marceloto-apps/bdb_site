@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { CoursePlayerClient } from "./CoursePlayerClient"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Aulas e Cursos — Big Data Bet",
   description: "Acesse nosso catálogo completo de aulas e materiais didáticos exclusivos.",

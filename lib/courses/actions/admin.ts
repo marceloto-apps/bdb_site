@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma"
 import { aulaSchema } from "@/lib/validations/aula"
 import { quizQuestionsSchema } from "@/lib/validations/quiz"
 import { awardPoints } from "@/lib/points/award"
+import { revalidatePath } from "next/cache"
 
 /**
  * Helper para verificar privilégios de administrador ou editor
@@ -242,7 +243,7 @@ export async function toggleLessonProgress(lessonId: string, completed: boolean)
   }
   const userId = session.user.id
 
-  return await prisma.lessonProgress.upsert({
+  const progress = await prisma.lessonProgress.upsert({
     where: {
       userId_lessonId: {
         userId,
@@ -262,6 +263,9 @@ export async function toggleLessonProgress(lessonId: string, completed: boolean)
       watchedPct: completed ? 100 : 0
     }
   })
+
+  revalidatePath("/curso")
+  return progress
 }
 
 /**
@@ -337,5 +341,6 @@ export async function saveLessonProgress(lessonId: string, watchedPct: number) {
     }
   }
 
+  revalidatePath("/curso")
   return progress
 }

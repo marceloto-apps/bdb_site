@@ -70,8 +70,8 @@ async function main() {
   // 2. Opções de Recompensa
   const rewardOptions = [
     { label: "10% off na assinatura", pointsCost: 500, discountPct: 10, appliesTo: "SUBSCRIPTION", couponValidityDays: 15, active: true },
-    { label: "20% off na assinatura", pointsCost: 1200, discountPct: 20, appliesTo: "SUBSCRIPTION", couponValidityDays: 15, active: true },
-    { label: "15% off em curso avulso", pointsCost: 800, discountPct: 15, appliesTo: "COURSE", couponValidityDays: 30, active: true }
+    { label: "20% off na assinatura", pointsCost: 1000, discountPct: 20, appliesTo: "SUBSCRIPTION", couponValidityDays: 15, active: true },
+    { label: "15% off em curso avulso", pointsCost: 750, discountPct: 15, appliesTo: "COURSE", couponValidityDays: 30, active: true }
   ];
 
   for (const reward of rewardOptions) {

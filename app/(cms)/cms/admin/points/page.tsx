@@ -462,24 +462,33 @@ export default function PointsAdminPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-zinc-400 mb-1">Custo em Pontos</label>
+                  <label className="block text-xs text-zinc-400 mb-1">Porcentagem de Desconto (%)</label>
                   <input 
                     type="number" 
                     required
-                    value={editingReward.pointsCost ?? 0}
-                    onChange={(e) => setEditingReward({...editingReward, pointsCost: parseInt(e.target.value) || 0})}
+                    min="1"
+                    max="100"
+                    value={editingReward.discountPct ?? 0}
+                    onChange={(e) => {
+                      const pct = parseInt(e.target.value) || 0
+                      setEditingReward({
+                        ...editingReward,
+                        discountPct: pct,
+                        pointsCost: pct * 50
+                      })
+                    }}
                     className="w-full text-sm bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-zinc-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-zinc-400 mb-1">Porcentagem de Desconto</label>
+                  <label className="block text-xs text-zinc-400 mb-1">Custo em Pontos (Auto-calculado)</label>
                   <input 
                     type="number" 
-                    required
-                    value={editingReward.discountPct ?? 0}
-                    onChange={(e) => setEditingReward({...editingReward, discountPct: parseInt(e.target.value) || 0})}
-                    className="w-full text-sm bg-zinc-950 border border-zinc-850 rounded px-3 py-2 text-zinc-100"
+                    disabled
+                    value={editingReward.pointsCost ?? 0}
+                    className="w-full text-sm bg-zinc-900 border border-zinc-850 rounded px-3 py-2 text-zinc-500 cursor-not-allowed font-bold"
                   />
+                  <span className="text-[10px] text-zinc-550 mt-1 block">Regra: 50 pontos para cada 1% de desconto.</span>
                 </div>
                 <div>
                   <label className="block text-xs text-zinc-400 mb-1">Validade do Cupom (Dias)</label>

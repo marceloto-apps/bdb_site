@@ -92,7 +92,7 @@ export async function saveRewardOption(data: {
 
   const payload = {
     label,
-    pointsCost,
+    pointsCost: discountPct * 50, // Força a regra de 50 pontos por 1% de desconto
     discountPct,
     appliesTo,
     couponValidityDays,

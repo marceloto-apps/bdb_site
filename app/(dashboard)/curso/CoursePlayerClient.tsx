@@ -1,6 +1,5 @@
 "use client"
-
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { 
   Play, 
   BookOpen, 
@@ -137,6 +136,11 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
   const [loadingVideo, setLoadingVideo] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [lastSavedPct, setLastSavedPct] = useState<number>(0)
+  
+  // Rastreamento de progresso real assistido
+  const watchedSecondsRef = useRef<Set<number>>(new Set())
+  const lastPlayheadRef = useRef<number | null>(null)
+  const activeTrackingLessonIdRef = useRef<string | null>(null)
 
   // Módulos abertos
   const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({})
@@ -351,9 +355,43 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
         }
 
         if (hasProg && duration > 0) {
-          const pct = (seconds / duration) * 100
-          console.log(`[CoursePlayer] Progresso capturado: ${pct.toFixed(2)}% (${seconds}/${duration}s)`)
-          await handleProgressPctUpdate(pct)
+          // Detecta se mudou de aula para resetar os acumuladores desta sessão
+          if (activeTrackingLessonIdRef.current !== selectedLesson.id) {
+            activeTrackingLessonIdRef.current = selectedLesson.id
+            watchedSecondsRef.current = new Set()
+            lastPlayheadRef.current = null
+          }
+
+          const currentTime = seconds
+          const lastTime = lastPlayheadRef.current
+
+          if (lastTime !== null) {
+            const diff = currentTime - lastTime
+            // Preenche o intervalo se a diferença for positiva e menor que 15 segundos (tolerância para velocidade rápida e lags)
+            if (diff > 0 && diff <= 15) {
+              const start = Math.floor(lastTime)
+              const end = Math.floor(Math.min(currentTime, duration))
+              for (let i = start; i <= end; i++) {
+                if (i >= 0) watchedSecondsRef.current.add(i)
+              }
+            } else {
+              // Se for um pulo manual ou retrocesso, adiciona apenas o segundo do playhead atual
+              watchedSecondsRef.current.add(Math.floor(Math.min(currentTime, duration)))
+            }
+          } else {
+            // Primeiro tick de progresso
+            watchedSecondsRef.current.add(Math.floor(Math.min(currentTime, duration)))
+          }
+
+          lastPlayheadRef.current = currentTime
+
+          // Calcula a porcentagem real de segundos únicos assistidos
+          const uniqueSeconds = watchedSecondsRef.current.size
+          const realPct = (uniqueSeconds / duration) * 100
+
+          console.log(`[CoursePlayer] Progresso Real: ${realPct.toFixed(2)}% | Segundos Assistidos: ${uniqueSeconds}/${Math.floor(duration)}s`)
+          
+          await handleProgressPctUpdate(realPct)
         }
       } catch (err) {
         // Ignora erros de parsing de mensagens de outras origens

@@ -3,6 +3,7 @@ import {
   calcularDispersaoMetrica,
   classificarDispersao,
   classificarDispersaoResiduos,
+  mediaVariancia,
 } from '@/lib/analytics/dispersao-condicional'
 
 describe('Dispersão condicional', () => {
@@ -133,22 +134,48 @@ describe('Dispersão condicional', () => {
     expect(r.condicional.veredito).not.toBeNull()
   })
 
-  it('teste de sanidade: valorExibido do agregado e condicional de gols e CV do xG correspondem a D e CV, nao a media', () => {
-    const obsGols = [2, 1, 0, 3, 1, 1, 2, 0, 1, 1] // media = 1.2, var = 0.8444 (amostral)
+  it('teste de sanidade: valorExibido do agregado de gols e CV do xG correspondem a D e CV calculados dinamicamente (nao tautologico)', () => {
+    // 1. Dados de gols
+    const obsGols = [2, 1, 0, 3, 1, 1, 2, 0, 1, 1]
     const lamGols = [1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2]
+    
+    // Cálculo dinâmico local de média e variância amostral (Bessel)
+    const muGols = obsGols.reduce((a, b) => a + b, 0) / obsGols.length
+    const s2Gols = obsGols.reduce((a, b) => a + (b - muGols) ** 2, 0) / (obsGols.length - 1)
+    const dEsperado = s2Gols / muGols
+
     const rGols = calcularDispersaoMetrica(obsGols, lamGols, 2, 'GOLS')
     
-    expect(rGols.agregado.media).toBeCloseTo(1.2, 4)
-    expect(rGols.agregado.indice).toBeCloseTo(0.7037, 4)
-    expect(rGols.agregado.indice).not.toBe(rGols.agregado.media)
+    // Asserções para gols (VMR)
+    expect(rGols.agregado.indice).toBeCloseTo(dEsperado, 6)
+    expect(rGols.agregado.indice).not.toBeCloseTo(muGols, 2) // não é a média
+    expect(rGols.agregado.tipo).toBe('VMR')
+    expect(rGols.agregado.veredito).not.toBeNull()
 
-    const obsXg = [1.5, 0.8, 1.2, 2.2, 0.5, 1.1, 1.8, 0.6, 1.3, 1.0] // media = 1.2
+    // 2. Dados de xG
+    const obsXg = [1.5, 0.8, 1.2, 2.2, 0.5, 1.1, 1.8, 0.6, 1.3, 1.0]
     const lamXg = [1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2]
+    
+    const muXg = obsXg.reduce((a, b) => a + b, 0) / obsXg.length
+    const s2Xg = obsXg.reduce((a, b) => a + (b - muXg) ** 2, 0) / (obsXg.length - 1)
+    const cvEsperado = Math.sqrt(s2Xg) / muXg
+
     const rXg = calcularDispersaoMetrica(obsXg, lamXg, 2, 'XG')
 
-    const varAmostralXg = 0.28
-    const cvEsperado = Math.sqrt(varAmostralXg) / 1.2
-    expect(rXg.agregado.indice).toBeCloseTo(cvEsperado, 4)
-    expect(rXg.agregado.indice).not.toBe(rXg.agregado.media)
+    // Asserções para xG (CV)
+    expect(rXg.agregado.indice).toBeCloseTo(cvEsperado, 6)
+    expect(rXg.agregado.indice).not.toBeCloseTo(muXg, 2) // não é a média
+    expect(rXg.agregado.tipo).toBe('CV')
+    expect(rXg.agregado.veredito).toBeNull() // sem veredito/badge
+  })
+
+  it('deve usar a correcao de Bessel (N-1) no calculo da variancia amostral', () => {
+    // Série: [1, 2, 3] -> Média = 2.
+    // Variância amostral com N-1 = 2: 2 / 2 = 1.
+    // Variância populacional com N = 3: 2 / 3 ≈ 0.6667.
+    const { media, variancia } = mediaVariancia([1, 2, 3])
+    expect(media).toBe(2)
+    expect(variancia).toBe(1)
+    expect(variancia).not.toBeCloseTo(2/3, 4)
   })
 })

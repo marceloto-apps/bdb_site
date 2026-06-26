@@ -139,4 +139,10 @@ describe('Model Selector', () => {
       expect(ranking[0].modelo).toBe(rankingBruto[0].modelo)
     }
   })
+
+  it('provando que xG nao influencia a selecao de modelos', () => {
+    const res1 = rankearModelos(mockJogos, 1.5, 1.2, mockMediasLiga, mockParams, 'NEUTRO')
+    const res2 = rankearModelos(mockJogos, 1.5, 1.2, mockMediasLiga, mockParams)
+    expect(res1.ranking.map(r => r.modelo)).toEqual(res2.ranking.map(r => r.modelo))
+  })
 })

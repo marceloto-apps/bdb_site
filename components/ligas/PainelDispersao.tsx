@@ -16,13 +16,13 @@ import type {
 } from '@/types/liga'
 
 // Cor do badge por veredito (tokens data.* do design system)
-function corVeredito(v: VeredictoDispersao): string {
+function corVeredito(v?: VeredictoDispersao | null): string {
   if (v === 'OVER') return 'bg-data-red/20 text-data-red border-data-red/40'
   if (v === 'UNDER') return 'bg-data-blue/20 text-data-blue border-data-blue/40'
   return 'bg-primary/20 text-primary border-primary/40'
 }
 
-function rotuloVeredito(v: VeredictoDispersao): string {
+function rotuloVeredito(v?: VeredictoDispersao | null): string {
   if (v === 'OVER') return 'Over'
   if (v === 'UNDER') return 'Under'
   return 'Poisson'
@@ -36,29 +36,55 @@ function rotuloDistribuicao(d: string): string {
 
 function LinhaMetrica({ m }: { m: DispersaoMetricaResponse }) {
   const rotulo = m.metrica === 'GOLS' ? 'GOLS' : 'xG'
+  const isCvAgregado = m.agregado.tipo === 'CV'
+  const isCvCondicional = m.condicional.tipo === 'CV'
+
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs font-mono">
       <span className="w-12 text-text-muted">{rotulo}</span>
 
-      <span className="text-text-secondary">Agregado:</span>
-      <span className="text-text-primary font-semibold">{m.agregado.indice.toFixed(2)}</span>
-      <Badge
-        variant="outline"
-        className={`px-1.5 py-0 text-[10px] ${corVeredito(m.agregado.veredito)}`}
-      >
-        {rotuloVeredito(m.agregado.veredito)}
-      </Badge>
+      {isCvAgregado ? (
+        <div className="flex items-center gap-1">
+          <span className="text-text-secondary">CV:</span>
+          <span className="text-text-primary font-semibold">{m.agregado.indice.toFixed(2)}</span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="text-[9px] text-text-muted cursor-help border border-border px-1 py-0 rounded bg-muted/30 ml-1">
+                  descritivo
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs text-xs bg-surface border border-border text-text-primary">
+                Coeficiente de Variação (métrica descritiva — sem classificação Poisson por se tratar de variável contínua).
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      ) : (
+        <>
+          <span className="text-text-secondary">Agregado:</span>
+          <span className="text-text-primary font-semibold">{m.agregado.indice.toFixed(2)}</span>
+          <Badge
+            variant="outline"
+            className={`px-1.5 py-0 text-[10px] ${corVeredito(m.agregado.veredito)}`}
+          >
+            {rotuloVeredito(m.agregado.veredito)}
+          </Badge>
+        </>
+      )}
 
       <span className="mx-1 text-border">|</span>
 
       <span className="text-text-secondary">Condicional:</span>
       <span className="text-text-primary font-semibold">{m.condicional.indice.toFixed(2)}</span>
-      <Badge
-        variant="outline"
-        className={`px-1.5 py-0 text-[10px] ${corVeredito(m.condicional.veredito)}`}
-      >
-        {rotuloVeredito(m.condicional.veredito)}
-      </Badge>
+      {!isCvCondicional && (
+        <Badge
+          variant="outline"
+          className={`px-1.5 py-0 text-[10px] ${corVeredito(m.condicional.veredito)}`}
+        >
+          {rotuloVeredito(m.condicional.veredito)}
+        </Badge>
+      )}
 
       {m.alertaAmostra && (
         <TooltipProvider>

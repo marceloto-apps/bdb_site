@@ -391,7 +391,7 @@ export async function GET(
           awayXg: j.stats?.awayXg ?? null,
         }))
         const diag = construirDiagnosticoDispersao(jogosDispersao)
-        vereditoDispersao = diag.gols.condicional.veredito
+        vereditoDispersao = diag.gols.condicional.veredito ?? undefined
 
         const { ranking, sinais } = rankearModelos(
           jogosTypeSafe as any,
@@ -399,7 +399,7 @@ export async function GET(
           lambdaA!,
           mediasLiga,
           parametrosExtras,
-          diag.gols.condicional.veredito
+          diag.gols.condicional.veredito ?? undefined
         )
         rankingModelos = ranking
         modeloResolvido = ranking[0].modelo

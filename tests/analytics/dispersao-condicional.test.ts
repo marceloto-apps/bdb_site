@@ -110,4 +110,26 @@ describe('Dispersão condicional', () => {
   it('N minúsculo (1 jogo) sempre retorna NORMAL', () => {
     expect(classificarDispersao(3.0, 1.0, 2).regime).toBe('NORMAL') // D=3 mas N=2
   })
+
+  // --- Novos Testes de Coeficiente de Variação (CV) ---
+
+  it('xG agregado retorna tipo CV e veredito null', () => {
+    const obs = [0.5, 1.5, 2.0, 0.7, 1.2]
+    const lam = [1.0, 1.0, 1.0, 1.0, 1.0]
+    const r = calcularDispersaoMetrica(obs, lam, 2, 'XG')
+    expect(r.agregado.tipo).toBe('CV')
+    expect(r.agregado.veredito).toBeNull()
+    expect(r.condicional.tipo).toBe('CV')
+    expect(r.condicional.veredito).toBeNull()
+  })
+
+  it('gols agregado mantem tipo VMR com veredito e banda', () => {
+    const obs = [1, 2, 0, 1, 3]
+    const lam = [1.0, 1.0, 1.0, 1.0, 1.0]
+    const r = calcularDispersaoMetrica(obs, lam, 2, 'GOLS')
+    expect(r.agregado.tipo).toBe('VMR')
+    expect(r.agregado.veredito).not.toBeNull()
+    expect(r.condicional.tipo).toBe('VMR')
+    expect(r.condicional.veredito).not.toBeNull()
+  })
 })

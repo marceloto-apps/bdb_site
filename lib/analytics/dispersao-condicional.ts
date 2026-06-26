@@ -38,20 +38,22 @@ export interface ResultadoClassificacaoDispersao {
 }
 
 export interface BlocoAgregado {
-  indice: number // Var/Média da liga
+  indice: number // Var/Média da liga (ou CV para xG)
   media: number
   variancia: number
   faixaInf: number // limite inferior da faixa Poisson
   faixaSup: number // limite superior da faixa Poisson
-  veredito: VeredictoDispersao
+  veredito?: VeredictoDispersao | null
+  tipo?: 'VMR' | 'CV'
 }
 
 export interface BlocoCondicional {
   indice: number // Σ resíduos² / (n - p)
   faixaInf: number
   faixaSup: number
-  veredito: VeredictoDispersao
+  veredito?: VeredictoDispersao | null
   distribuicaoSugerida: DistribuicaoSugerida
+  tipo?: 'VMR' | 'CV'
 }
 
 export interface ResultadoDispersaoMetrica {
@@ -263,8 +265,12 @@ export function calcularDispersaoMetrica(
 
   const metodoFaixa: 'QUI_QUADRADO' | 'ERRO_PADRAO' = 'QUI_QUADRADO'
 
-  const inflacao =
-    indiceCond > 0 ? (resAgg.d / indiceCond - 1) * 100 : 0
+  const isXg = metrica === 'XG'
+  const cv = media > 0 ? Math.sqrt(variancia) / media : 0
+
+  const inflacao = isXg
+    ? 0
+    : (indiceCond > 0 ? (resAgg.d / indiceCond - 1) * 100 : 0)
 
   let alertaAmostra: string | null = null
   if (n < 50) {
@@ -277,19 +283,21 @@ export function calcularDispersaoMetrica(
     amostra: n,
     nParametros,
     agregado: {
-      indice: resAgg.d,
+      indice: isXg ? cv : resAgg.d,
       media,
       variancia,
-      faixaInf: infAgg,
-      faixaSup: supAgg,
-      veredito: veredAgg,
+      faixaInf: isXg ? 0 : infAgg,
+      faixaSup: isXg ? 0 : supAgg,
+      veredito: isXg ? null : veredAgg,
+      tipo: isXg ? 'CV' : 'VMR',
     },
     condicional: {
       indice: indiceCond,
-      faixaInf: infCond,
-      faixaSup: supCond,
-      veredito: veredCond,
-      distribuicaoSugerida: mapearDistribuicao(veredCond),
+      faixaInf: isXg ? 0 : infCond,
+      faixaSup: isXg ? 0 : supCond,
+      veredito: isXg ? null : veredCond,
+      distribuicaoSugerida: isXg ? 'POISSON' : mapearDistribuicao(veredCond),
+      tipo: isXg ? 'CV' : 'VMR',
     },
     inflacaoPercentual: inflacao,
     metodoFaixa,

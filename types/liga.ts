@@ -150,14 +150,16 @@ export interface DispersaoMetricaResponse {
     indice: number
     faixaInf: number
     faixaSup: number
-    veredito: VeredictoDispersao
+    veredito?: VeredictoDispersao | null
+    tipo?: 'VMR' | 'CV'
   }
   condicional: {
     indice: number
     faixaInf: number
     faixaSup: number
-    veredito: VeredictoDispersao
+    veredito?: VeredictoDispersao | null
     distribuicaoSugerida: DistribuicaoSugerida
+    tipo?: 'VMR' | 'CV'
   }
   inflacaoPercentual: number
   alertaAmostra: string | null

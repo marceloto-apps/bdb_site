@@ -657,7 +657,7 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
 - **Visualização de Plano:** Painel `/dashboard/plano` desenvolvido para exibir o status atual da assinatura, botão para o portal de faturamento e redirecionamentos adequados.
 
 **Segurança e Controle de Acessos (Acesso VIP):**
-- **Motor de Permissão (`hasVipAccess`):** Helper unificado para verificar permissões de acesso a ligas fechadas. Valida se o usuário é Administrador/Editor, se possui plano `VIP_BASICO`/`VIP_PRO` ativo, ou se possui registro de acesso legado vitalício (`LegacyAccess`).
+- **Motor de Permissão (`hasVipAccess`):** Helper unificado para verificar permissões de acesso a ligas fechadas. Valida se o usuário possui plano `VIP_BASICO`/`VIP_PRO` ativo, ou se possui registro de acesso legado vitalício (`LegacyAccess`). Os cargos administrativos (ADMIN/EDITOR) não concedem acesso VIP automático.
 - **Middleware Serverless-friendly:** Para evitar problemas de conexão com banco de dados em Edge runtimes, a validação de acesso das ligas e previsões foi delegada do Middleware do Next.js para os Route Handlers da API e Server Components individuais.
 - **Proteção Visual:** A visualização de ligas restritas no menu e nas rotas bloqueia acessos de usuários sem permissões, apresentando a tela e o CTA de planos/upgrade.
 

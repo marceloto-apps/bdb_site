@@ -2365,11 +2365,20 @@ Endpoint público configurado no Stripe Dashboard para receber eventos em tempo 
 
 ## 5. Controle de Acessos VIP (lib/auth/check-access.ts)
 
-A verificação de permissão é feita por meio da função assíncrona `hasVipAccess(userId: string): Promise<boolean>`.
-- **Regras de Liberação:**
-  - Retorna `true` se `user.role` for `ADMIN` ou `EDITOR`.
+A verificação de permissão é feita por meio das funções assíncronas `hasVipAccess(userId: string): Promise<boolean>` e `hasBacktestAccess(userId: string): Promise<boolean>`.
+
+- **Regras de Acesso:**
+  - **VIP e Ferramentas VIP:** O acesso a ligas e ferramentas VIP (como backtest) é determinado exclusivamente pelo campo `plan` na base de dados (`VIP_BASICO` ou `VIP_PRO`) ou por registros na tabela `LegacyAccess` (usuários legados).
+  - **Cargos (Role):** Os cargos (`ADMIN`, `EDITOR`, `REVISOR`, `AUTOR`) servem estritamente para gerenciar o nível de acesso ao CMS e áreas administrativas do site (como gerenciar posts, revisar, responder comentários de aulas, etc.). O cargo do usuário **não** concede automaticamente acesso a ligas VIP ou ferramentas de Backtest se o plano do usuário for `FREE`.
+
+- **Regras de Liberação de Ligas VIP:**
   - Retorna `true` se `user.plan` for `VIP_BASICO` ou `VIP_PRO`.
   - Retorna `true` se o usuário possuir um registro vinculado na tabela `LegacyAccess` ou se houver correspondência pelo e-mail cadastrado na tabela de legados.
+  
+- **Regras de Liberação de Backtest:**
+  - Retorna `true` se `user.plan` for `VIP_PRO`.
+  - Retorna `true` se o usuário possuir um registro vinculado na tabela `LegacyAccess` ou se houver correspondência pelo e-mail cadastrado na tabela de legados.
+
 - **Autovinculação:** Se houver correspondência de acesso legado apenas por e-mail, o sistema atualiza o registro na tabela `LegacyAccess` vinculando o `userId` correspondente para otimizar acessos futuros.
 
 ## 6. Proteção de Rotas e Telas (UI/UX)

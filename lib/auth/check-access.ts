@@ -4,9 +4,10 @@ import { prisma } from '@/lib/prisma'
  * Verifica se um usuário possui acesso aos recursos VIP (ligas VIP).
  * 
  * Regras:
- * 1. ADMIN ou EDITOR possuem acesso total irrestrito.
+ * 1. O acesso é determinado estritamente pelo campo `plan` na base de dados ou por acesso legado.
  * 2. Usuários com plano VIP_BASICO ou VIP_PRO possuem acesso.
  * 3. Usuários que constam na tabela LegacyAccess (acesso vitalício do Hubla) possuem acesso.
+ * Nota: Cargos (Roles) como ADMIN ou EDITOR NÃO concedem acesso automático a recursos VIP.
  */
 export async function hasVipAccess(userId: string): Promise<boolean> {
   if (!userId) return false
@@ -20,11 +21,6 @@ export async function hasVipAccess(userId: string): Promise<boolean> {
     })
 
     if (!user) return false
-
-    // 1. ADMIN ou EDITOR possuem acesso completo
-    if (user.role === 'ADMIN' || user.role === 'EDITOR') {
-      return true
-    }
 
     // 2. Planos pagos (VIP_BASICO e VIP_PRO) liberam as ligas VIP na Fase 4
     if (user.plan === 'VIP_BASICO' || user.plan === 'VIP_PRO') {
@@ -61,9 +57,10 @@ export async function hasVipAccess(userId: string): Promise<boolean> {
  * Verifica se um usuário possui acesso à ferramenta de Backtest (VIP_PRO).
  * 
  * Regras:
- * 1. ADMIN ou EDITOR possuem acesso.
+ * 1. O acesso é determinado estritamente pelo campo `plan` na base de dados ou por acesso legado.
  * 2. Usuários com plano VIP_PRO possuem acesso.
  * 3. Usuários que constam na tabela LegacyAccess possuem acesso.
+ * Nota: Cargos (Roles) como ADMIN ou EDITOR NÃO concedem acesso automático ao Backtest.
  */
 export async function hasBacktestAccess(userId: string): Promise<boolean> {
   if (!userId) return false
@@ -77,11 +74,6 @@ export async function hasBacktestAccess(userId: string): Promise<boolean> {
     })
 
     if (!user) return false
-
-    // 1. ADMIN ou EDITOR
-    if (user.role === 'ADMIN' || user.role === 'EDITOR') {
-      return true
-    }
 
     // 2. Plano VIP_PRO
     if (user.plan === 'VIP_PRO') {

@@ -34,7 +34,7 @@ describe('check-access - hasVipAccess', () => {
     expect(hasAccess).toBe(false)
   })
 
-  it('deve retornar true para usuários com papel ADMIN ou EDITOR', async () => {
+  it('deve retornar false para usuários com papel ADMIN ou EDITOR se estiverem no plano FREE', async () => {
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-admin',
       role: 'ADMIN',
@@ -42,7 +42,7 @@ describe('check-access - hasVipAccess', () => {
       legacyAccess: null,
     } as any)
 
-    expect(await hasVipAccess('user-admin')).toBe(true)
+    expect(await hasVipAccess('user-admin')).toBe(false)
 
     vi.mocked(prisma.user.findUnique).mockResolvedValue({
       id: 'user-editor',
@@ -51,7 +51,7 @@ describe('check-access - hasVipAccess', () => {
       legacyAccess: null,
     } as any)
 
-    expect(await hasVipAccess('user-editor')).toBe(true)
+    expect(await hasVipAccess('user-editor')).toBe(false)
   })
 
   it('deve retornar true para usuários com plano VIP_BASICO ou VIP_PRO', async () => {

@@ -5,7 +5,7 @@
 ### Adicionado
 - **Mecanismo de Checkout e Portal**: Endpoints `/api/checkout` e `/api/portal` para integração com Stripe Checkout (assinaturas dos planos VIP_BASICO e VIP_PRO) e Stripe Customer Portal (gerenciamento e cancelamento de assinaturas).
 - **Processador de Webhook do Stripe**: Endpoint `/api/webhook/stripe` com validação de assinatura (`stripe-signature`), verificação do corpo bruto (*raw body*), idempotência via tabela `StripeWebhookEvent` e processamento dos eventos `checkout.session.completed`, `customer.subscription.updated` e `customer.subscription.deleted`.
-- **Validador de Acesso VIP**: Função `hasVipAccess` em `lib/auth/check-access.ts` que valida se o usuário possui cargo de `ADMIN`/`EDITOR`, se tem plano pago ativo, ou se possui registro de acesso legado vitalício.
+- **Validador de Acesso VIP**: Função `hasVipAccess` em `lib/auth/check-access.ts` que valida se o usuário tem plano pago ativo, ou se possui registro de acesso legado vitalício (cargos como ADMIN/EDITOR não concedem bypass automático).
 - **Importador de Usuários Legados**: Script CLI `scripts/import-legacy.ts` para importação massiva de assinantes vitalícios do Hubla para a tabela `LegacyAccess`.
 
 ### Alterado

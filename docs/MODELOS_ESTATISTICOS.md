@@ -1806,12 +1806,12 @@ Para proteger o seletor contra ruído amostral e falsos diagnósticos, o modo `A
    - O seletor força a escolha de **Dixon-Coles** como modelo robusto base com a flag `selecaoAutomatica: false` exposta na API.
    - Os sinais de triagem são reportados como `INDETERMINADO`.
 
-2. **Regime `AIC_PURO` ($10 \le N < 180$):**
+2. **Regime `AIC_PURO` ($10 \le N < 140$):**
    - A triagem ativa é desativada para evitar instabilidade. Os sinais de triagem retornam como `INDETERMINADO`.
-   - A seleção é feita puramente com base no AIC bruto. Em caso de empate ($\Delta AIC < 2.0$), resolve-se pela ordem de robustez padrão: $\text{POISSON} > \text{DIXON\_COLES} > \text{ZIP} > \text{NB}$.
+   - A seleção é feita puramente com base no AIC bruto. Em caso de empate ($\Delta AIC < 2.0$), resolve-se pela ordem de robustez padrão: $\text{DIXON\_COLES} > \text{POISSON} > \text{ZIP} > \text{NB}$.
    - Nenhum boost ou reordenação por sinais é aplicado.
 
-3. **Regime `COMPLETO` ($N \ge 180$):**
+3. **Regime `COMPLETO` ($N \ge 140$):**
    - Triagem ativa é executada calculando os sinais `zip` e `dc` para a liga.
    - **Sinal ZIP ($R_{zero}$):** Avalia os zeros marginais (gols marcados = 0 por time por jogo), calculando a razão:
      $$R_{zero} = \frac{P_{obs}(g=0)}{e^{-\mu}}$$

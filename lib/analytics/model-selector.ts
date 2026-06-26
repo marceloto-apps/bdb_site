@@ -123,7 +123,7 @@ export function rankearModelos(
   // 4. Regimes de Amostra e Sinais de Triagem
   const nJogos = jogos.length
   const regime: 'FALLBACK' | 'AIC_PURO' | 'COMPLETO' =
-    nJogos < 10 ? 'FALLBACK' : nJogos < 180 ? 'AIC_PURO' : 'COMPLETO'
+    nJogos < 10 ? 'FALLBACK' : nJogos < 140 ? 'AIC_PURO' : 'COMPLETO'
 
   let zipSinal: 'FORTE' | 'LEVE' | 'AUSENTE' | 'INDETERMINADO' = 'INDETERMINADO'
   let dcSinal: 'INDICADO' | 'AUSENTE' | 'INDETERMINADO' = 'INDETERMINADO'
@@ -165,12 +165,12 @@ export function rankearModelos(
       if (dcSinal === 'INDICADO') {
         ORDEM_PRIORIDADE = { DIXON_COLES: 0, POISSON: 1, ZIP: 2, NB: 3 }
       } else {
-        ORDEM_PRIORIDADE = { POISSON: 0, DIXON_COLES: 1, ZIP: 2, NB: 3 }
+        ORDEM_PRIORIDADE = { DIXON_COLES: 0, POISSON: 1, ZIP: 2, NB: 3 }
       }
     }
   } else {
-    // Para AIC_PURO e FALLBACK (triagem desativada), a ordem de desempate padrão favorece a parcimônia (POISSON com k=2)
-    ORDEM_PRIORIDADE = { POISSON: 0, DIXON_COLES: 1, ZIP: 2, NB: 3 }
+    // Para AIC_PURO e FALLBACK (triagem desativada), a ordem de desempate padrão favorece o Dixon-Coles sobre Poisson
+    ORDEM_PRIORIDADE = { DIXON_COLES: 0, POISSON: 1, ZIP: 2, NB: 3 }
   }
 
   // Primeiro, ordena por AIC puro para encontrar o líder absoluto (menor AIC)

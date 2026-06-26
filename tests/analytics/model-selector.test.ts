@@ -89,7 +89,7 @@ describe('Model Selector', () => {
     expect(dcPoisson.aic).toBe(dcUndefined.aic)
   })
 
-  it('deve desempatar por robustez (POISSON > DIXON_COLES > ZIP > NB) quando delta AIC < 2 e sem triagem ativa', () => {
+  it('deve desempatar por robustez (DIXON_COLES > POISSON > ZIP > NB) quando delta AIC < 2 e sem triagem ativa', () => {
     const { ranking: rankings } = rankearModelos(mockJogos, 1.5, 1.2, mockMediasLiga, mockParams)
     
     // Verifica se para qualquer par ordenado com delta AIC < 2, a ordem de robustez é respeitada
@@ -98,7 +98,7 @@ describe('Model Selector', () => {
       const b = rankings[i+1]
       const delta = Math.abs(a.aic - b.aic)
       if (delta < 2) {
-        const ORDEM: Record<string, number> = { POISSON: 0, DIXON_COLES: 1, ZIP: 2, NB: 3 }
+        const ORDEM: Record<string, number> = { DIXON_COLES: 0, POISSON: 1, ZIP: 2, NB: 3 }
         expect(ORDEM[a.modelo]).toBeLessThan(ORDEM[b.modelo])
       }
     }
@@ -106,14 +106,14 @@ describe('Model Selector', () => {
 
   // --- Novos Testes: Guard Rails & Triagem Avançada ---
 
-  it('N=179 cai em AIC_PURO (sinais INDETERMINADO)', () => {
-    const { sinais } = rankearModelos(gerarJogos(179), 1.5, 1.2, mockMediasLiga, mockParams)
+  it('N=139 cai em AIC_PURO (sinais INDETERMINADO)', () => {
+    const { sinais } = rankearModelos(gerarJogos(139), 1.5, 1.2, mockMediasLiga, mockParams)
     expect(sinais.zip).toBe('INDETERMINADO')
     expect(sinais.dc).toBe('INDETERMINADO')
   })
 
-  it('N=180 ativa regime COMPLETO (triagem rodando)', () => {
-    const { sinais } = rankearModelos(gerarJogosComZeros(180), 1.5, 1.2, mockMediasLiga, mockParams)
+  it('N=140 ativa regime COMPLETO (triagem rodando)', () => {
+    const { sinais } = rankearModelos(gerarJogosComZeros(140), 1.5, 1.2, mockMediasLiga, mockParams)
     expect(sinais.zip).not.toBe('INDETERMINADO') // triagem ativou
   })
 

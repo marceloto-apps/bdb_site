@@ -132,4 +132,23 @@ describe('Dispersão condicional', () => {
     expect(r.condicional.tipo).toBe('VMR')
     expect(r.condicional.veredito).not.toBeNull()
   })
+
+  it('teste de sanidade: valorExibido do agregado e condicional de gols e CV do xG correspondem a D e CV, nao a media', () => {
+    const obsGols = [2, 1, 0, 3, 1, 1, 2, 0, 1, 1] // media = 1.2, var = 0.8444 (amostral)
+    const lamGols = [1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2]
+    const rGols = calcularDispersaoMetrica(obsGols, lamGols, 2, 'GOLS')
+    
+    expect(rGols.agregado.media).toBeCloseTo(1.2, 4)
+    expect(rGols.agregado.indice).toBeCloseTo(0.7037, 4)
+    expect(rGols.agregado.indice).not.toBe(rGols.agregado.media)
+
+    const obsXg = [1.5, 0.8, 1.2, 2.2, 0.5, 1.1, 1.8, 0.6, 1.3, 1.0] // media = 1.2
+    const lamXg = [1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2]
+    const rXg = calcularDispersaoMetrica(obsXg, lamXg, 2, 'XG')
+
+    const varAmostralXg = 0.28
+    const cvEsperado = Math.sqrt(varAmostralXg) / 1.2
+    expect(rXg.agregado.indice).toBeCloseTo(cvEsperado, 4)
+    expect(rXg.agregado.indice).not.toBe(rXg.agregado.media)
+  })
 })

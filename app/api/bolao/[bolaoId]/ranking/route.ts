@@ -52,10 +52,12 @@ export async function GET(
     }
     // -------------------------------------------------------------
 
-    // Obter parâmetros de paginação da query string
+    // Obter parâmetros de paginação da query string com fallback seguro contra valores inválidos ou NaN
     const searchParams = req.nextUrl.searchParams;
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const pageVal = parseInt(searchParams.get("page") || "1", 10);
+    const limitVal = parseInt(searchParams.get("limit") || "20", 10);
+    const page = Math.max(1, isNaN(pageVal) ? 1 : pageVal);
+    const limit = Math.max(1, isNaN(limitVal) ? 20 : limitVal);
     const skip = (page - 1) * limit;
 
     // Buscar ranking com a ordenação especificada e desempate por data de criação do usuário

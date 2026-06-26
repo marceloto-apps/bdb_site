@@ -1,4 +1,5 @@
 import { rankearModelos } from '../../lib/analytics/model-selector'
+import { construirDiagnosticoDispersao } from '../../lib/analytics/dispersao-builder'
 
 describe('Model Selector', () => {
   const mockJogos = [
@@ -140,9 +141,108 @@ describe('Model Selector', () => {
     }
   })
 
-  it('provando que xG nao influencia a selecao de modelos', () => {
-    const res1 = rankearModelos(mockJogos, 1.5, 1.2, mockMediasLiga, mockParams, 'NEUTRO')
-    const res2 = rankearModelos(mockJogos, 1.5, 1.2, mockMediasLiga, mockParams)
-    expect(res1.ranking.map(r => r.modelo)).toEqual(res2.ranking.map(r => r.modelo))
+  it('Cenario B: deve provar que alterar drasticamente o xG nao altera o ranking de modelos', () => {
+    const times = ['timeA', 'timeB', 'timeC']
+    const jogosBase = [
+      { homeTeamId: 'timeA', awayTeamId: 'timeB', fthg: 2, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeC', fthg: 1, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeA', fthg: 0, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeC', fthg: 3, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeA', fthg: 1, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeB', fthg: 2, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeB', fthg: 1, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeC', fthg: 0, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeA', fthg: 1, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeC', fthg: 2, ftag: 0, utcDate: new Date() },
+      
+      { homeTeamId: 'timeA', awayTeamId: 'timeB', fthg: 1, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeC', fthg: 2, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeA', fthg: 1, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeC', fthg: 2, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeA', fthg: 0, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeB', fthg: 1, ftag: 3, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeB', fthg: 0, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeC', fthg: 1, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeA', fthg: 3, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeC', fthg: 1, ftag: 2, utcDate: new Date() },
+    ]
+
+    const jogosXgBaixo = jogosBase.map((j, i) => ({ ...j, homeXg: i % 2 === 0 ? 0.1 : 0.9, awayXg: i % 2 === 0 ? 0.9 : 0.1 }))
+    const jogosXgAlto = jogosBase.map(j => ({ ...j, homeXg: 0.5, awayXg: 0.5 }))
+
+    const diagBaixo = construirDiagnosticoDispersao(jogosXgBaixo)
+    const diagAlto = construirDiagnosticoDispersao(jogosXgAlto)
+
+    expect(diagBaixo.xg?.agregado.indice).not.toBe(diagAlto.xg?.agregado.indice)
+
+    const resBaixo = rankearModelos(
+      jogosXgBaixo,
+      1.5,
+      1.2,
+      mockMediasLiga,
+      mockParams,
+      diagBaixo.gols.condicional.veredito ?? undefined
+    )
+
+    const resAlto = rankearModelos(
+      jogosXgAlto,
+      1.5,
+      1.2,
+      mockMediasLiga,
+      mockParams,
+      diagAlto.gols.condicional.veredito ?? undefined
+    )
+
+    expect(resBaixo.ranking.map(r => r.modelo)).toEqual(resAlto.ranking.map(r => r.modelo))
+  })
+
+  it('Cenario B: deve provar isolamento do xG no desempate no fallback (gols nulo)', () => {
+    const times = ['timeA', 'timeB', 'timeC']
+    const jogosBase = [
+      { homeTeamId: 'timeA', awayTeamId: 'timeB', fthg: 2, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeC', fthg: 1, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeA', fthg: 0, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeC', fthg: 3, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeA', fthg: 1, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeB', fthg: 2, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeB', fthg: 1, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeC', fthg: 0, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeA', fthg: 1, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeC', fthg: 2, ftag: 0, utcDate: new Date() },
+
+      { homeTeamId: 'timeA', awayTeamId: 'timeB', fthg: 1, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeC', fthg: 2, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeA', fthg: 1, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeC', fthg: 2, ftag: 1, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeA', fthg: 0, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeB', fthg: 1, ftag: 3, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeB', fthg: 0, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeB', awayTeamId: 'timeC', fthg: 1, ftag: 0, utcDate: new Date() },
+      { homeTeamId: 'timeC', awayTeamId: 'timeA', fthg: 3, ftag: 2, utcDate: new Date() },
+      { homeTeamId: 'timeA', awayTeamId: 'timeC', fthg: 1, ftag: 2, utcDate: new Date() },
+    ]
+
+    const jogosXgBaixo = jogosBase.map((j, i) => ({ ...j, homeXg: i % 2 === 0 ? 0.1 : 0.9, awayXg: i % 2 === 0 ? 0.9 : 0.1 }))
+    const jogosXgAlto = jogosBase.map(j => ({ ...j, homeXg: 0.5, awayXg: 0.5 }))
+
+    const resBaixo = rankearModelos(
+      jogosXgBaixo,
+      1.5,
+      1.2,
+      mockMediasLiga,
+      mockParams,
+      undefined
+    )
+
+    const resAlto = rankearModelos(
+      jogosXgAlto,
+      1.5,
+      1.2,
+      mockMediasLiga,
+      mockParams,
+      undefined
+    )
+
+    expect(resBaixo.ranking.map(r => r.modelo)).toEqual(resAlto.ranking.map(r => r.modelo))
   })
 })

@@ -34,7 +34,7 @@ export function useLeagueFilters(defaultMaxRound: number = 38): UseLeagueFilters
     oddsVisitante: FAIXAS_ODDS_PADRAO.map(f => ({ ...f, selected: true })),
   })
 
-  const [modelo, setModelo] = useState<ModoModelo>('POISSON')
+  const [modelo, setModelo] = useState<ModoModelo>('AUTO')
   const [lambdaMethod, setLambdaMethod] = useState<LambdaMethod>('MEDIA_SIMPLES')
 
   const setHomeTeamId = useCallback((id: string | null) => {
@@ -73,7 +73,7 @@ export function useLeagueFilters(defaultMaxRound: number = 38): UseLeagueFilters
       oddsCasa: FAIXAS_ODDS_PADRAO.map(f => ({ ...f, selected: true })),
       oddsVisitante: FAIXAS_ODDS_PADRAO.map(f => ({ ...f, selected: true })),
     }))
-    setModelo('POISSON')
+    setModelo('AUTO')
     setLambdaMethod('MEDIA_SIMPLES')
   }, [])
 

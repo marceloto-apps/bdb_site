@@ -8,6 +8,8 @@ import { cn } from '@/lib/utils'
 import type { MediasTimeXG, ForcasTimeXG, MediasLigaXG } from '@/lib/analytics/types'
 import type { MediasTime, ForcasTime } from '@/lib/analytics/forca-time'
 import type { MediasLigaCalculadas } from '@/lib/analytics/medias'
+import { PainelDispersao } from './PainelDispersao'
+import type { DispersaoLigaResponse } from '@/types/liga'
 
 interface PainelMediasProps {
   medias: {
@@ -28,6 +30,7 @@ interface PainelMediasProps {
   forcasAwayXG?: ForcasTimeXG | null
   ligaMediasXG?: MediasLigaXG | null
   xgDisponivel: boolean
+  dispersao?: DispersaoLigaResponse | null
 }
 
 export function PainelMedias({ 
@@ -40,7 +43,8 @@ export function PainelMedias({
   forcasHomeXG,
   forcasAwayXG,
   ligaMediasXG,
-  xgDisponivel 
+  xgDisponivel,
+  dispersao
 }: PainelMediasProps) {
   const renderForca = (valor: number) => {
     const isHigh = valor > 1.05
@@ -68,28 +72,15 @@ export function PainelMedias({
         </CardTitle>
       </CardHeader>
       
-      {/* TAREFA 1: Médias da Liga na faixa global */}
-      <div className="bg-muted/20 border-b px-4 py-3 text-sm text-muted-foreground flex flex-col justify-center items-center gap-2 text-center">
-        {/* Linha de Gols */}
-        <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
-          <span className="font-bold uppercase text-[11px] tracking-widest text-muted-foreground/70 min-w-[140px] md:text-right">── Média Liga GOLS</span>
-          <span>Mandante: <span className="font-mono text-foreground font-semibold">{medias.liga.muH.toFixed(2)}</span> <span className="text-[0.9em] text-muted-foreground/60">(Var: {medias.liga.varH.toFixed(2)})</span></span>
-          <span className="hidden md:inline text-border">|</span>
-          <span>Visitante: <span className="font-mono text-foreground font-semibold">{medias.liga.muA.toFixed(2)}</span> <span className="text-[0.9em] text-muted-foreground/60">(Var: {medias.liga.varA.toFixed(2)})</span></span>
-        </div>
-        
-        {/* Linha de xG */}
-        {xgDisponivel && ligaMediasXG && (
-          <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
-            <span className="font-bold uppercase text-[11px] tracking-widest text-muted-foreground/70 min-w-[140px] md:text-right">── Média Liga xG</span>
-            <span>Mandante: <span className="font-mono text-foreground font-semibold">{ligaMediasXG.muH.toFixed(2)}</span> <span className="text-[0.9em] text-muted-foreground/60">(Var: {ligaMediasXG.varH.toFixed(2)})</span></span>
-            <span className="hidden md:inline text-border">|</span>
-            <span>Visitante: <span className="font-mono text-foreground font-semibold">{ligaMediasXG.muA.toFixed(2)}</span> <span className="text-[0.9em] text-muted-foreground/60">(Var: {ligaMediasXG.varA.toFixed(2)})</span></span>
-          </div>
-        )}
-      </div>
-
       <CardContent className="flex-1 p-4 md:p-6 flex flex-col gap-6">
+        {dispersao && (
+          <PainelDispersao 
+            data={dispersao} 
+            mediasLigaGols={medias.liga}
+            mediasLigaXG={ligaMediasXG}
+            xgDisponivel={xgDisponivel}
+          />
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           
           {/* ========================================================= */}

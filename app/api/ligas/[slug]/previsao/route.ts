@@ -27,6 +27,8 @@ import {
   calcularMediasTimeXGComDecay,
   type MediasLigaXG,
   calcularLambdaMercado,
+  rankearModelos,
+  construirDiagnosticoDispersao,
 } from '@/lib/analytics'
 
 export async function GET(
@@ -371,20 +373,65 @@ export async function GET(
       rho: rhoLiga,
     }
     const modeloSelecionado = query.modelo
+    let modeloResolvido: 'POISSON' | 'ZIP' | 'NB' | 'DIXON_COLES' = 'POISSON'
+    let rankingModelos: any[] = []
+    let vereditoDispersao: string | undefined = undefined
+    let selecaoAutomatica = true
+    let sinaisTriagem: any = undefined
+
+    if (modeloSelecionado === 'AUTO') {
+      try {
+        const jogosDispersao = jogosTypeSafe.map(j => ({
+          homeTeamId: j.homeTeamId,
+          awayTeamId: j.awayTeamId,
+          fthg: j.fthg,
+          ftag: j.ftag,
+          utcDate: j.utcDate,
+          homeXg: j.stats?.homeXg ?? null,
+          awayXg: j.stats?.awayXg ?? null,
+        }))
+        const diag = construirDiagnosticoDispersao(jogosDispersao)
+        vereditoDispersao = diag.gols.condicional.veredito
+
+        const { ranking, sinais } = rankearModelos(
+          jogosTypeSafe as any,
+          lambdaH!,
+          lambdaA!,
+          mediasLiga,
+          parametrosExtras,
+          diag.gols.condicional.veredito
+        )
+        rankingModelos = ranking
+        modeloResolvido = ranking[0].modelo
+        sinaisTriagem = sinais
+      } catch (err) {
+        console.error('[API previsao AUTO fallback] Erro ao selecionar modelo:', err)
+        modeloResolvido = 'DIXON_COLES'
+        selecaoAutomatica = false
+        sinaisTriagem = {
+          zip: 'INDETERMINADO',
+          dc: 'INDETERMINADO',
+        }
+      }
+    } else {
+      modeloResolvido = modeloSelecionado
+      selecaoAutomatica = false
+    }
+
     let matriz: number[][] = []
     let rhoClamped = false
     let nbWarning = null
 
-    if (modeloSelecionado === 'POISSON') {
+    if (modeloResolvido === 'POISSON') {
       matriz = matrizPlacaresPoisson(lambdaH!, lambdaA!)
-    } else if (modeloSelecionado === 'ZIP') {
+    } else if (modeloResolvido === 'ZIP') {
       matriz = matrizPlacaresZIP(lambdaH!, lambdaA!, parametrosExtras.piH, parametrosExtras.piA)
-    } else if (modeloSelecionado === 'NB') {
+    } else if (modeloResolvido === 'NB') {
       const resNB = matrizPlacaresNB(lambdaH!, lambdaA!, parametrosExtras.varH, parametrosExtras.varA)
       matriz = resNB.matriz
       nbWarning = resNB.warning
       if (nbWarning) warnings.push(`NB Warning: ${nbWarning}`)
-    } else if (modeloSelecionado === 'DIXON_COLES') {
+    } else if (modeloResolvido === 'DIXON_COLES') {
       const resDC = matrizPlacaresDixonColes(lambdaH!, lambdaA!, parametrosExtras.rho)
       matriz = resDC.matriz
       rhoClamped = resDC.rhoClamped
@@ -426,6 +473,11 @@ export async function GET(
     return NextResponse.json({
       data: {
         modelo: modeloSelecionado,
+        modeloSelecionado: modeloResolvido,
+        rankingModelos,
+        vereditoDispersao,
+        selecaoAutomatica,
+        sinaisTriagem,
         medias: {
           home: mediasHome,
           away: mediasAway,

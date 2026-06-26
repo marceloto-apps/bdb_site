@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/auth'
 import { createCheckoutSession, createBillingPortalSession } from '@/lib/stripe'
@@ -31,7 +31,8 @@ describe('Billing API Routes', () => {
 
   describe('POST /api/checkout', () => {
     it('deve retornar 401 se o usuário não estiver autenticado', async () => {
-      vi.mocked(auth).mockResolvedValueOnce(null)
+      const mockedAuth = vi.mocked(auth) as unknown as Mock<() => Promise<any>>
+      mockedAuth.mockResolvedValueOnce(null)
 
       const req = new Request('http://localhost/api/checkout', {
         method: 'POST',
@@ -120,7 +121,8 @@ describe('Billing API Routes', () => {
 
   describe('POST /api/portal', () => {
     it('deve retornar 401 se o usuário não estiver autenticado', async () => {
-      vi.mocked(auth).mockResolvedValueOnce(null)
+      const mockedAuth = vi.mocked(auth) as unknown as Mock<() => Promise<any>>
+      mockedAuth.mockResolvedValueOnce(null)
 
       const req = new Request('http://localhost/api/portal', {
         method: 'POST',

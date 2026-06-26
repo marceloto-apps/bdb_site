@@ -9,5 +9,7 @@ export * from './model-selector'
 export * from './mapa-valor'
 export * from './types'
 export * from './lambda-calculators'
+export * from './dispersao-condicional'
+export * from './dispersao-builder'
 
 // Módulo unificado para a Engine de Cálculo Estatístico

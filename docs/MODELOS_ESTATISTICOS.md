@@ -1797,21 +1797,81 @@ O número de parâmetros livres ($k$) varia:
 **Ajuste Dinâmico de $k$ na Binomial Negativa:**
 Se a Binomial Negativa realizar fallback parcial (apenas um lado usa Poisson devido a ausência de superdispersão), o número de parâmetros é penalizado justamente ($k=3$). Se for fallback total, a NB compete como Poisson puro ($k=2$).
 
-### 17.3 Boosts Heurísticos e Trava de Limite
+### 17.3 Regimes de Amostra e Sinais de Triagem
 
-Modelos avançados precisam de evidências substanciais para superar o Poisson Simples, mas características óbvias da liga (extrema variância ou muitos jogos $0 \times 0$) disparam heurísticas a favor de DC, ZIP e NB.
-Para garantir que a matemática não seja sobrepujada por heurísticas arbitrárias, o bônus máximo é **-3 pontos de AIC**, com uma **trava estrita**: o boost nunca pode ultrapassar o modelo líder em mais de 1 ponto.
+Para proteger o seletor contra ruído amostral e falsos diagnósticos, o modo `AUTO` segmenta a decisão em três regimes distintos baseados no volume total de jogos da liga ($N$):
 
-$$
-Boost_{aplicado} = \min(3, \max(0, AIC_{alvo} - AIC_{lider} + 1))
-$$
+1. **Regime `FALLBACK` ($N < 10$):**
+   - O diagnóstico de dispersão e a triagem são desativados.
+   - O seletor força a escolha de **Dixon-Coles** como modelo robusto base com a flag `selecaoAutomatica: false` exposta na API.
+   - Os sinais de triagem são reportados como `INDETERMINADO`.
 
-### 17.4 Classificação de Confiança
+2. **Regime `AIC_PURO` ($10 \le N < 180$):**
+   - A triagem ativa é desativada para evitar instabilidade. Os sinais de triagem retornam como `INDETERMINADO`.
+   - A seleção é feita puramente com base no AIC bruto. Em caso de empate ($\Delta AIC < 2.0$), resolve-se pela ordem de robustez padrão: $\text{POISSON} > \text{DIXON\_COLES} > \text{ZIP} > \text{NB}$.
+   - Nenhum boost ou reordenação por sinais é aplicado.
 
-O modelo com menor AIC vence. A distância (Delta) do vencedor para o segundo colocado define a confiança:
-- **Alta:** $\Delta AIC > 4.0$ (vencedor destacadamente superior)
-- **Média:** $\Delta AIC > 2.0$ (vencedor marginalmente superior)
-- **Baixa:** $\Delta AIC \leq 2.0$ (empate técnico)
+3. **Regime `COMPLETO` ($N \ge 180$):**
+   - Triagem ativa é executada calculando os sinais `zip` e `dc` para a liga.
+   - **Sinal ZIP ($R_{zero}$):** Avalia os zeros marginais (gols marcados = 0 por time por jogo), calculando a razão:
+     $$R_{zero} = \frac{P_{obs}(g=0)}{e^{-\mu}}$$
+     onde $\mu$ é a média de gols da liga por time/jogo. A classificação é:
+     - `zip === 'FORTE'` se $R_{zero} > 1.25$
+     - `zip === 'LEVE'` se $R_{zero} > 1.10$
+     - `zip === 'AUSENTE'` caso contrário.
+   - **Sinal Dixon-Coles ($D_{baixos}$):** Mede a distorção absoluta de probabilidade acumulada nas 4 células baixas ($0\times0$, $1\times0$, $0\times1$, $1\times1$) comparando as frequências observadas da liga contra a Poisson simples:
+     $$D_{baixos} = \sum_{(i,j)\in\{0,1\}^2}\left|P_{obs}(i,j)-P_{poisson}(i,j)\right|$$
+     onde $P_{poisson}(i,j)$ usa a média de gols da liga $\mu_h^{liga}$ e $\mu_a^{liga}$. O sinal indica `dc === 'INDICADO'` se $D_{baixos} > 0.04$ combinando com correlação empírica relevante ($|\rho| \ge 0.05$); caso contrário, retorna `dc === 'AUSENTE'`.
+
+#### Classificação de Dispersão (UNDER / NORMAL / OVER)
+
+Índice de dispersão: $D = s^2/\bar{x}$ (gols marginais agregados, 2 obs por jogo).
+Sob Poisson, $E[D] = 1$ e $(N-1)\cdot D \sim \chi^2(N-1)$.
+
+Banda de normalidade ($\pm 2\cdot\text{SE}$, $\text{SE} \approx \sqrt{2/(N-1)}$):
+    NORMAL  ⟺  1 - 2·sqrt(2/(N-1)) ≤ D ≤ 1 + 2·sqrt(2/(N-1))
+    UNDER   ⟺  D < limite inferior
+    OVER    ⟺  D > limite superior
+
+| N_obs | NORMAL (banda) | UNDER se | OVER se |
+|-------|----------------|----------|---------|
+| 200   | 0.80 – 1.20    | < 0.80   | > 1.20  |
+| 400   | 0.86 – 1.14    | < 0.86   | > 1.14  |
+| 760   | 0.90 – 1.10    | < 0.90   | > 1.10  |
+
+Nota de domínio: gols de futebol são tipicamente levemente over-dispersos
+(D real entre 1.05 e 1.30). UNDER genuíno é raro; com N grande, investigar
+filtro de dados ou liga atípica antes de confiar no sinal.
+
+### 17.4 Soberania do AIC, Ordem de Robustez e Desempate (Burnham & Anderson)
+
+O modelo com menor AIC bruto é o candidato a líder. Para manter a soberania estatística do AIC e evitar distorções, **não há boost (subtração direta) no AIC bruto**. Os sinais de triagem atuam EXCLUSIVAMENTE como desempate se os modelos estiverem na janela de equivalência estatística ($\Delta AIC < 2.0$). Fora desta janela, o modelo com menor AIC vence.
+
+Se múltiplos modelos caírem dentro de $\Delta AIC < 2.0$ em relação ao líder do AIC, a prioridade de reordenação é definida deterministicamente em conformidade com o regime e o diagnóstico condicional de dispersão dos gols:
+
+* **Em regime `COMPLETO` com diagnóstico condicional `'OVER'` (superdispersão):**
+  * Se o sinal de triagem `zip === 'FORTE'`:
+    $$\text{ZIP} > \text{NB} > \text{DIXON\_COLES} > \text{POISSON}$$
+  * Caso contrário:
+    $$\text{NB} > \text{ZIP} > \text{DIXON\_COLES} > \text{POISSON}$$
+
+* **Em regime `COMPLETO` com diagnóstico condicional `'UNDER'` (sub-dispersão) ou `'POISSON'` (neutro / undefined):**
+  * Se o sinal de triagem `dc === 'INDICADO'`:
+    $$\text{DIXON\_COLES} > \text{POISSON} > \text{ZIP} > \text{NB}$$
+  * Caso contrário:
+    $$\text{POISSON} > \text{DIXON\_COLES} > \text{ZIP} > \text{NB}$$
+
+* **Regime `AIC_PURO` ou `FALLBACK` (ou qualquer outro caso genérico):**
+  * Usa a ordem fixa de robustez padrão:
+    $$\text{POISSON} > \text{DIXON\_COLES} > \text{ZIP} > \text{NB}$$
+
+> **Decisão sobre Sub-Dispersão (COM-Poisson):**
+> O modelo Conway-Maxwell-Poisson (COM-Poisson) foi avaliado para mitigar sob/sub-dispersão gerais. Contudo, foi formalmente descartado devido à alta complexidade de cálculo em tempo real e retorno estatístico muito baixo (ROI estatístico irrelevante para futebol, onde a sub-dispersão é fraca e rara). Nos raros cenários de sub-dispersão, o sistema adota os aproximadores conservadores robustos **Dixon-Coles** e **Poisson Simples** conforme as prioridades acima.
+
+A classificação de confiança final é computada comparando o AIC do modelo vencedor com o segundo colocado pós-desempate:
+- **Alta:** $\Delta AIC > 4.0$
+- **Média:** $2.0 < \Delta AIC \leq 4.0$
+- **Baixa:** $\Delta AIC \leq 2.0$
 
 ---
 

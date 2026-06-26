@@ -666,3 +666,22 @@ O sistema da Fase 2 (Dashboards) encontra-se totalmente implementado, tipado, co
 - **Garantia de Idempotência:** Prevenção de processamento duplicado através de registros únicos no modelo `StripeWebhookEvent`, filtrando retransmissões do Stripe.
 - **Sincronização de Assinatura:** Eventos de `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated` e `customer.subscription.deleted` persistem o estado e os períodos da assinatura no modelo `Subscription`.
 - **Interoperabilidade com Legados:** No cancelamento ou rebaixamento da assinatura do Stripe, o sistema realiza uma verificação por e-mail no modelo `LegacyAccess`. Usuários legados mantêm acesso vitalício e não sofrem rebaixamento para o plano `FREE`.
+
+---
+
+### 38. Diagnóstico de Dispersão Condicional (Fase 2) — 25/06/2026
+
+**Engine Analítica de Dispersão:**
+- **Módulo `dispersao-condicional.ts`:** Criado módulo puro com cálculo de resíduos de Pearson e qui-quadrado inverso de forma nativa e manual por aproximação e bisseção (sem novas bibliotecas). Diferencia o veredito de dispersão agregada (médias da liga, enviesada) e condicional (descontados os lambdas esperados).
+- **Builder e Otimizações:** Implementado o construtor `dispersao-builder.ts` que consome as partidas concluídas da temporada e estima forças de baseline sem decay. O xG usa os lambdas de gols como proxy indicativo e não sugere distribuição final de probabilidade.
+
+**Integração do Model Selector (AIC):**
+- **Refinamento do Boost Heurístico:** A antiga heurística de dispersão agregada ($Var/Média > 1.15$) foi inteiramente removida de `model-selector.ts`. O boost de AIC agora utiliza exclusivamente o veredito condicional (`vereditoGolsCondicional === 'OVER'`). Casos com veredito `undefined` (modo compatível) ou `POISSON` não aplicam qualquer boost.
+- **Regra de Desempate de AIC ($\Delta AIC < 2$)**: Implementada a regra de Burnham & Anderson. Quando a diferença de AIC entre modelos é estatisticamente insignificante (< 2 pontos), o motor analítico escolhe o modelo mais estável seguindo a ordem fixa de robustez: `DIXON_COLES > POISSON > ZIP > NB`.
+
+**Dashboard, UI e Modo AUTO:**
+- **Ativação e UI do Modo AUTO**: O modo `AUTO` foi definido como a primeira opção e default do seletor de modelos estatísticos na UI. A rota de API (`previsao/route.ts`) agora processa a dispersão condicional e executa o ranking AIC para selecionar o melhor modelo automaticamente. Quando o modo `AUTO` está ativo, a UI exibe um banner dinâmico detalhando o modelo escolhido e seu veredito de dispersão.
+- **Fallback Resiliente**: Se a liga tiver amostragem insuficiente (< 10 jogos) ou houver erro no diagnóstico, o seletor executa um fallback resiliente e transparente para o modelo `DIXON_COLES` com a flag `selecaoAutomatica: false` ativa, garantindo que a previsão nunca quebre.
+- **Processamento Server-Side:** Para evitar a introdução de latências de rede e layout shifts (LCP) no Dashboard de Liga, dispensou-se o uso de uma rota de API client-side para o diagnóstico da liga. O cálculo é feito no próprio Server Component (`page.tsx`) reusando a query de partidas e repassado via props, com tratamento silencioso em `try/catch`.
+- **Painel Visual Premium:** Adicionado o componente `PainelDispersao.tsx` dentro do `PainelMedias.tsx` para apresentar de forma comparativa e explicativa os índices agregados e condicionais de Gols e xG, com tooltips estilizados e badges do design system.
+- **Garantia de Qualidade:** Adicionadas suítes de testes Vitest cobrindo a lógica de desempate por robustez e o fallback do modo AUTO na API. Todos os testes estão passando com sucesso.

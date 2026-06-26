@@ -89,6 +89,7 @@ model User {
   bolaoScores       BolaoScore[]
   legacyAccess      LegacyAccess?
   lessonComments    LessonComment[]
+  savedBacktests    SavedBacktest[]
 
   @@map("users")
 }
@@ -329,6 +330,7 @@ model Competition {
   seasons         Season[]
   imports         MatchImport[]
   ingestJobs      IngestJob[]
+  leagueSnapshots LeagueSnapshot[]
 
   @@index([country])
   @@index([type])
@@ -352,6 +354,7 @@ model Season {
   teamSeasons     TeamSeason[]
   matches         Match[]
   ingestJobs      IngestJob[]
+  leagueSnapshots LeagueSnapshot[]
 
   @@unique([competitionId, year])
   @@index([competitionId])
@@ -380,6 +383,7 @@ model Team {
   awayMatches     Match[]     @relation("AwayTeam")
   playerStats     PlayerMatchStats[]
   shots           Shot[]
+  matchTeamStats  MatchTeamStats[]
 
   @@index([country])
   @@map("teams")
@@ -507,6 +511,8 @@ model Match {
   playerStats     PlayerMatchStats[]
   shots           Shot[]
   bolaoPalpites   BolaoPalpite[]
+  teamStats       MatchTeamStats[]
+  leagueSnapshot  LeagueSnapshot?
 
   @@index([seasonId, utcDate])
   @@index([seasonId, round])
@@ -1284,5 +1290,81 @@ model PlanConfig {
 
   @@map("plan_configs")
 }
+
+// ============================================
+// Fase 5 — Tabelas para o motor de Backtest
+// ============================================
+
+model LeagueSnapshot {
+  id            String   @id @default(cuid())
+  competitionId String
+  seasonId      String
+  matchId       String   @unique
+  utcDate       DateTime
+
+  // Parâmetros estatísticos e de modelagem acumulados na temporada até a data da partida
+  muH           Float    // Média gols mandante
+  muA           Float    // Média gols visitante
+  varH          Float    // Variância gols mandante
+  varA          Float    // Variância gols visitante
+  piH           Float    // Excesso de zeros mandante (ZIP)
+  piA           Float    // Excesso de zeros visitante (ZIP)
+  rho           Float    // Parâmetro Dixon-Coles (global da temporada)
+  totalJogos    Int      // Total de jogos na amostra da temporada
+  muH_xg        Float?   // Média xG mandante
+  muA_xg        Float?   // Média xG visitante
+
+  competition   Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  season        Season      @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  match         Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@index([competitionId, seasonId, utcDate])
+  @@map("league_snapshots")
+}
+
+model MatchTeamStats {
+  id                String   @id @default(cuid())
+  matchId           String
+  teamId            String
+  side              Side     // HOME | AWAY
+  window            Int?     // 5 | 10 | 20 | 40 | null = Total/Temporada
+
+  // Estatísticas computadas no corte temporal
+  avgGoalsScored    Float?
+  avgGoalsConceded  Float?
+  cvGoals           Float?   // Coeficiente de variação dos gols
+  avgCorners        Float?
+  avgShots          Float?
+  avgShotsOnTarget  Float?
+  xg                Float?
+  passAccuracy      Float?
+
+  match             Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, teamId, window])
+  @@index([side, window])
+  @@map("match_team_stats")
+}
+
+enum Side {
+  HOME
+  AWAY
+}
+
+model SavedBacktest {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  filters    Json     // Payload de filtros Zod
+  resultMeta Json     // Resultados resumidos (ROI, hits, etc.)
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("saved_backtests")
+}
+
 
 

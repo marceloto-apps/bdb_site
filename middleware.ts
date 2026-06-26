@@ -48,8 +48,14 @@ export default auth((req) => {
     }
   }
 
-  // --- APIs protegidas da Fase 2, do Bolão e de Cursos/Aulas ---
-  if (pathname.startsWith('/api/ligas') || pathname.startsWith('/api/admin') || pathname.startsWith('/api/bolao') || pathname.startsWith('/api/aulas')) {
+  // --- APIs protegidas da Fase 2, do Bolão, de Cursos/Aulas e de Backtest ---
+  if (
+    pathname.startsWith('/api/ligas') ||
+    pathname.startsWith('/api/admin') ||
+    pathname.startsWith('/api/bolao') ||
+    pathname.startsWith('/api/aulas') ||
+    pathname.startsWith('/api/backtest')
+  ) {
     if (!session) {
       return NextResponse.json(
         { error: 'UNAUTHORIZED', message: 'Autenticação necessária' },
@@ -70,5 +76,7 @@ export const config = {
     '/api/admin/:path*',
     '/api/bolao/:path*',
     '/api/aulas/:path*',
+    '/api/backtest/:path*',
   ],
 }
+

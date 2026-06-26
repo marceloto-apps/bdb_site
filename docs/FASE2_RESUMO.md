@@ -49,6 +49,14 @@ e o dashboard interativo para análise de confrontos.
   - **Remoção de Contextos Redundantes**: Ocultação dos seletores de mando (Casa/Visitante/Geral) especificamente nesta aba.
   - **Coluna de Posições (P)**: Introduzida no início da tabela mostrando siglas padronizadas: `GK` (Goleiro), `DF` (Defensor), `MC` (Meio Campo) e `AT` (Atacante), com suporte a ordenação tática sequencial (GK → DF → MC → AT).
   - **Abreviaturas Compactas e Legenda**: Abreviatura dos nomes das colunas de estatísticas para economizar espaço e exibição de legenda dinâmica no rodapé com base na sub-aba ativa.
+- **Diagnóstico de Dispersão Condicional e Seleção AUTO**:
+  - Implementado o cálculo puro de resíduos de Pearson e qui-quadrado inverso de forma manual para avaliação de dispersão agregada vs. condicional de gols e xG no nível da liga.
+  - Substituição da antiga heurística baseada em dispersão agregada ($Var/Média > 1.15$) pela dispersão condicional na engine de seleção automática de modelos (`model-selector.ts`).
+  - Criação do componente `PainelDispersao.tsx` e integração server-side no `page.tsx` para evitar latência de LCP, rodando de forma resiliente com fallback silencioso caso a liga possua menos de 10 jogos.
+  - Exibição de recomendação de distribuição exclusiva para a métrica de Gols, indicando o xG como um diagnóstico meramente de apoio/indicativo sem sugestão de distribuição.
+  - Ativação do modo `AUTO` como default no seletor de modelos estatísticos na UI, detalhando o modelo selecionado e veredito.
+  - Regra de Desempate ($\Delta AIC < 2$): Modelos indistinguíveis estatisticamente (Burnham & Anderson) desempatam de forma determinística pela ordem fixa de robustez: `DIXON_COLES > POISSON > ZIP > NB`.
+  - Fallback Resiliente: Se a liga tiver amostragem insuficiente (< 10 jogos) ou houver erro no diagnóstico, o seletor executa um fallback resiliente e transparente para `DIXON_COLES` com a flag `selecaoAutomatica: false` ativa, garantindo que a previsão nunca quebre.
 
 ---
 
@@ -81,6 +89,8 @@ API-Football → Sync Admin → MySQL → API Routes → Motor Analítico → Cl
 | `zinb.ts` | Zero-Inflated Negative Binomial |
 | `lambda-calculators.ts` | Dispatcher e cálculo de métodos de λ (Simples, Forças Relativas, xG) |
 | `model-selector.ts` | Seleção automática via AIC |
+| `dispersao-condicional.ts` | Cálculos puros de resíduos de Pearson e qui-quadrado inverso |
+| `dispersao-builder.ts` | Agregador de partidas da liga e construção do diagnóstico |
 | `market-calculator.ts` | Derivação de mercados (1X2, BTTS, O/U, AH) |
 | `mapa-valor.ts` | Cálculo de ROI por faixa de odds |
 | `estatisticas-jogadores-builder.ts` | Agregação de dados volumétricos, minutagem (mínimo 180 min) e histórico de partidas de jogadores |
@@ -111,6 +121,7 @@ API-Football → Sync Admin → MySQL → API Routes → Motor Analítico → Cl
 | `FiltroFaixaOdds` | Client | Toggle de faixas de odds |
 | `BadgeModeloAuto` | Client | Badge de confiança do modelo automático |
 | `PainelMedias` | Client | Cards de médias, forças relativas e Expected Goals (xG) |
+| `PainelDispersao` | Client | Painel comparativo de dispersão agregada vs condicional de gols e xG |
 | `PainelMatrizPlacares` | Client | Grid 11×11 com heatmap |
 | `PainelProjecaoHandicaps` | Client | Projeção avançada de Handicaps e Odds Justas baseadas em Matriz |
 | `PainelMercados` | Client | Tabelas 1X2, BTTS, O/U, AH com EV% |

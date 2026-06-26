@@ -27,7 +27,7 @@ export interface FaixaOddsSelection {
 }
 
 export type ModeloEstatistico = 'POISSON' | 'ZIP' | 'NB' | 'DIXON_COLES'
-export type ModoModelo = ModeloEstatistico
+export type ModoModelo = 'AUTO' | ModeloEstatistico
 
 export const FAIXAS_ODDS_PADRAO: FaixaOddsSelection[] = [
   { label: '1.21-1.40', min: 1.21, max: 1.40, selected: true },
@@ -96,6 +96,28 @@ export interface PrevisaoResponse {
   ligaMediasXG?: MediasLigaXG | null
   oddsFaixasDisponiveisCasa: boolean[]
   oddsFaixasDisponiveisVisitante: boolean[]
+
+  modeloSelecionado?: ModeloEstatistico
+  rankingModelos?: ModeloRanking[]
+  vereditoDispersao?: VeredictoDispersao
+  selecaoAutomatica?: boolean
+  sinaisTriagem?: {
+    zip: 'FORTE' | 'LEVE' | 'AUSENTE' | 'INDETERMINADO'
+    dc: 'INDICADO' | 'AUSENTE' | 'INDETERMINADO'
+    detalhesDispersao?: {
+      indice: number
+      faixaInf: number
+      faixaSup: number
+    }
+  }
+}
+
+export interface ModeloRanking {
+  modelo: ModeloEstatistico
+  aic: number
+  logLikelihood: number
+  parametros: number
+  confianca: 'ALTA' | 'MEDIA' | 'BAIXA' | null
 }
 
 export type PrevisaoState = PrevisaoResponse
@@ -117,3 +139,37 @@ export interface MapaValorResponse {
   over25: MapaValorFaixa[]
   under25: MapaValorFaixa[]
 }
+
+export type VeredictoDispersao = 'OVER' | 'UNDER' | 'NEUTRO'
+export type DistribuicaoSugerida = 'POISSON' | 'NB' | 'COM_POISSON'
+
+export interface DispersaoMetricaResponse {
+  metrica: 'GOLS' | 'XG'
+  amostra: number
+  agregado: {
+    indice: number
+    faixaInf: number
+    faixaSup: number
+    veredito: VeredictoDispersao
+  }
+  condicional: {
+    indice: number
+    faixaInf: number
+    faixaSup: number
+    veredito: VeredictoDispersao
+    distribuicaoSugerida: DistribuicaoSugerida
+  }
+  inflacaoPercentual: number
+  alertaAmostra: string | null
+}
+
+export interface DispersaoLigaResponse {
+  gols: DispersaoMetricaResponse
+  xg: DispersaoMetricaResponse | null
+  sugestaoFinal: {
+    distribuicao: DistribuicaoSugerida
+    confianca: 'ALTA' | 'MEDIA' | 'BAIXA'
+    explicacao: string
+  }
+}
+

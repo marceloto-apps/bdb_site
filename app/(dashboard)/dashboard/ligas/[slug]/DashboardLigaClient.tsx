@@ -20,7 +20,7 @@ import { AlertCircle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
-import { TimeOption, ModoModelo, PrevisaoState, MapaValorResponse } from '@/types/liga'
+import { TimeOption, ModoModelo, PrevisaoState, MapaValorResponse, DispersaoLigaResponse } from '@/types/liga'
 import { TabOddsProfit } from '@/components/ligas/partida/TabOddsProfit'
 import { TabGolsXg } from '@/components/ligas/partida/TabGolsXg'
 import { TabEscanteiosCartoes } from '@/components/ligas/partida/TabEscanteiosCartoes'
@@ -47,6 +47,7 @@ interface DashboardLigaClientProps {
   maxRodada: number
   totalJogos: number
   partidasIniciais: PartidaSerializada[]
+  dispersao?: DispersaoLigaResponse | null
 }
 
 export function DashboardLigaClient({
@@ -55,7 +56,8 @@ export function DashboardLigaClient({
   mediasLiga,
   maxRodada,
   totalJogos,
-  partidasIniciais
+  partidasIniciais,
+  dispersao
 }: DashboardLigaClientProps) {
   const filters = useLeagueFilters(maxRodada)
   const { filtros, modelo, setModelo, setLambdaMethod, queryParams, resetFiltros, ...setters } = filters
@@ -229,7 +231,7 @@ export function DashboardLigaClient({
     const cleanParams: Record<string, string> = {}
     if (filtros.homeTeamId) cleanParams.homeTeamId = filtros.homeTeamId
     if (filtros.awayTeamId) cleanParams.awayTeamId = filtros.awayTeamId
-    cleanParams.modelo = 'POISSON'
+    cleanParams.modelo = 'AUTO'
     cleanParams.lambdaMethod = 'MEDIA_SIMPLES'
     fetchPrevisao(cleanParams)
     fetchEstatisticas(cleanParams, mandoContext)
@@ -316,7 +318,7 @@ export function DashboardLigaClient({
           <BannerModeloWarning 
             nbWarning={previsao.nbWarning}
             rhoClamped={previsao.rhoClamped}
-            modeloSelecionado={previsao.modelo}
+            modeloSelecionado={previsao.modeloSelecionado || previsao.modelo}
           />
 
           <FiltrosAvancados
@@ -354,7 +356,7 @@ export function DashboardLigaClient({
                     }}
                     className="text-xs"
                   >
-                    Contexto: Casa / Visitante
+                    Contexto: Casa/Fora
                   </Button>
                   <Button 
                     variant={mandoContext === 'GERAL' ? 'default' : 'outline'} 
@@ -410,6 +412,7 @@ export function DashboardLigaClient({
             forcasAwayXG={previsao.forcasAwayXG}
             ligaMediasXG={previsao.ligaMediasXG}
             xgDisponivel={previsao.xgDisponivel}
+            dispersao={dispersao}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
@@ -419,6 +422,9 @@ export function DashboardLigaClient({
                 modo={modelo}
                 onChange={handleModeloChange}
                 warnings={previsao.warnings}
+                modeloSelecionado={previsao.modeloSelecionado}
+                vereditoDispersao={previsao.vereditoDispersao}
+                sinaisTriagem={previsao.sinaisTriagem}
               />
             </div>
 

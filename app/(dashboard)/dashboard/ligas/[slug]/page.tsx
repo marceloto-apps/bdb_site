@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { calcularMediasLiga } from '@/lib/analytics'
+import { calcularMediasLiga, construirDiagnosticoDispersao } from '@/lib/analytics'
 import { getSeasonDateFilter } from '@/lib/utils/season-filter'
 import { DashboardLigaClient } from './DashboardLigaClient'
 import { auth } from '@/auth'
@@ -141,6 +141,23 @@ export default async function LigaDashboardPage({ params }: { params: { slug: st
     temporada: activeSeason.year
   }
 
+  // Calcular diagnóstico de dispersão condicional de forma resiliente
+  let dispersao = null
+  try {
+    const jogosDispersao = partidas.map(p => ({
+      homeTeamId: p.homeTeamId,
+      awayTeamId: p.awayTeamId,
+      fthg: p.fthg!,
+      ftag: p.ftag!,
+      utcDate: p.utcDate,
+      homeXg: p.stats?.homeXg ?? null,
+      awayXg: p.stats?.awayXg ?? null,
+    }))
+    dispersao = construirDiagnosticoDispersao(jogosDispersao)
+  } catch (err) {
+    console.error('[dispersao page] Erro silencioso ao calcular diagnóstico:', err)
+  }
+
   return (
     <div className="p-4 md:p-8">
       <DashboardLigaClient
@@ -150,6 +167,7 @@ export default async function LigaDashboardPage({ params }: { params: { slug: st
         maxRodada={maxRodada}
         totalJogos={partidas.length}
         partidasIniciais={partidasIniciais}
+        dispersao={dispersao}
       />
     </div>
   )

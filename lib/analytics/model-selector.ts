@@ -2,6 +2,14 @@ import { matrizPlacaresPoisson } from './poisson'
 import { matrizPlacaresZIP } from './zero-inflated'
 import { matrizPlacaresNB } from './negative-binomial'
 import { matrizPlacaresDixonColes } from './dixon-coles'
+import {
+  VeredictoDispersao,
+  calcularExcessoZeros,
+  avaliarDixonColes,
+  classificarDispersao,
+  serieMarginalAgregada,
+  mediaVariancia,
+} from './dispersao-condicional'
 
 export type ModeloEstatistico = 'POISSON' | 'ZIP' | 'NB' | 'DIXON_COLES'
 
@@ -11,6 +19,19 @@ export interface ModeloRanking {
   logLikelihood: number
   parametros: number // k
   confianca: 'ALTA' | 'MEDIA' | 'BAIXA' | null
+}
+
+export interface ResultadoRankingModelos {
+  ranking: ModeloRanking[]
+  sinais: {
+    zip: 'FORTE' | 'LEVE' | 'AUSENTE' | 'INDETERMINADO'
+    dc: 'INDICADO' | 'AUSENTE' | 'INDETERMINADO'
+    detalhesDispersao?: {
+      indice: number
+      faixaInf: number
+      faixaSup: number
+    }
+  }
 }
 
 /**
@@ -36,7 +57,7 @@ function calcularLogLikelihood(
 }
 
 /**
- * Rankeia os 4 modelos por AIC e retorna array ordenado (menor AIC = melhor).
+ * Rankeia os 4 modelos por AIC e retorna objeto com ranking e sinais de triagem.
  * 
  * NOTA ARQUITETURAL SOBRE LAMBDAS NO RANKING:
  * É intencional usar lambdas calculados COM DECAY temporal nesta função. 
@@ -61,8 +82,9 @@ export function rankearModelos(
     varH: number
     varA: number
     rho: number
-  }
-): ModeloRanking[] {
+  },
+  vereditoGolsCondicional?: VeredictoDispersao
+): ResultadoRankingModelos {
   // 1. Gerar matrizes e extrair fallbacks
   const matrizPoisson = matrizPlacaresPoisson(lambdaH, lambdaA)
   const matrizZIP = matrizPlacaresZIP(lambdaH, lambdaA, parametrosExtras.piH, parametrosExtras.piA)
@@ -91,67 +113,83 @@ export function rankearModelos(
   const aicNB = -2 * llNB + 2 * kNB
   const aicDixonColes = -2 * llDixonColes + 2 * kDC
 
-  const rankings: Omit<ModeloRanking, 'confianca'>[] = [
-    { modelo: 'POISSON', aic: aicPoisson, logLikelihood: llPoisson, parametros: 2 },
-    { modelo: 'ZIP', aic: aicZIP, logLikelihood: llZIP, parametros: 4 },
-    { modelo: 'NB', aic: aicNB, logLikelihood: llNB, parametros: kNB },
-    { modelo: 'DIXON_COLES', aic: aicDixonColes, logLikelihood: llDixonColes, parametros: kDC },
+  const rankings: ModeloRanking[] = [
+    { modelo: 'POISSON', aic: aicPoisson, logLikelihood: llPoisson, parametros: 2, confianca: null },
+    { modelo: 'ZIP', aic: aicZIP, logLikelihood: llZIP, parametros: 4, confianca: null },
+    { modelo: 'NB', aic: aicNB, logLikelihood: llNB, parametros: kNB, confianca: null },
+    { modelo: 'DIXON_COLES', aic: aicDixonColes, logLikelihood: llDixonColes, parametros: kDC, confianca: null },
   ]
 
-  // 4. Heurísticas adicionais (SPECS 2C.1)
-  // Var/Média > 1.15 E freq 0-0 > 8% → boost Dixon-Coles
-  // Var/Média > 1.15 E freq 0-0 ≤ 8% → boost NB
-  const totalJogos = jogos.length || 1
-  let freq00 = 0
-  let somaH = 0
-  let somaA = 0
-  for (const j of jogos) {
-    if (j.fthg === 0 && j.ftag === 0) freq00++
-    somaH += j.fthg
-    somaA += j.ftag
+  // 4. Regimes de Amostra e Sinais de Triagem
+  const nJogos = jogos.length
+  const regime: 'FALLBACK' | 'AIC_PURO' | 'COMPLETO' =
+    nJogos < 10 ? 'FALLBACK' : nJogos < 180 ? 'AIC_PURO' : 'COMPLETO'
+
+  let zipSinal: 'FORTE' | 'LEVE' | 'AUSENTE' | 'INDETERMINADO' = 'INDETERMINADO'
+  let dcSinal: 'INDICADO' | 'AUSENTE' | 'INDETERMINADO' = 'INDETERMINADO'
+
+  if (regime === 'COMPLETO') {
+    const { rZero } = calcularExcessoZeros(jogos)
+    zipSinal = rZero > 1.25 ? 'FORTE' : rZero > 1.10 ? 'LEVE' : 'AUSENTE'
+
+    const { dcIndicado } = avaliarDixonColes(
+      jogos,
+      parametrosExtras.rho,
+      mediasLiga.muH,
+      mediasLiga.muA
+    )
+    dcSinal = dcIndicado ? 'INDICADO' : 'AUSENTE'
   }
-  const pct00 = freq00 / totalJogos
-  const mediaH = somaH / totalJogos
-  const mediaA = somaA / totalJogos
 
-  let varEmpiricaH = 0
-  let varEmpiricaA = 0
-  for (const j of jogos) {
-    varEmpiricaH += Math.pow(j.fthg - mediaH, 2)
-    varEmpiricaA += Math.pow(j.ftag - mediaA, 2)
-  }
-  varEmpiricaH /= totalJogos
-  varEmpiricaA /= totalJogos
+  // Calcular veredito de dispersão usando a nova banda dinâmica ancorada em N
+  const serie = serieMarginalAgregada(jogos)
+  const { media: mediaMarginal, variancia: varianciaMarginal, n: nObs } = mediaVariancia(serie)
 
-  const razaoVarMediaH = mediaH > 0 ? varEmpiricaH / mediaH : 1
-  const razaoVarMediaA = mediaA > 0 ? varEmpiricaA / mediaA : 1
-  const varMediaAlta = razaoVarMediaH > 1.15 || razaoVarMediaA > 1.15
+  const resBanda = classificarDispersao(varianciaMarginal, mediaMarginal, nObs)
+  const vereditoBanda = resBanda.regime === 'NORMAL' ? 'NEUTRO' : resBanda.regime
+  const vereditoGols = vereditoGolsCondicional
+    ? (vereditoGolsCondicional as string === 'POISSON' || vereditoGolsCondicional as string === 'NEUTRO' ? 'NEUTRO' : vereditoGolsCondicional)
+    : vereditoBanda
 
-  if (varMediaAlta) {
-    // Ordenar preliminarmente para encontrar o líder
-    rankings.sort((a, b) => a.aic - b.aic)
-    const bestAic = rankings[0].aic
+  // 5. Definir ordem de prioridade para desempate (ΔAIC < 2)
+  let ORDEM_PRIORIDADE: Record<ModeloEstatistico, number>
 
-    if (pct00 > 0.08) {
-      // Boost Dixon-Coles (reduz AIC)
-      const target = rankings.find(r => r.modelo === 'DIXON_COLES')
-      if (target && target !== rankings[0]) {
-        // Limita o boost para que o target não ultrapasse o líder por mais de 1 ponto de AIC
-        const maxBoost = Math.max(0, target.aic - bestAic + 1)
-        target.aic -= Math.min(3, maxBoost)
+  if (regime === 'COMPLETO') {
+    if (vereditoGols === 'OVER') {
+      if (zipSinal === 'FORTE') {
+        ORDEM_PRIORIDADE = { ZIP: 0, NB: 1, DIXON_COLES: 2, POISSON: 3 }
+      } else {
+        ORDEM_PRIORIDADE = { NB: 0, ZIP: 1, DIXON_COLES: 2, POISSON: 3 }
       }
     } else {
-      // Boost NB
-      const target = rankings.find(r => r.modelo === 'NB')
-      if (target && target !== rankings[0]) {
-        const maxBoost = Math.max(0, target.aic - bestAic + 1)
-        target.aic -= Math.min(3, maxBoost)
+      if (dcSinal === 'INDICADO') {
+        ORDEM_PRIORIDADE = { DIXON_COLES: 0, POISSON: 1, ZIP: 2, NB: 3 }
+      } else {
+        ORDEM_PRIORIDADE = { POISSON: 0, DIXON_COLES: 1, ZIP: 2, NB: 3 }
       }
     }
+  } else {
+    // Para AIC_PURO e FALLBACK (triagem desativada), a ordem de desempate padrão favorece a parcimônia (POISSON com k=2)
+    ORDEM_PRIORIDADE = { POISSON: 0, DIXON_COLES: 1, ZIP: 2, NB: 3 }
   }
 
-  // 5. Ordenar definitivamente por AIC crescente
+  // Primeiro, ordena por AIC puro para encontrar o líder absoluto (menor AIC)
   rankings.sort((a, b) => a.aic - b.aic)
+  const minAic = rankings[0].aic
+
+  // Ordena com base no empate (delta < 2 do líder absoluto) usando a ORDEM_PRIORIDADE
+  rankings.sort((a, b) => {
+    const aEmpatado = (a.aic - minAic) < 2
+    const bEmpatado = (b.aic - minAic) < 2
+
+    if (aEmpatado && bEmpatado) {
+      return ORDEM_PRIORIDADE[a.modelo] - ORDEM_PRIORIDADE[b.modelo]
+    }
+    if (aEmpatado) return -1
+    if (bEmpatado) return 1
+
+    return a.aic - b.aic
+  })
 
   // 6. Calcular confiança (Delta AIC entre 1º e 2º colocado)
   const delta = Math.abs(rankings[0].aic - rankings[1].aic)
@@ -160,5 +198,23 @@ export function rankearModelos(
   else if (delta > 2) confianca = 'MEDIA'
 
   // Confiança só é aplicada ao modelo vencedor (índice 0)
-  return rankings.map((r, idx) => ({ ...r, confianca: idx === 0 ? confianca : null }))
+  const rankingFinal = rankings.map((r, idx) => ({ ...r, confianca: idx === 0 ? confianca : null }))
+
+  const se = nObs > 1 ? Math.sqrt(2 / (nObs - 1)) : 0
+  const inf = Math.max(0, 1 - 2 * se)
+  const sup = 1 + 2 * se
+  const D = mediaMarginal > 0 ? varianciaMarginal / mediaMarginal : 0
+
+  return {
+    ranking: rankingFinal,
+    sinais: {
+      zip: zipSinal,
+      dc: dcSinal,
+      detalhesDispersao: regime === 'COMPLETO' ? {
+        indice: D,
+        faixaInf: inf,
+        faixaSup: sup,
+      } : undefined,
+    }
+  }
 }

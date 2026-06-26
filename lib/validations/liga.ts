@@ -19,7 +19,7 @@ export const partidasQuerySchema = z.object({
 export const previsaoQuerySchema = z.object({
   homeTeamId: z.string().cuid(),
   awayTeamId: z.string().cuid(),
-  modelo: z.enum(['POISSON', 'ZIP', 'NB', 'DIXON_COLES']).default('POISSON'),
+  modelo: z.enum(['AUTO', 'POISSON', 'ZIP', 'NB', 'DIXON_COLES']).default('AUTO'),
   lambdaMethod: z.enum(['MEDIA_SIMPLES', 'FORCAS_RELATIVAS', 'XG', 'MERCADO']).default('MEDIA_SIMPLES'),
   // Filtros opcionais (mesmos do /partidas, usados para filtrar a base do cálculo)
   roundFrom: z.coerce.number().int().min(1).optional(),

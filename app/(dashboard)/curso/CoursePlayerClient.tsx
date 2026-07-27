@@ -136,6 +136,7 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
   const [loadingVideo, setLoadingVideo] = useState(false)
   const [videoError, setVideoError] = useState<string | null>(null)
   const [lastSavedPct, setLastSavedPct] = useState<number>(0)
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false)
   
   // Rastreamento de progresso real assistido
   const watchedSecondsRef = useRef<Set<number>>(new Set())
@@ -229,14 +230,27 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
     }
   }
 
-  // Reseta a porcentagem salva ao trocar de aula
+  // Reseta a porcentagem salva e o player ao trocar de aula
   useEffect(() => {
+    setIsPlayingVideo(false)
     if (selectedLesson) {
       setLastSavedPct(selectedLesson.watchedPct || 0)
     } else {
       setLastSavedPct(0)
     }
   }, [selectedLessonId])
+
+  // Função auxiliar para forçar autoplay quando o usuário clica no botão Play da Capa
+  const getAutoplayUrl = (url: string | null) => {
+    if (!url) return ""
+    if (url.includes("autoplay=false")) {
+      return url.replace("autoplay=false", "autoplay=true")
+    }
+    if (!url.includes("autoplay=")) {
+      return url.includes("?") ? `${url}&autoplay=1` : `${url}?autoplay=1`
+    }
+    return url
+  }
 
   // Função para tratar atualizações de progresso vindas do player de vídeo
   const handleProgressPctUpdate = async (pct: number) => {
@@ -492,18 +506,24 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
                 >
                   {/* Capa do Curso */}
                   <div className="aspect-[16/9] w-full bg-gradient-to-br from-indigo-950/40 via-purple-950/30 to-zinc-950 relative flex items-center justify-center border-b border-zinc-850 overflow-hidden">
-                    {course.coverUrl ? (
-                      <img 
-                        src={course.coverUrl} 
-                        alt={course.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                      />
-                    ) : (
-                      <div className="text-center p-6 space-y-1.5 select-none">
-                        <GraduationCap className="h-10 w-10 text-purple-400/80 mx-auto opacity-70 group-hover:rotate-6 transition-transform" />
-                        <span className="text-[10px] font-black text-zinc-500 tracking-wider uppercase block">CURSOS BIGDATABET</span>
-                      </div>
-                    )}
+                    {(() => {
+                      const displayCover = course.coverUrl || course.modules.flatMap(m => m.lessons).find(l => l.coverUrl)?.coverUrl
+                      if (displayCover) {
+                        return (
+                          <img 
+                            src={displayCover} 
+                            alt={course.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                          />
+                        )
+                      }
+                      return (
+                        <div className="text-center p-6 space-y-1.5 select-none">
+                          <GraduationCap className="h-10 w-10 text-purple-400/80 mx-auto opacity-70 group-hover:rotate-6 transition-transform" />
+                          <span className="text-[10px] font-black text-zinc-500 tracking-wider uppercase block">CURSOS BIGDATABET</span>
+                        </div>
+                      )
+                    })()}
                     
                     {/* Badge de Acesso */}
                     <div className="absolute top-3 left-3">
@@ -802,32 +822,53 @@ export function CoursePlayerClient({ courses, user }: CoursePlayerClientProps) {
             <div className="space-y-6">
               {/* Vídeo ou Imagem de Capa */}
               {selectedLesson.hasVideo ? (
-                <div className="w-full aspect-video bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 relative flex items-center justify-center shadow-xl">
-                  {loadingVideo && (
-                    <div className="flex flex-col items-center gap-2 text-zinc-400">
-                      <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
-                      <span className="text-xs">Carregando player seguro...</span>
-                    </div>
-                  )}
-
-                  {videoError && (
-                    <div className="p-6 text-center max-w-md space-y-3">
-                      <AlertTriangle className="h-10 w-10 text-rose-500 mx-auto" />
-                      <h4 className="text-sm font-bold text-zinc-200">Não foi possível exibir o vídeo</h4>
-                      <p className="text-xs text-zinc-500">{videoError}</p>
-                    </div>
-                  )}
-
-                  {embedUrl && (
-                    <iframe
-                      id="course-video-iframe"
-                      src={embedUrl}
-                      className="w-full h-full"
-                      allowFullScreen
-                      allow="autoplay; encrypted-media; picture-in-picture"
+                selectedLesson.coverUrl && !isPlayingVideo ? (
+                  <div 
+                    onClick={() => setIsPlayingVideo(true)}
+                    className="w-full aspect-video bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 relative cursor-pointer group shadow-xl transition-all duration-300 hover:border-amber-500/50"
+                  >
+                    <img 
+                      src={selectedLesson.coverUrl} 
+                      alt={selectedLesson.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                  )}
-                </div>
+                    <div className="absolute inset-0 bg-black/40 group-hover:bg-black/25 transition-colors flex flex-col items-center justify-center gap-3">
+                      <div className="w-16 h-16 rounded-full bg-amber-500/90 group-hover:bg-amber-500 group-hover:scale-110 flex items-center justify-center shadow-xl shadow-amber-500/20 text-zinc-950 transition-all duration-300">
+                        <Play className="h-8 w-8 fill-zinc-950 ml-1" />
+                      </div>
+                      <span className="text-xs font-bold text-white bg-zinc-900/90 backdrop-blur px-3.5 py-1.5 rounded-full border border-zinc-750 shadow-md group-hover:border-amber-500/50 transition-colors">
+                        Assistir Aula
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full aspect-video bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 relative flex items-center justify-center shadow-xl">
+                    {loadingVideo && (
+                      <div className="flex flex-col items-center gap-2 text-zinc-400">
+                        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+                        <span className="text-xs">Carregando player seguro...</span>
+                      </div>
+                    )}
+
+                    {videoError && (
+                      <div className="p-6 text-center max-w-md space-y-3">
+                        <AlertTriangle className="h-10 w-10 text-rose-500 mx-auto" />
+                        <h4 className="text-sm font-bold text-zinc-200">Não foi possível exibir o vídeo</h4>
+                        <p className="text-xs text-zinc-500">{videoError}</p>
+                      </div>
+                    )}
+
+                    {embedUrl && (
+                      <iframe
+                        id="course-video-iframe"
+                        src={isPlayingVideo ? getAutoplayUrl(embedUrl) : embedUrl}
+                        className="w-full h-full"
+                        allowFullScreen
+                        allow="autoplay; encrypted-media; picture-in-picture"
+                      />
+                    )}
+                  </div>
+                )
               ) : selectedLesson.coverUrl ? (
                 <div className="w-full aspect-video bg-zinc-950 rounded-2xl overflow-hidden border border-zinc-800 relative shadow-xl">
                   <img 

@@ -921,6 +921,9 @@ enum DataSource {
   THESTATSAPI
   FOOTBALL_DATA
   MANUAL
+  FPT_BET365
+  FPT_BETFAIR
+  ODDSPAPI
 }
 
 enum CompetitionType {

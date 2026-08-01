@@ -35,20 +35,8 @@ export default async function LigasPage() {
     orderBy: { name: 'asc' }
   })
 
-  // Ligas Finalizadas
-  const finishedSlugs = [
-    'premier-league', 
-    'la-liga', 
-    'serie-a',
-    '2-bundesliga',
-    'bundesliga',
-    'championship',
-    'eredivisie',
-    'laliga-2',
-    'liga-portugal',
-    'ligue-1',
-    'pro-league'
-  ]
+  // Ligas Finalizadas (Ligas europeias reiniciando para temporada 2026/2027 em agosto)
+  const finishedSlugs: string[] = []
 
   // Mapear para o formato esperado pelo LigaCard (sem ocultar as ligas trancadas)
   const ligas = competicoes

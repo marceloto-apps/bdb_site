@@ -34,9 +34,11 @@ interface OddsCacheEntry {
   apiMatchInfo: { status?: string; utcDate?: string; round?: number } | null
 }
 
+export type BookmakerSource = 'bet365' | 'pinnacle' | 'betfair-exchange'
+
 const linhasOU = ['0.5', '1.5', '2.5', '3.5', '4.5']
 
-const createEmptyOdds = (fonte: 'bet365' | 'pinnacle' | 'betfair-exchange' | 'manual'): OddsMercado => ({
+const createEmptyOdds = (fonte: BookmakerSource | 'manual'): OddsMercado => ({
   fonte,
   x1x2: { home: null, draw: null, away: null },
   btts: { yes: null, no: null },
@@ -69,7 +71,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }: PainelOddsMercadoProps) {
-  const [bookmaker, setBookmaker] = useState<'bet365' | 'pinnacle' | 'betfair-exchange'>('bet365')
+  const [bookmaker, setBookmaker] = useState<BookmakerSource>('bet365')
   const [oddsType, setOddsType] = useState<'opening' | 'current'>('current')
   const [isManual, setIsManual] = useState(false)
   const [isLoading, setIsLoading] = useState(false)

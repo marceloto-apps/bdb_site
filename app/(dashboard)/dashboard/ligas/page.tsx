@@ -19,7 +19,17 @@ export default async function LigasPage() {
   }
 
   const competicoes = await prisma.competition.findMany({
-    where: { active: true },
+    where: {
+      active: true,
+      type: 'LEAGUE',
+      NOT: {
+        OR: [
+          { slug: 'copa-do-mundo-2026' },
+          { slug: 'copa-2026' },
+          { externalId: 'comp_6107' }
+        ]
+      }
+    },
     include: {
       seasons: {
         where: { isCurrent: true },

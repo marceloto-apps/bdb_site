@@ -76,14 +76,6 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname.startsWith('/dashboard/bolao')} tooltip="Bolão Copa 2026">
-              <Link href="/dashboard/bolao">
-                <Trophy className="text-amber-500 animate-pulse" />
-                <span>Bolão Copa 2026</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroup>
 

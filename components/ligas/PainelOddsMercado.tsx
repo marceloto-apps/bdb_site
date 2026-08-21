@@ -36,7 +36,7 @@ interface OddsCacheEntry {
 
 const linhasOU = ['0.5', '1.5', '2.5', '3.5', '4.5']
 
-const createEmptyOdds = (fonte: 'bet365' | 'pinnacle' | 'betfair-exchange' | 'kambi' | 'manual'): OddsMercado => ({
+const createEmptyOdds = (fonte: 'bet365' | 'pinnacle' | 'betfair-exchange' | 'manual'): OddsMercado => ({
   fonte,
   x1x2: { home: null, draw: null, away: null },
   btts: { yes: null, no: null },
@@ -69,7 +69,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 }
 
 export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }: PainelOddsMercadoProps) {
-  const [bookmaker, setBookmaker] = useState<'bet365' | 'pinnacle' | 'betfair-exchange' | 'kambi'>('bet365')
+  const [bookmaker, setBookmaker] = useState<'bet365' | 'pinnacle' | 'betfair-exchange'>('bet365')
   const [oddsType, setOddsType] = useState<'opening' | 'current'>('current')
   const [isManual, setIsManual] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -450,11 +450,10 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
             onValueChange={(v) => setBookmaker(v as any)} 
             className="w-full min-w-[280px] flex-1 max-w-[360px]"
           >
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="bet365" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">Bet365</TabsTrigger>
               <TabsTrigger value="pinnacle" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">Pinnacle</TabsTrigger>
               <TabsTrigger value="betfair-exchange" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">BetfairEx</TabsTrigger>
-              <TabsTrigger value="kambi" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">Kambi</TabsTrigger>
             </TabsList>
           </Tabs>
 
@@ -720,7 +719,7 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
           {apiMatchInfo?.status === 'SCHEDULED' ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="font-normal border-primary/20 bg-primary/5 text-primary">
-                📡 {bookmaker === 'bet365' ? 'Bet365' : bookmaker === 'pinnacle' ? 'Pinnacle' : bookmaker === 'betfair-exchange' ? 'BetfairEx' : 'Kambi'} ({oddsType === 'opening' ? 'Abertura' : 'Atuais'})
+                📡 {bookmaker === 'bet365' ? 'Bet365' : bookmaker === 'pinnacle' ? 'Pinnacle' : 'BetfairEx'} ({oddsType === 'opening' ? 'Abertura' : 'Atuais'})
               </Badge>
               <span className="truncate">
                 {apiMatchInfo.utcDate ? new Date(apiMatchInfo.utcDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}

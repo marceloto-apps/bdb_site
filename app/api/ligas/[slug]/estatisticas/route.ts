@@ -84,6 +84,11 @@ export async function GET(
         ]
       },
       include: {
+        // Base histórica da bet365: onde o Flashscore cobre a casa, estas linhas SÃO as dele
+        // (`source = FLASHSCORE`) — o job flashscore-promote-historical do bdb_ingest
+        // substitui as da TheStatsAPI em `MatchOdds`, porque a unique da tabela não deixa as
+        // duas fontes conviverem na mesma casa. Nas ligas em que o Flashscore não cota a
+        // bet365 (USL, J2, Rússia…), o histórico antigo segue aqui em vez de a amostra sumir.
         odds: {
           where: {
             bookmaker: { name: 'Bet365' },

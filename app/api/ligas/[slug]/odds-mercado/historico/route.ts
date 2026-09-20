@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { oddsMercadoQuerySchema } from "@/lib/validations/odds-mercado"
+import { filtroDeFonte } from "@/lib/odds/sources"
 
 export async function GET(
   req: NextRequest,
@@ -72,18 +73,30 @@ export async function GET(
     }
 
     // 4. Buscar histórico total de movimentação de odds
-    const oddsMovements = await prisma.oddsMovement.findMany({
-      where: {
-        matchId: match.id,
-        bookmakerId: bookmaker.id,
-      },
-      include: {
-        market: true,
-      },
-      orderBy: {
-        capturedAt: "asc",
-      },
-    })
+    //
+    // Casa com fonte dona (bet365 e betano são do Flashscore) só mostra a curva da fonte
+    // dela — senão o gráfico mistura os preços de dois feeds na mesma linha. Sem nada na
+    // fonte dona (liga em que o Flashscore não cota a casa), cai no histórico sem filtro.
+    const fonte = filtroDeFonte(bookmakerSlug)
+    const buscarMovements = (comFonte: boolean) =>
+      prisma.oddsMovement.findMany({
+        where: {
+          matchId: match.id,
+          bookmakerId: bookmaker.id,
+          ...(comFonte && fonte ? fonte : {}),
+        },
+        include: {
+          market: true,
+        },
+        orderBy: {
+          capturedAt: "asc",
+        },
+      })
+
+    let oddsMovements = await buscarMovements(true)
+    if (oddsMovements.length === 0 && fonte) {
+      oddsMovements = await buscarMovements(false)
+    }
 
     // 5. Agrupar dados por timestamp
     const x1x2Group: Record<string, { capturedAt: string; home: number | null; draw: number | null; away: number | null }> = {}

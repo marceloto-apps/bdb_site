@@ -995,6 +995,9 @@ model OddsMovement {
   oddsType     OddsType  @default(PREMATCH_CLOSING)
   capturedAt   DateTime
   milestone    String?   @db.VarChar(20)
+  /// Quem escreveu a linha: THESTATSAPI | ODDSPAPI | FLASHSCORE (UNKNOWN = anterior à coluna).
+  /// Casa tem fonte dona — bet365 e betano são do Flashscore (lib/odds/sources.ts).
+  source       String    @default("UNKNOWN") @db.VarChar(20)
   createdAt    DateTime  @default(now())
 
   @@index([matchId, bookmakerId, marketId, selection])

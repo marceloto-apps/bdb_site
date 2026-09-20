@@ -15,6 +15,7 @@ import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { encontrarLambdaIterativo } from '@/lib/ferramentas/over-under-25/poisson-25'
 import { poissonCdf, poissonPmf } from './poisson'
+import { filtroDeFonte } from '@/lib/odds/sources'
 
 /**
  * Método 1 — Média Simples (baseline referencial)
@@ -219,19 +220,29 @@ export async function buscarOddsMaisRecentes(
   const TTL_HOURS = process.env.ODDS_TTL_HOURS ? parseInt(process.env.ODDS_TTL_HOURS, 10) : 48
   const limite = new Date(Date.now() - TTL_HOURS * 60 * 60 * 1000)
 
-  const oddsMovements = await prisma.oddsMovement.findMany({
-    where: {
-      matchId,
-      bookmakerId: bookmaker.id,
-      capturedAt: { gte: limite }
-    },
-    include: {
-      market: true
-    },
-    orderBy: {
-      capturedAt: 'desc'
-    }
-  })
+  // A bet365 é do Flashscore (lib/odds/sources.ts). Importa aqui porque esta função exige os
+  // 5 mercados no MESMO instante de captura: misturar dois feeds da casa dava timestamps que
+  // nunca coincidem. Sem linha do Flashscore (liga em que ele não cota a casa), cai no que há.
+  const buscarMovements = (comFonte: boolean) =>
+    prisma.oddsMovement.findMany({
+      where: {
+        matchId,
+        bookmakerId: bookmaker.id,
+        capturedAt: { gte: limite },
+        ...(comFonte ? filtroDeFonte(bookmaker.slug) ?? {} : {})
+      },
+      include: {
+        market: true
+      },
+      orderBy: {
+        capturedAt: 'desc'
+      }
+    })
+
+  let oddsMovements = await buscarMovements(true)
+  if (oddsMovements.length === 0 && filtroDeFonte(bookmaker.slug)) {
+    oddsMovements = await buscarMovements(false)
+  }
 
   const tentarExtrairCinco = (oddsList: any[]) => {
     const res = {

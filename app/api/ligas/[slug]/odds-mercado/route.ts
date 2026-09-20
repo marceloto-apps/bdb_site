@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { oddsMercadoQuerySchema } from "@/lib/validations/odds-mercado"
+import { filtroDeFonte } from "@/lib/odds/sources"
 
 export async function GET(
   req: NextRequest,
@@ -72,49 +73,65 @@ export async function GET(
     }
 
     // 4. Buscar Odds
-    // Primeiro tenta buscar do histórico em tempo real (OddsMovement) que é onde ficam as atualizações recentes
-    const oddsMovementsWhere: any = {
-      matchId: match.id,
-      bookmakerId: bookmaker.id,
-    }
-    if (oddsType === "opening") {
-      oddsMovementsWhere.milestone = "opening"
+    // Primeiro tenta buscar do histórico em tempo real (OddsMovement) que é onde ficam as atualizações recentes.
+    //
+    // Casa com fonte dona (bet365 e betano são do Flashscore) é consultada primeiro só na
+    // fonte dela: enquanto a bet365 teve dois feeds, o painel mostrava abertura de um e
+    // fechamento de outro. A busca sem filtro fica como segunda tentativa, para a liga em
+    // que o Flashscore não cota a casa continuar exibindo o que já exibia.
+    const fonte = filtroDeFonte(bookmakerSlug)
+
+    const buscarMovements = async (comFonte: boolean) => {
+      const where: any = {
+        matchId: match.id,
+        bookmakerId: bookmaker.id,
+        ...(comFonte && fonte ? fonte : {}),
+      }
+      if (oddsType === "opening") {
+        where.milestone = "opening"
+      }
+      return prisma.oddsMovement.findMany({
+        where,
+        select: {
+          id: true,
+          selection: true,
+          line: true,
+          odds: true,
+          market: true,
+          oddsType: true,
+        },
+        orderBy: {
+          capturedAt: "desc",
+        },
+      })
     }
 
-    const oddsMovements = await prisma.oddsMovement.findMany({
-      where: oddsMovementsWhere,
-      select: {
-        id: true,
-        selection: true,
-        line: true,
-        odds: true,
-        market: true,
-        oddsType: true,
-      },
-      orderBy: {
-        capturedAt: "desc",
-      },
-    })
+    let oddsMovements = await buscarMovements(true)
+    if (oddsMovements.length === 0 && fonte) {
+      oddsMovements = await buscarMovements(false)
+    }
 
     let oddsToProcess: any[] = []
 
     if (oddsMovements.length > 0) {
       oddsToProcess = oddsMovements
     } else {
-      // Fallback para MatchOdds
-      const matchOddsWhere: any = {
-        matchId: match.id,
-        bookmakerId: bookmaker.id,
+      // Fallback para MatchOdds — mesma preferência de fonte.
+      const buscarMatchOdds = async (comFonte: boolean) => {
+        const where: any = {
+          matchId: match.id,
+          bookmakerId: bookmaker.id,
+          ...(comFonte && fonte ? fonte : {}),
+        }
+        if (oddsType === "opening") {
+          where.oddsType = "PREMATCH_OPENING"
+        }
+        return prisma.matchOdds.findMany({ where, include: { market: true } })
       }
-      if (oddsType === "opening") {
-        matchOddsWhere.oddsType = "PREMATCH_OPENING"
+      let odds = await buscarMatchOdds(true)
+      if (odds.length === 0 && fonte) {
+        odds = await buscarMatchOdds(false)
       }
-      const odds = await prisma.matchOdds.findMany({
-        where: matchOddsWhere,
-        include: {
-          market: true,
-        },
-      })
       oddsToProcess = odds
     }
 

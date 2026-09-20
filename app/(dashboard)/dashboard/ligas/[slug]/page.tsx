@@ -20,18 +20,16 @@ export default async function LigaDashboardPage({ params }: { params: { slug: st
   const session = await auth()
   const slug = params.slug
 
-  const { isLeagueFree } = await import('@/lib/auth/free-leagues')
-  const isFree = isLeagueFree(slug)
+  if (!session?.user?.id) {
+    redirect('/login')
+  }
 
-  if (!isFree) {
-    if (!session?.user?.id) {
-      redirect('/login')
-    }
-    const { hasVipAccess } = await import('@/lib/auth/check-access')
-    const hasAccess = await hasVipAccess(session.user.id)
-    if (!hasAccess) {
-      redirect('/planos')
-    }
+  const { isLeagueAccessible } = await import('@/lib/auth/free-leagues')
+  const { hasVipAccess } = await import('@/lib/auth/check-access')
+  const hasAccess = await hasVipAccess(session.user.id)
+
+  if (!isLeagueAccessible(slug, hasAccess)) {
+    redirect('/planos')
   }
 
   const liga = await prisma.competition.findUnique({

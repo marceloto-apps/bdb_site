@@ -19,17 +19,14 @@ export async function GET(
 
     const { slug } = params
 
-    const { isLeagueFree } = await import('@/lib/auth/free-leagues')
-    const isFree = isLeagueFree(slug)
-    if (!isFree) {
-      const { hasVipAccess } = await import('@/lib/auth/check-access')
-      const hasAccess = await hasVipAccess(session.user.id)
-      if (!hasAccess) {
-        return NextResponse.json(
-          { error: 'FORBIDDEN', message: 'Acesso VIP necessário.' },
-          { status: 403 }
-        )
-      }
+    const { isLeagueAccessible } = await import('@/lib/auth/free-leagues')
+    const { hasVipAccess } = await import('@/lib/auth/check-access')
+    const hasAccess = await hasVipAccess(session.user.id)
+    if (!isLeagueAccessible(slug, hasAccess)) {
+      return NextResponse.json(
+        { error: 'FORBIDDEN', message: 'Acesso VIP necessário.' },
+        { status: 403 }
+      )
     }
 
     const { searchParams } = new URL(req.url)

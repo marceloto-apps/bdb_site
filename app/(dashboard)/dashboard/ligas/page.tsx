@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { LigaCard } from '@/components/ligas/LigaCard'
 import { BarChart3 } from 'lucide-react'
 import { auth } from '@/auth'
-import { isLeagueFree } from '@/lib/auth/free-leagues'
+import { isLeagueFree, isLeagueAccessible, LEAGUE_ORDER_RANK } from '@/lib/auth/free-leagues'
 
 export const metadata: Metadata = {
   title: 'Ligas - BDB',
@@ -54,7 +54,7 @@ export default async function LigasPage() {
       const season = comp.seasons[0]
       const totalJogos = season ? season._count.matches : 0
       const tier = isLeagueFree(comp.slug) ? 'FREE' : 'VIP'
-      const disponivel = isVip || tier === 'FREE'
+      const disponivel = isLeagueAccessible(comp.slug, isVip)
       const finalizada = finishedSlugs.includes(comp.slug)
 
       return {
@@ -70,13 +70,18 @@ export default async function LigasPage() {
       }
     })
 
-  // Ordenar ligas: Ativas primeiro, finalizadas por último. Dentro de cada grupo: FREE primeiro, depois ordem alfabética.
+  // Ordenar ligas: Ativas primeiro, finalizadas por último.
+  // Dentro de cada grupo: ordem por tamanho/relevância (LEAGUE_ORDER_RANK), e empate por nome alfabético.
   ligas.sort((a, b) => {
     if (a.finalizada && !b.finalizada) return 1;
     if (!a.finalizada && b.finalizada) return -1;
     
-    if (a.tier === 'FREE' && b.tier === 'VIP') return -1;
-    if (a.tier === 'VIP' && b.tier === 'FREE') return 1;
+    const rankA = LEAGUE_ORDER_RANK[a.slug] ?? 999;
+    const rankB = LEAGUE_ORDER_RANK[b.slug] ?? 999;
+
+    if (rankA !== rankB) {
+      return rankA - rankB;
+    }
     
     return a.nome.localeCompare(b.nome);
   });

@@ -34,7 +34,15 @@ interface OddsCacheEntry {
   apiMatchInfo: { status?: string; utcDate?: string; round?: number } | null
 }
 
-export type BookmakerSource = 'bet365' | 'pinnacle' | 'betfair-exchange'
+export type BookmakerSource = 'bet365' | 'betano' | 'pinnacle' | 'betfair-exchange'
+
+/** Rótulo da casa no painel. Bet365 e Betano vêm do Flashscore (bdb_ingest, flashscore-promote-odds). */
+const BOOKMAKER_LABEL: Record<BookmakerSource, string> = {
+  bet365: 'Bet365',
+  betano: 'Betano',
+  pinnacle: 'Pinnacle',
+  'betfair-exchange': 'BetfairEx',
+}
 
 const linhasOU = ['0.5', '1.5', '2.5', '3.5', '4.5']
 
@@ -450,10 +458,11 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
           <Tabs 
             value={bookmaker} 
             onValueChange={(v) => setBookmaker(v as any)} 
-            className="w-full min-w-[280px] flex-1 max-w-[360px]"
+            className="w-full min-w-[280px] flex-1 max-w-[440px]"
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="bet365" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">Bet365</TabsTrigger>
+              <TabsTrigger value="betano" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">Betano</TabsTrigger>
               <TabsTrigger value="pinnacle" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">Pinnacle</TabsTrigger>
               <TabsTrigger value="betfair-exchange" disabled={isManual} className="text-xs px-1 overflow-hidden text-ellipsis whitespace-nowrap">BetfairEx</TabsTrigger>
             </TabsList>
@@ -721,7 +730,7 @@ export function PainelOddsMercado({ slug, homeTeamId, awayTeamId, onOddsChange }
           {apiMatchInfo?.status === 'SCHEDULED' ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Badge variant="outline" className="font-normal border-primary/20 bg-primary/5 text-primary">
-                📡 {bookmaker === 'bet365' ? 'Bet365' : bookmaker === 'pinnacle' ? 'Pinnacle' : 'BetfairEx'} ({oddsType === 'opening' ? 'Abertura' : 'Atuais'})
+                📡 {BOOKMAKER_LABEL[bookmaker]} ({oddsType === 'opening' ? 'Abertura' : 'Atuais'})
               </Badge>
               <span className="truncate">
                 {apiMatchInfo.utcDate ? new Date(apiMatchInfo.utcDate).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}

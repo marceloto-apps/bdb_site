@@ -18,11 +18,13 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { nomeAbreviado } from "@/lib/utils/team-name";
 
 interface Team {
   id: string;
   name: string;
   shortName: string | null;
+  nameReviewedAt: string | null;
   logoUrl: string | null;
 }
 
@@ -496,7 +498,7 @@ export default function BolaoPage() {
                         {/* Mandante */}
                         <div className="flex-1 flex items-center justify-end gap-3 text-right">
                           <span className="font-semibold text-sm md:text-base hidden sm:inline">{match.homeTeam.name}</span>
-                          <span className="font-semibold text-sm sm:hidden">{match.homeTeam.shortName || match.homeTeam.name.substring(0, 3)}</span>
+                          <span className="font-semibold text-sm sm:hidden">{nomeAbreviado(match.homeTeam)}</span>
                           <Avatar className="w-8 h-8 bg-muted/60 border border-border/60">
                             {match.homeTeam.logoUrl && <AvatarImage src={match.homeTeam.logoUrl} />}
                             <AvatarFallback className="text-[10px] font-bold">{match.homeTeam.name.substring(0, 2).toUpperCase()}</AvatarFallback>
@@ -539,7 +541,7 @@ export default function BolaoPage() {
                             <AvatarFallback className="text-[10px] font-bold">{match.awayTeam.name.substring(0, 2).toUpperCase()}</AvatarFallback>
                           </Avatar>
                           <span className="font-semibold text-sm md:text-base hidden sm:inline">{match.awayTeam.name}</span>
-                          <span className="font-semibold text-sm sm:hidden">{match.awayTeam.shortName || match.awayTeam.name.substring(0, 3)}</span>
+                          <span className="font-semibold text-sm sm:hidden">{nomeAbreviado(match.awayTeam)}</span>
                         </div>
                       </div>
 

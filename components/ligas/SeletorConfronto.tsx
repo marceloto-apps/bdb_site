@@ -106,11 +106,11 @@ export function SeletorConfronto({
                           <Image src={p.homeTeam.logo} alt={p.homeTeam.name} fill className="object-contain" />
                         </div>
                       ) : <div className="w-5 h-5 bg-muted rounded-full shrink-0" />}
-                      <span className="text-sm font-medium truncate">{p.homeTeam.shortName || p.homeTeam.name}</span>
+                      <span className="text-sm font-medium truncate">{p.homeTeam.displayName}</span>
                     </div>
                     <span className="text-[10px] font-medium text-muted-foreground px-1 uppercase">vs</span>
                     <div className="flex items-center justify-end gap-2 flex-1 min-w-0">
-                      <span className="text-sm font-medium truncate text-right">{p.awayTeam.shortName || p.awayTeam.name}</span>
+                      <span className="text-sm font-medium truncate text-right">{p.awayTeam.displayName}</span>
                       {p.awayTeam.logo ? (
                         <div className="w-5 h-5 relative shrink-0">
                           <Image src={p.awayTeam.logo} alt={p.awayTeam.name} fill className="object-contain" />

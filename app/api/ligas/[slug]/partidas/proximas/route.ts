@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { nomeExibicao } from '@/lib/utils/team-name'
 
 const querySchema = z.object({
   rodadas: z.coerce.number().int().min(1).max(3).default(2)
@@ -76,10 +77,10 @@ export async function GET(
         round: true,
         utcDate: true,
         homeTeam: {
-          select: { id: true, name: true, shortName: true, logoUrl: true }
+          select: { id: true, name: true, shortName: true, nameReviewedAt: true, logoUrl: true }
         },
         awayTeam: {
-          select: { id: true, name: true, shortName: true, logoUrl: true }
+          select: { id: true, name: true, shortName: true, nameReviewedAt: true, logoUrl: true }
         }
       }
     })
@@ -93,12 +94,14 @@ export async function GET(
         id: p.homeTeam.id,
         name: p.homeTeam.name,
         shortName: p.homeTeam.shortName,
+        displayName: nomeExibicao(p.homeTeam),
         logo: p.homeTeam.logoUrl
       },
       awayTeam: {
         id: p.awayTeam.id,
         name: p.awayTeam.name,
         shortName: p.awayTeam.shortName,
+        displayName: nomeExibicao(p.awayTeam),
         logo: p.awayTeam.logoUrl
       }
     }))

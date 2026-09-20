@@ -6,8 +6,9 @@ export interface PartidaFutura {
   id: string
   round: string
   date: string
-  homeTeam: { id: string; name: string; shortName: string | null; logo: string | null }
-  awayTeam: { id: string; name: string; shortName: string | null; logo: string | null }
+  /** displayName: nome revisado, senão curto, senão nome (lib/utils/team-name.ts) */
+  homeTeam: { id: string; name: string; shortName: string | null; displayName: string; logo: string | null }
+  awayTeam: { id: string; name: string; shortName: string | null; displayName: string; logo: string | null }
 }
 
 export interface UseProximasPartidasReturn {

@@ -368,6 +368,10 @@ model Team {
   externalId      String    @unique
   name            String
   shortName       String?
+  // Revisão humana do nome (bdb_ingest, `identity:names`): quando preenchido, `name` é o nome
+  // canônico pt-BR e prevalece sobre `shortName` na exibição (lib/utils/team-name.ts).
+  nameReviewedAt  DateTime?
+  nameRef         String?   @db.VarChar(200)
   country         String?
   stadiumName     String?
   stadiumCity     String?

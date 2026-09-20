@@ -1,7 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { hasVipAccess } from '@/lib/auth/check-access'
 import { isLeagueAccessible, isLeagueFree, LEAGUE_ORDER_RANK } from '@/lib/auth/free-leagues'
-import { getSaoPauloDayRange, formatHoraSP, formatDataCompletaSP } from '@/lib/utils/date-sp'
+import {
+  getSaoPauloDayRange,
+  getSaoPauloDateString,
+  formatHoraSP,
+  formatDataCompletaSP,
+} from '@/lib/utils/date-sp'
 import { nomeExibicao } from '@/lib/utils/team-name'
 
 export interface MatchItem {
@@ -59,25 +64,30 @@ export interface JogosDoDiaResult {
 }
 
 /**
- * Carrega todas as partidas do dia correspondente ao fuso de São Paulo,
+ * Carrega exclusivamente as partidas do dia NÃO INICIADAS e NÃO FINALIZADAS (SCHEDULED),
+ * com horário de início a partir do momento atual até o fim do dia em São Paulo,
  * filtrando estritamente pelas ligas às quais o usuário possui acesso.
  */
 export async function carregarJogosDoDia(
   userId: string,
   targetDate: Date = new Date()
 ): Promise<JogosDoDiaResult> {
+  const now = new Date()
   const { startUtc, endUtc, dateStr } = getSaoPauloDayRange(targetDate)
+  const todayStr = getSaoPauloDateString(now)
   const isVip = await hasVipAccess(userId)
 
-  // Buscar todas as partidas que ocorrem dentro do dia em São Paulo
+  // Como o sync da API roda apenas 2 vezes ao dia, exibimos apenas partidas
+  // que ainda NÃO INICIARAM e NÃO FINALIZARAM (status SCHEDULED).
+  // Se a data de referência for o dia de hoje, consideramos partidas com início a partir de agora.
+  const gteDate = dateStr === todayStr ? now : startUtc
+
   const matches = await prisma.match.findMany({
     where: {
+      status: 'SCHEDULED',
       utcDate: {
-        gte: startUtc,
+        gte: gteDate,
         lte: endUtc,
-      },
-      status: {
-        in: ['SCHEDULED', 'LIVE', 'FINISHED', 'POSTPONED'],
       },
       season: {
         competition: {
@@ -205,18 +215,15 @@ export async function carregarJogosDoDia(
     return a.name.localeCompare(b.name)
   })
 
-  // Estatísticas por status
-  const estatisticas = {
-    total: partidas.length,
-    aoVivo: partidas.filter((p) => p.status === 'LIVE').length,
-    agendados: partidas.filter((p) => p.status === 'SCHEDULED').length,
-    finalizados: partidas.filter((p) => p.status === 'FINISHED').length,
-  }
-
   return {
     partidas,
     ligas,
-    estatisticas,
+    estatisticas: {
+      total: partidas.length,
+      aoVivo: 0,
+      agendados: partidas.length,
+      finalizados: 0,
+    },
     dataReferencia: {
       dateStr,
       dataCompleta: formatDataCompletaSP(targetDate),

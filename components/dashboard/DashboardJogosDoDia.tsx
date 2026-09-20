@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import Link from 'next/link'
 import { DashboardMatchCard } from './DashboardMatchCard'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -12,18 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Calendar, Search, Filter, RefreshCw, X, Radio } from 'lucide-react'
+import { Calendar, Search, Filter, RefreshCw, X, Trophy } from 'lucide-react'
 import type { MatchItem, LeagueFilterOption } from '@/lib/dashboard/jogos-do-dia'
 
 interface DashboardJogosDoDiaProps {
   initialPartidas: MatchItem[]
   ligas: LeagueFilterOption[]
-  estatisticas?: {
-    total: number
-    aoVivo: number
-    agendados: number
-    finalizados: number
-  }
   dataReferencia: {
     dateStr: string
     dataCompleta: string
@@ -38,13 +33,12 @@ export function DashboardJogosDoDia({
   dataReferencia,
 }: DashboardJogosDoDiaProps) {
   const [selectedLeague, setSelectedLeague] = useState<string>('all')
-  const [selectedStatus, setSelectedStatus] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [visibleCount, setVisibleCount] = useState<number>(ITEMS_PER_PAGE)
 
-  // As 4 principais ligas do dia para acesso rápido em pílulas
+  // As principais ligas com jogos a acontecer hoje para as pílulas de 1 clique
   const topLigasPills = useMemo(() => {
-    return ligas.slice(0, 4)
+    return ligas.slice(0, 5)
   }, [ligas])
 
   // Filtragem dinâmica de partidas
@@ -53,13 +47,6 @@ export function DashboardJogosDoDia({
       // Filtro de liga
       if (selectedLeague !== 'all' && match.competition.slug !== selectedLeague) {
         return false
-      }
-
-      // Filtro de status
-      if (selectedStatus !== 'ALL') {
-        if (selectedStatus === 'LIVE' && match.status !== 'LIVE') return false
-        if (selectedStatus === 'SCHEDULED' && match.status !== 'SCHEDULED') return false
-        if (selectedStatus === 'FINISHED' && match.status !== 'FINISHED') return false
       }
 
       // Filtro de busca textual (times ou liga)
@@ -75,29 +62,13 @@ export function DashboardJogosDoDia({
 
       return true
     })
-  }, [initialPartidas, selectedLeague, selectedStatus, searchQuery])
-
-  // Estatísticas contextuais da liga selecionada
-  const contextualStats = useMemo(() => {
-    const list =
-      selectedLeague === 'all'
-        ? initialPartidas
-        : initialPartidas.filter((m) => m.competition.slug === selectedLeague)
-
-    return {
-      total: list.length,
-      aoVivo: list.filter((m) => m.status === 'LIVE').length,
-      agendados: list.filter((m) => m.status === 'SCHEDULED').length,
-      finalizados: list.filter((m) => m.status === 'FINISHED').length,
-    }
-  }, [initialPartidas, selectedLeague])
+  }, [initialPartidas, selectedLeague, searchQuery])
 
   const displayedMatches = filteredMatches.slice(0, visibleCount)
   const hasMore = visibleCount < filteredMatches.length
 
   const handleResetFilters = () => {
     setSelectedLeague('all')
-    setSelectedStatus('ALL')
     setSearchQuery('')
     setVisibleCount(ITEMS_PER_PAGE)
   }
@@ -109,21 +80,21 @@ export function DashboardJogosDoDia({
         <div>
           <div className="flex items-center gap-2">
             <h2 className="font-display text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-              Jogos do Dia
+              Jogos de Hoje
             </h2>
-            {contextualStats.aoVivo > 0 && (
+            {initialPartidas.length > 0 && (
               <Badge
                 variant="outline"
-                className="bg-red-500/10 text-red-400 border-red-500/30 flex items-center gap-1 text-xs py-0.5"
+                className="bg-primary/10 text-primary border-primary/30 text-xs py-0.5"
               >
-                <Radio className="w-3 h-3 animate-pulse" />
-                {contextualStats.aoVivo} ao vivo
+                {filteredMatches.length}{' '}
+                {filteredMatches.length === 1 ? 'partida a acontecer' : 'partidas a acontecer'}
               </Badge>
             )}
           </div>
           <p className="text-sm text-muted-foreground capitalize flex items-center gap-1.5 mt-0.5">
             <Calendar className="w-3.5 h-3.5" />
-            {dataReferencia.dataCompleta}
+            {dataReferencia.dataCompleta} • Horário de Brasília
           </p>
         </div>
 
@@ -153,7 +124,7 @@ export function DashboardJogosDoDia({
         </div>
       </div>
 
-      {/* Barra de Filtros Rápidos (Pílulas de Ligas + Tabs de Status) */}
+      {/* Barra de Filtros (Pílulas de Ligas + Campo de Busca) */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         {/* Pílulas de Ligas Top */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
@@ -164,7 +135,7 @@ export function DashboardJogosDoDia({
             }}
             className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 ${
               selectedLeague === 'all'
-                ? 'bg-primary text-black font-semibold shadow-sm'
+                ? 'bg-primary text-black font-semibold shadow-xs'
                 : 'bg-surface hover:bg-muted text-muted-foreground hover:text-white border border-border/80'
             }`}
           >
@@ -178,8 +149,8 @@ export function DashboardJogosDoDia({
                 setVisibleCount(ITEMS_PER_PAGE)
               }}
               className={`px-3 py-1.5 rounded-full font-medium transition-colors shrink-0 ${
-                selectedLeague === 'liga-' + liga.slug || selectedLeague === liga.slug
-                  ? 'bg-primary text-black font-semibold shadow-sm'
+                selectedLeague === liga.slug
+                  ? 'bg-primary text-black font-semibold shadow-xs'
                   : 'bg-surface hover:bg-muted text-muted-foreground hover:text-white border border-border/80'
               }`}
             >
@@ -188,88 +159,24 @@ export function DashboardJogosDoDia({
           ))}
         </div>
 
-        {/* Tabs de Status */}
-        <div className="flex items-center gap-1 bg-surface p-1 rounded-lg border border-border/80 text-xs shrink-0 self-start md:self-auto">
-          <button
-            onClick={() => {
-              setSelectedStatus('ALL')
-              setVisibleCount(ITEMS_PER_PAGE)
-            }}
-            className={`px-2.5 py-1 rounded-md transition-colors ${
-              selectedStatus === 'ALL'
-                ? 'bg-background text-white font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-white'
-            }`}
-          >
-            Todos ({contextualStats.total})
-          </button>
-
-          <button
-            onClick={() => {
-              setSelectedStatus('LIVE')
-              setVisibleCount(ITEMS_PER_PAGE)
-            }}
-            className={`px-2.5 py-1 rounded-md transition-colors flex items-center gap-1 ${
-              selectedStatus === 'LIVE'
-                ? 'bg-red-500/20 text-red-400 font-semibold'
-                : contextualStats.aoVivo > 0
-                ? 'text-red-400/90 hover:text-red-300'
-                : 'text-muted-foreground hover:text-white'
-            }`}
-          >
-            {contextualStats.aoVivo > 0 && (
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-            )}
-            Ao Vivo ({contextualStats.aoVivo})
-          </button>
-
-          <button
-            onClick={() => {
-              setSelectedStatus('SCHEDULED')
-              setVisibleCount(ITEMS_PER_PAGE)
-            }}
-            className={`px-2.5 py-1 rounded-md transition-colors ${
-              selectedStatus === 'SCHEDULED'
-                ? 'bg-background text-white font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-white'
-            }`}
-          >
-            Agendados ({contextualStats.agendados})
-          </button>
-
-          <button
-            onClick={() => {
-              setSelectedStatus('FINISHED')
-              setVisibleCount(ITEMS_PER_PAGE)
-            }}
-            className={`px-2.5 py-1 rounded-md transition-colors ${
-              selectedStatus === 'FINISHED'
-                ? 'bg-background text-white font-semibold shadow-xs'
-                : 'text-muted-foreground hover:text-white'
-            }`}
-          >
-            Finalizados ({contextualStats.finalizados})
-          </button>
+        {/* Campo de Busca Rápida */}
+        <div className="relative w-full md:w-64 shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar time ou liga..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-8 bg-surface/60 border-border text-xs h-9"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
-      </div>
-
-      {/* Campo de Busca Rápida */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar time ou liga..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 pr-8 bg-surface/60 border-border text-xs h-9"
-        />
-        {searchQuery && (
-          <button
-            onClick={() => setSearchQuery('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        )}
       </div>
 
       {/* Grid de Partidas */}
@@ -303,21 +210,33 @@ export function DashboardJogosDoDia({
           </div>
           <div>
             <h3 className="font-semibold text-text-primary text-base">
-              Nenhuma partida encontrada
+              Nenhum jogo a ser realizado hoje
             </h3>
             <p className="text-xs text-muted-foreground max-w-sm mt-1">
-              Não há partidas de hoje correspondentes aos filtros selecionados. Experimente trocar a liga ou limpar os filtros.
+              {searchQuery || selectedLeague !== 'all'
+                ? 'Nenhuma partida correspondente aos filtros selecionados. Tente limpar os filtros ou selecionar outra liga.'
+                : 'Não há mais partidas programadas para hoje nas suas ligas ou todos os jogos de hoje já foram iniciados.'}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResetFilters}
-            className="text-xs gap-1.5 mt-2"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Limpar Filtros
-          </Button>
+          <div className="flex items-center gap-2 pt-1">
+            {(searchQuery || selectedLeague !== 'all') && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetFilters}
+                className="text-xs gap-1.5"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Limpar Filtros
+              </Button>
+            )}
+            <Button asChild size="sm" variant="ghost" className="text-xs gap-1.5 text-primary">
+              <Link href="/dashboard/ligas">
+                <Trophy className="w-3.5 h-3.5" />
+                Ver Catálogo de Ligas
+              </Link>
+            </Button>
+          </div>
         </div>
       )}
     </section>

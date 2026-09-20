@@ -51,7 +51,7 @@ describe('carregarJogosDoDia service', () => {
     vi.clearAllMocks()
   })
 
-  it('deve carregar, ordenar por LEAGUE_ORDER_RANK e calcular estatísticas de partidas', async () => {
+  it('deve buscar apenas partidas SCHEDULED não iniciadas e ordenar ligas por LEAGUE_ORDER_RANK', async () => {
     vi.mocked(hasVipAccess).mockResolvedValue(false)
 
     const mockMatches = [
@@ -91,11 +91,11 @@ describe('carregarJogosDoDia service', () => {
       },
       {
         id: 'match-2',
-        utcDate: new Date('2026-09-20T15:30:00.000Z'),
-        status: 'LIVE',
+        utcDate: new Date('2026-09-20T20:30:00.000Z'),
+        status: 'SCHEDULED',
         round: 5,
-        fthg: 1,
-        ftag: 0,
+        fthg: null,
+        ftag: null,
         homeTeam: {
           id: 'team-ars',
           name: 'Arsenal',
@@ -122,11 +122,11 @@ describe('carregarJogosDoDia service', () => {
       },
       {
         id: 'match-3',
-        utcDate: new Date('2026-09-20T13:00:00.000Z'),
-        status: 'FINISHED',
+        utcDate: new Date('2026-09-20T21:00:00.000Z'),
+        status: 'SCHEDULED',
         round: 5,
-        fthg: 2,
-        ftag: 1,
+        fthg: null,
+        ftag: null,
         homeTeam: {
           id: 'team-san',
           name: 'Santos',
@@ -157,11 +157,17 @@ describe('carregarJogosDoDia service', () => {
 
     const result = await carregarJogosDoDia('user-1', new Date('2026-09-20T12:00:00Z'))
 
+    // Validar chamada ao prisma
+    expect(prisma.match.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: 'SCHEDULED',
+        }),
+      })
+    )
+
     expect(result.partidas.length).toBe(3)
     expect(result.estatisticas.total).toBe(3)
-    expect(result.estatisticas.aoVivo).toBe(1)
-    expect(result.estatisticas.agendados).toBe(1)
-    expect(result.estatisticas.finalizados).toBe(1)
 
     // Ligas devem estar ordenadas por LEAGUE_ORDER_RANK (Brasileirão A -> B -> Premier League)
     expect(result.ligas[0].slug).toBe('brasileirao-serie-a')

@@ -65,9 +65,9 @@ export default async function DashboardPage() {
           <p className="text-sm text-muted-foreground">
             {estatisticas.total > 0
               ? `Você tem ${estatisticas.total} ${
-                  estatisticas.total === 1 ? 'jogo' : 'jogos'
-                } programados para hoje nas suas ligas.`
-              : 'Acompanhe as análises, ferramentas e novidades do BigDataBet.'}
+                  estatisticas.total === 1 ? 'jogo programado' : 'jogos programados'
+                } para acontecer hoje nas suas ligas.`
+              : 'Não há mais jogos programados para hoje nas suas ligas.'}
           </p>
         </div>
 
@@ -91,7 +91,6 @@ export default async function DashboardPage() {
       <DashboardJogosDoDia
         initialPartidas={partidas}
         ligas={ligas}
-        estatisticas={estatisticas}
         dataReferencia={dataReferencia}
       />
 

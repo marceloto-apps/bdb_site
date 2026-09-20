@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Trophy, ChevronRight, Activity } from 'lucide-react'
+import { Trophy, ChevronRight, Activity, Clock } from 'lucide-react'
 import type { MatchItem } from '@/lib/dashboard/jogos-do-dia'
 
 interface DashboardMatchCardProps {
@@ -13,15 +13,12 @@ interface DashboardMatchCardProps {
 }
 
 export function DashboardMatchCard({ match }: DashboardMatchCardProps) {
-  const { homeTeam, awayTeam, competition, status, horaSP, fthg, ftag, round, hasXg } = match
+  const { homeTeam, awayTeam, competition, horaSP, round, hasXg, status } = match
 
-  const isLive = status === 'LIVE'
-  const isFinished = status === 'FINISHED'
-  const isScheduled = status === 'SCHEDULED'
   const isPostponed = status === 'POSTPONED'
 
   return (
-    <div className="bg-surface/80 hover:bg-surface border border-border hover:border-primary/40 rounded-xl p-4 transition-all duration-200 shadow-sm flex flex-col justify-between gap-3 group">
+    <div className="bg-surface/80 hover:bg-surface border border-border hover:border-primary/40 rounded-xl p-4 transition-all duration-200 shadow-xs flex flex-col justify-between gap-3 group">
       {/* Header do Card: Liga, Rodada e Selo */}
       <div className="flex items-center justify-between text-xs pb-2 border-b border-border/50">
         <div className="flex items-center gap-1.5 overflow-hidden">
@@ -48,7 +45,7 @@ export function DashboardMatchCard({ match }: DashboardMatchCardProps) {
         </Badge>
       </div>
 
-      {/* Corpo Central: Confronto e Placar/Horário */}
+      {/* Corpo Central: Confronto e Horário */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-1">
         {/* Time Mandante */}
         <div className="flex items-center gap-2.5 min-w-0">
@@ -76,50 +73,25 @@ export function DashboardMatchCard({ match }: DashboardMatchCardProps) {
           </span>
         </div>
 
-        {/* Centro: Placar ou Horário */}
+        {/* Centro: Horário do Confronto */}
         <div className="flex flex-col items-center justify-center px-2 min-w-[70px]">
-          {isLive && (
-            <div className="flex flex-col items-center">
-              <span className="flex items-center gap-1 text-[10px] uppercase font-bold text-red-400 mb-0.5 tracking-wider">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-                Ao Vivo
-              </span>
-              <span className="font-display font-bold text-xl text-white tracking-wider">
-                {fthg ?? 0} - {ftag ?? 0}
-              </span>
-            </div>
-          )}
-
-          {isFinished && (
-            <div className="flex flex-col items-center">
-              <span className="text-[10px] text-muted-foreground uppercase font-semibold mb-0.5">
-                Fim
-              </span>
-              <span className="font-display font-bold text-lg text-text-primary tracking-wider">
-                {fthg ?? 0} - {ftag ?? 0}
-              </span>
-            </div>
-          )}
-
-          {isScheduled && (
-            <div className="flex flex-col items-center">
-              <span className="font-mono font-bold text-base text-primary">
-                {horaSP}
-              </span>
-              <span className="text-[9px] text-muted-foreground">Brasília</span>
-            </div>
-          )}
-
-          {isPostponed && (
+          {isPostponed ? (
             <Badge
               variant="outline"
               className="text-[10px] bg-amber-500/10 text-amber-400 border-amber-500/30"
             >
               Adiado
             </Badge>
+          ) : (
+            <div className="flex flex-col items-center">
+              <span className="font-mono font-bold text-base text-primary">
+                {horaSP}
+              </span>
+              <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
+                <Clock className="w-2.5 h-2.5" />
+                Brasília
+              </span>
+            </div>
           )}
         </div>
 

@@ -9,7 +9,8 @@ import type { MediasTimeXG, ForcasTimeXG, MediasLigaXG } from '@/lib/analytics/t
 import type { MediasTime, ForcasTime } from '@/lib/analytics/forca-time'
 import type { MediasLigaCalculadas } from '@/lib/analytics/medias'
 import { PainelDispersao } from './PainelDispersao'
-import type { DispersaoLigaResponse } from '@/types/liga'
+import type { DispersaoLigaResponse, AmostraConfronto } from '@/types/liga'
+import { ContadorAmostra } from './ContadorAmostra'
 
 interface PainelMediasProps {
   medias: {
@@ -31,6 +32,9 @@ interface PainelMediasProps {
   ligaMediasXG?: MediasLigaXG | null
   xgDisponivel: boolean
   dispersao?: DispersaoLigaResponse | null
+  amostra?: AmostraConfronto | null
+  /** Amostra não sustenta a previsão: o painel segue descritivo e o λ simples vira aviso */
+  projecaoIndisponivel?: boolean
 }
 
 export function PainelMedias({ 
@@ -44,7 +48,9 @@ export function PainelMedias({
   forcasAwayXG,
   ligaMediasXG,
   xgDisponivel,
-  dispersao
+  dispersao,
+  amostra,
+  projecaoIndisponivel = false
 }: PainelMediasProps) {
   const renderForca = (valor: number) => {
     const isHigh = valor > 1.05
@@ -127,6 +133,9 @@ export function PainelMedias({
                   <div className="flex flex-col gap-3">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Projeção (Média):</span>
+                      {projecaoIndisponivel ? (
+                        <span className="text-xs italic text-muted-foreground">Dados insuficientes para previsão</span>
+                      ) : (
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-base text-primary">
                           {((medias.home.mgc + medias.away.mgsv) / 2).toFixed(2)}
@@ -136,6 +145,7 @@ export function PainelMedias({
                           ({medias.home.mgc.toFixed(2)} + {medias.away.mgsv.toFixed(2)}) / 2
                         </span>
                       </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -227,8 +237,8 @@ export function PainelMedias({
               </div>
             </div>
             
-            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground flex items-center justify-center gap-2">
-              <span>{medias.home.jogosCasa} jogos em casa</span>
+            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground flex flex-wrap items-center justify-center gap-2">
+              <ContadorAmostra resumo={amostra?.home} fallbackTotal={medias.home.jogosCasa} rotulo="jogos em casa" />
               {medias.home.formaCasa && medias.home.formaCasa.length > 0 && (
                 <>
                   <span className="text-muted-foreground/30">|</span>
@@ -293,6 +303,9 @@ export function PainelMedias({
                   <div className="flex flex-col gap-3">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Projeção (Média):</span>
+                      {projecaoIndisponivel ? (
+                        <span className="text-xs italic text-muted-foreground">Dados insuficientes para previsão</span>
+                      ) : (
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-base text-blue-500">
                           {((medias.away.mgv + medias.home.mgsc) / 2).toFixed(2)}
@@ -302,6 +315,7 @@ export function PainelMedias({
                           ({medias.away.mgv.toFixed(2)} + {medias.home.mgsc.toFixed(2)}) / 2
                         </span>
                       </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -393,8 +407,8 @@ export function PainelMedias({
               </div>
             </div>
             
-            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground flex items-center justify-center gap-2">
-              <span>{medias.away.jogosFora} jogos fora</span>
+            <div className="bg-muted/20 px-4 py-2.5 border-t text-sm text-center font-bold text-foreground flex flex-wrap items-center justify-center gap-2">
+              <ContadorAmostra resumo={amostra?.away} fallbackTotal={medias.away.jogosFora} rotulo="jogos fora" />
               {medias.away.formaFora && medias.away.formaFora.length > 0 && (
                 <>
                   <span className="text-muted-foreground/30">|</span>

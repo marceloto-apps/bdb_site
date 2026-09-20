@@ -7,6 +7,7 @@ import { getSeasonDateFilter } from '@/lib/utils/season-filter'
 import {
   calcularMediasLiga,
   calcularMediasTime,
+  calcularMediasTimeDescritivas,
   calcularMediasTimeComDecay,
   calcularForcasTime,
   matrizPlacaresPoisson,
@@ -23,6 +24,7 @@ import {
   montarComposicaoLambdas,
   calcularMediasLigaXG,
   calcularMediasTimeXG,
+  calcularMediasTimeXGDescritivas,
   calcularForcasTimeXG,
   calcularMediasTimeXGComDecay,
   type MediasLigaXG,
@@ -30,6 +32,7 @@ import {
   rankearModelos,
   construirDiagnosticoDispersao,
 } from '@/lib/analytics'
+import { construirAmostraTime, faixasDisponiveis, temFiltroAtivo } from '@/lib/analytics/amostra'
 
 export async function GET(
   req: Request,
@@ -132,6 +135,7 @@ export async function GET(
             bookmaker: { name: 'bet365' },
             market: { key: 'match_odds' },
           },
+          include: { market: { select: { key: true } } },
         },
         stats: {
           select: {
@@ -143,91 +147,93 @@ export async function GET(
       orderBy: { utcDate: 'asc' },
     })
 
-    if (todosOsJogos.length < 20) {
-      return NextResponse.json(
-        { error: 'INSUFFICIENT_LEAGUE_DATA', message: 'Dados insuficientes da liga' },
-        { status: 400 }
-      )
+    const jogosTypeSafe = todosOsJogos.map((m) => ({ ...m, fthg: m.fthg!, ftag: m.ftag! }))
+
+    // Amostra de cada time sob os Filtros Avançados — mesma função usada em /estatisticas.
+    // O λ só usa o mandante EM CASA e o visitante FORA, então é nesse mando que o filtro corta.
+    const filtrosAtivos = temFiltroAtivo(query)
+    const amostraHome = construirAmostraTime(jogosTypeSafe, query.homeTeamId, 'home', query)
+    const amostraAway = construirAmostraTime(jogosTypeSafe, query.awayTeamId, 'away', query)
+
+    const jogosFiltradosHome = [...amostraHome.jogos, ...amostraHome.jogosOutroMando]
+    const jogosFiltradosAway = [...amostraAway.jogos, ...amostraAway.jogosOutroMando]
+
+    // Quais faixas de odds têm jogos para os times selecionados (base completa, sem filtro)
+    const oddsFaixasDisponiveisCasa = faixasDisponiveis(jogosTypeSafe, query.homeTeamId, 'home', FAIXAS_ODDS_PADRAO)
+    const oddsFaixasDisponiveisVisitante = faixasDisponiveis(jogosTypeSafe, query.awayTeamId, 'away', FAIXAS_ODDS_PADRAO)
+
+    const confrontoResumo = confronto ? {
+      id: confronto.id,
+      round: confronto.round,
+      utcDate: confronto.utcDate.toISOString(),
+    } : null
+
+    // Amostra que não sustenta a previsão NÃO é erro da requisição: responde 200 sem o modelo,
+    // com o que é só descrição (médias, frequências, forma, amostra, confronto), para a tela
+    // seguir mostrando estatísticas, odds e jogadores e avisar só no lugar da projeção.
+    const respostaSemPrevisao = (motivo: string) => {
+      const n = jogosTypeSafe.length
+      const media = (soma: number) => (n > 0 ? soma / n : 0)
+      const muH = media(jogosTypeSafe.reduce((s, j) => s + j.fthg, 0))
+      const muA = media(jogosTypeSafe.reduce((s, j) => s + j.ftag, 0))
+      const ligaDescritiva = {
+        muH,
+        muA,
+        varH: media(jogosTypeSafe.reduce((s, j) => s + Math.pow(j.fthg - muH, 2), 0)),
+        varA: media(jogosTypeSafe.reduce((s, j) => s + Math.pow(j.ftag - muA, 2), 0)),
+        totalJogos: n,
+      }
+
+      // Liga sem gols no mando zera o denominador da força: 0 em vez de NaN (que vira null no JSON)
+      const finito = (v: number) => (Number.isFinite(v) ? v : 0)
+      const forcasSeguras = (m: ReturnType<typeof calcularMediasTimeDescritivas>) => {
+        const f = calcularForcasTime(m, ligaDescritiva)
+        return { fcAtC: finito(f.fcAtC), fcDfC: finito(f.fcDfC), fcAtV: finito(f.fcAtV), fcDfV: finito(f.fcDfV) }
+      }
+
+      const mediasHomeDesc = calcularMediasTimeDescritivas(query.homeTeamId, jogosFiltradosHome as any)
+      const mediasAwayDesc = calcularMediasTimeDescritivas(query.awayTeamId, jogosFiltradosAway as any)
+
+      let ligaXG: MediasLigaXG | null = null
+      try {
+        ligaXG = calcularMediasLigaXG(jogosTypeSafe as any)
+      } catch {
+        ligaXG = null
+      }
+      const homeXG = ligaXG ? calcularMediasTimeXGDescritivas(query.homeTeamId, jogosFiltradosHome as any) : null
+      const awayXG = ligaXG ? calcularMediasTimeXGDescritivas(query.awayTeamId, jogosFiltradosAway as any) : null
+
+      return NextResponse.json({
+        data: {
+          previsaoDisponivel: false,
+          motivoIndisponivel: motivo,
+          modelo: query.modelo,
+          medias: { home: mediasHomeDesc, away: mediasAwayDesc, liga: ligaDescritiva },
+          forcas: { home: forcasSeguras(mediasHomeDesc), away: forcasSeguras(mediasAwayDesc) },
+          xgDisponivel: Boolean(ligaXG && homeXG && awayXG),
+          xgJogosDisponiveis: ligaXG?.totalJogos ?? 0,
+          mediasHomeXG: homeXG,
+          mediasAwayXG: awayXG,
+          forcasHomeXG: ligaXG && homeXG ? calcularForcasTimeXG(homeXG, ligaXG) : null,
+          forcasAwayXG: ligaXG && awayXG ? calcularForcasTimeXG(awayXG, ligaXG) : null,
+          ligaMediasXG: ligaXG,
+          oddsFaixasDisponiveisCasa,
+          oddsFaixasDisponiveisVisitante,
+          amostra: { filtrosAtivos, home: amostraHome.resumo, away: amostraAway.resumo },
+          confronto: confrontoResumo,
+        },
+      })
     }
 
-    const jogosTypeSafe = todosOsJogos.map((m) => ({ ...m, fthg: m.fthg!, ftag: m.ftag! }))
+    if (todosOsJogos.length < 20) {
+      return respostaSemPrevisao(`A liga tem só ${todosOsJogos.length} jogos finalizados na temporada (mín. 20).`)
+    }
 
     // Calcular estatísticas globais da liga (NUNCA USAM DECAY)
     const mediasLiga = calcularMediasLiga(jogosTypeSafe as any)
     const piLiga = estimarPiLiga(jogosTypeSafe as any, mediasLiga)
     const varianciaLiga = calcularVarianciaGols(jogosTypeSafe as any, mediasLiga)
     const rhoLiga = estimarRhoEmpirico(jogosTypeSafe as any, mediasLiga)
-
-    // Filtrar jogos
-    let jogosFiltrados = [...jogosTypeSafe]
-
-    if (query.roundFrom || query.roundTo) {
-      jogosFiltrados = jogosFiltrados.filter(j => {
-        if (query.roundFrom && j.round != null && j.round < query.roundFrom) return false
-        if (query.roundTo && j.round != null && j.round > query.roundTo) return false
-        return true
-      })
-    }
-
-    if (query.months) {
-      const allowedMonths = query.months.split(',').map(Number)
-      jogosFiltrados = jogosFiltrados.filter(j => {
-        const month = new Date(j.utcDate).getMonth() + 1
-        return allowedMonths.includes(month)
-      })
-    }
-
-    // Filtro de odds - suporte a faixas não-contíguas
-    const parseFaixas = (csv: string) =>
-      csv.split(',').map(f => {
-        const [min, max] = f.split('-').map(Number)
-        return { min, max }
-      })
-
-    const faixasCasa = query.oddsCasaFaixas ? parseFaixas(query.oddsCasaFaixas) : null
-    const faixasVis = query.oddsVisFaixas ? parseFaixas(query.oddsVisFaixas) : null
-
-    // Filtrar jogos por odds de forma independente para cada time (mando respectivo)
-    const filtrarJogosPorOdds = (teamId: string, jogos: typeof jogosTypeSafe) => {
-      if (!faixasCasa && !faixasVis) return jogos
-
-      return jogos.filter(j => {
-        const isHome = j.homeTeamId === teamId
-        const isAway = j.awayTeamId === teamId
-
-        if (isHome && faixasCasa) {
-          const oddCasa = j.odds.find((o: any) => o.selection === 'home')?.odds
-          // Sem odd = inclui (não penalizar jogos sem dados de odds)
-          if (oddCasa && !faixasCasa.some(f => oddCasa >= f.min && oddCasa <= f.max)) return false
-        }
-        if (isAway && faixasVis) {
-          const oddVis = j.odds.find((o: any) => o.selection === 'away')?.odds
-          if (oddVis && !faixasVis.some(f => oddVis >= f.min && oddVis <= f.max)) return false
-        }
-        return true
-      })
-    }
-
-    const jogosFiltradosHome = filtrarJogosPorOdds(query.homeTeamId, jogosFiltrados)
-    const jogosFiltradosAway = filtrarJogosPorOdds(query.awayTeamId, jogosFiltrados)
-
-    // Computar quais faixas de odds têm jogos para os times selecionados
-    const jogosMandante = jogosTypeSafe.filter(j => j.homeTeamId === query.homeTeamId)
-    const jogosVisitante = jogosTypeSafe.filter(j => j.awayTeamId === query.awayTeamId)
-
-    const oddsFaixasDisponiveisCasa = FAIXAS_ODDS_PADRAO.map(faixa =>
-      jogosMandante.some(j => {
-        const odd = j.odds.find((o: any) => o.selection === 'home')?.odds
-        return odd != null && odd >= faixa.min && odd <= faixa.max
-      })
-    )
-
-    const oddsFaixasDisponiveisVisitante = FAIXAS_ODDS_PADRAO.map(faixa =>
-      jogosVisitante.some(j => {
-        const odd = j.odds.find((o: any) => o.selection === 'away')?.odds
-        return odd != null && odd >= faixa.min && odd <= faixa.max
-      })
-    )
 
     let mediasHome, mediasAway, forcasHome, forcasAway, lambdaH, lambdaA
     let mediasHomePoisson, mediasAwayPoisson, forcasHomePoisson, forcasAwayPoisson, lambdaHPoisson, lambdaAPoisson
@@ -263,10 +269,17 @@ export async function GET(
       forcasAwayPoisson = calcularForcasTime(mediasAwayPoisson, mediasLiga)
 
       if (xgDisponivel) {
-        mediasHomeXGPoisson = calcularMediasTimeXG(query.homeTeamId, jogosFiltradosHome as any)
-        mediasAwayXGPoisson = calcularMediasTimeXG(query.awayTeamId, jogosFiltradosAway as any)
-        forcasHomeXGPoisson = calcularForcasTimeXG(mediasHomeXGPoisson, ligaMediasXG!)
-        forcasAwayXGPoisson = calcularForcasTimeXG(mediasAwayXGPoisson, ligaMediasXG!)
+        try {
+          mediasHomeXGPoisson = calcularMediasTimeXG(query.homeTeamId, jogosFiltradosHome as any)
+          mediasAwayXGPoisson = calcularMediasTimeXG(query.awayTeamId, jogosFiltradosAway as any)
+          forcasHomeXGPoisson = calcularForcasTimeXG(mediasHomeXGPoisson, ligaMediasXG!)
+          forcasAwayXGPoisson = calcularForcasTimeXG(mediasAwayXGPoisson, ligaMediasXG!)
+        } catch (e) {
+          // Sem filtro, falta de xG do time continua sendo erro; com filtro, a amostra pode
+          // ficar com menos de 4 jogos com xG — segue só com gols em vez de derrubar o cálculo.
+          if (!filtrosAtivos) throw e
+          xgDisponivel = false
+        }
       }
 
       const paramsPoisson = {
@@ -295,15 +308,16 @@ export async function GET(
       composicaoPoisson = montarComposicaoLambdas(paramsPoisson as any)
 
       if (query.modelo !== 'POISSON') {
-        // Modelos avançados usam decay (E NUNCA SOFREM FILTROS MANUAIS DE RODADA/MÊS)
-        mediasHome = calcularMediasTimeComDecay(query.homeTeamId, jogosTypeSafe as any, dataReferencia)
-        mediasAway = calcularMediasTimeComDecay(query.awayTeamId, jogosTypeSafe as any, dataReferencia)
+        // Modelos avançados usam decay SOBRE A MESMA AMOSTRA FILTRADA do Poisson: o filtro
+        // escolhe os jogos, o decay só define o peso de cada um. Parâmetros de liga seguem globais.
+        mediasHome = calcularMediasTimeComDecay(query.homeTeamId, jogosFiltradosHome as any, dataReferencia)
+        mediasAway = calcularMediasTimeComDecay(query.awayTeamId, jogosFiltradosAway as any, dataReferencia)
         forcasHome = calcularForcasTime(mediasHome, mediasLiga)
         forcasAway = calcularForcasTime(mediasAway, mediasLiga)
 
         if (xgDisponivel) {
-          mediasHomeXG = calcularMediasTimeXGComDecay(query.homeTeamId, jogosTypeSafe as any, dataReferencia)
-          mediasAwayXG = calcularMediasTimeXGComDecay(query.awayTeamId, jogosTypeSafe as any, dataReferencia)
+          mediasHomeXG = calcularMediasTimeXGComDecay(query.homeTeamId, jogosFiltradosHome as any, dataReferencia)
+          mediasAwayXG = calcularMediasTimeXGComDecay(query.awayTeamId, jogosFiltradosAway as any, dataReferencia)
           forcasHomeXG = calcularForcasTimeXG(mediasHomeXG, ligaMediasXG!)
           forcasAwayXG = calcularForcasTimeXG(mediasAwayXG, ligaMediasXG!)
         }
@@ -343,18 +357,11 @@ export async function GET(
         composicao = composicaoPoisson
       }
     } catch (e: any) {
-      // Contar jogos de cada time no dataset filtrado
-      const homeCasa = jogosFiltradosHome.filter((j: any) => j.homeTeamId === query.homeTeamId).length
-      const homeFora = jogosFiltradosHome.filter((j: any) => j.awayTeamId === query.homeTeamId).length
-      const awayCasa = jogosFiltradosAway.filter((j: any) => j.homeTeamId === query.awayTeamId).length
-      const awayFora = jogosFiltradosAway.filter((j: any) => j.awayTeamId === query.awayTeamId).length
-      const hasFilters = query.roundFrom || query.roundTo || query.months || query.oddsCasaFaixas || query.oddsVisFaixas
-      const filterMsg = hasFilters
-        ? ` Após filtros — Mandante: ${homeCasa} casa / ${homeFora} fora · Visitante: ${awayCasa} casa / ${awayFora} fora (mín. 4 cada).`
-        : ''
-      return NextResponse.json(
-        { error: 'INSUFFICIENT_TEAM_DATA', message: `Dados insuficientes para o cálculo.${filterMsg}${hasFilters ? ' Tente relaxar os filtros.' : ''}` },
-        { status: 400 }
+      return respostaSemPrevisao(
+        'O modelo exige ao menos 4 jogos em casa e 4 fora de cada time. ' +
+        `Mandante: ${amostraHome.resumo.usados} em casa / ${amostraHome.jogosOutroMando.length} fora · ` +
+        `Visitante: ${amostraAway.jogosOutroMando.length} em casa / ${amostraAway.resumo.usados} fora.` +
+        (filtrosAtivos ? ' Relaxe os filtros para projetar.' : '')
       )
     }
 
@@ -469,6 +476,7 @@ export async function GET(
 
     return NextResponse.json({
       data: {
+        previsaoDisponivel: true,
         modelo: modeloSelecionado,
         modeloSelecionado: modeloResolvido,
         rankingModelos,
@@ -505,17 +513,18 @@ export async function GET(
         ligaMediasXG,
         oddsFaixasDisponiveisCasa,
         oddsFaixasDisponiveisVisitante,
-        confronto: confronto ? {
-          id: confronto.id,
-          round: confronto.round,
-          utcDate: confronto.utcDate.toISOString(),
-        } : null,
+        amostra: {
+          filtrosAtivos,
+          home: amostraHome.resumo,
+          away: amostraAway.resumo,
+        },
+        confronto: confrontoResumo,
       },
     })
   } catch (error) {
     console.error('[GET /api/ligas/[slug]/previsao]', error)
     return NextResponse.json(
-      { error: 'INTERNAL_SERVER_ERROR', message: 'Erro interno do servidor' },
+      { error: 'INTERNAL_SERVER_ERROR', message: 'Nenhum histórico disponível para analisar este confronto no momento.' },
       { status: 500 }
     )
   }

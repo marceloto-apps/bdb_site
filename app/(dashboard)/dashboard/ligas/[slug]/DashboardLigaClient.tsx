@@ -20,7 +20,9 @@ import { AlertCircle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import Link from 'next/link'
-import { TimeOption, ModoModelo, PrevisaoState, MapaValorResponse, DispersaoLigaResponse } from '@/types/liga'
+import { TimeOption, ModoModelo, PrevisaoState, MapaValorResponse, DispersaoLigaResponse, AmostraConfronto } from '@/types/liga'
+import { ContadorAmostra } from '@/components/ligas/ContadorAmostra'
+import { AvisoPrevisaoIndisponivel } from '@/components/ligas/AvisoPrevisaoIndisponivel'
 import { TabOddsProfit } from '@/components/ligas/partida/TabOddsProfit'
 import { TabGolsXg } from '@/components/ligas/partida/TabGolsXg'
 import { TabEscanteiosCartoes } from '@/components/ligas/partida/TabEscanteiosCartoes'
@@ -30,6 +32,7 @@ import type { LambdaMethod } from '@/lib/analytics/types'
 import { OddsMercado } from '@/lib/validations/odds-mercado'
 
 interface PartidaSerializada {
+  id: string
   round: number | null
   utcDate: string
   homeTeamId: string
@@ -65,9 +68,10 @@ export function DashboardLigaClient({
   const [previsao, setPrevisao] = useState<PrevisaoState | null>(null)
   const [mapaValor, setMapaValor] = useState<MapaValorResponse | null>(null)
   const [oddsMercado, setOddsMercado] = useState<OddsMercado | null>(null)
-  const [estatisticas, setEstatisticas] = useState<{ homeStats: any, awayStats: any } | null>(null)
+  const [estatisticas, setEstatisticas] = useState<{ homeStats: any, awayStats: any, amostra?: AmostraConfronto } | null>(null)
   const [isCalculating, setIsCalculating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [semHistorico, setSemHistorico] = useState(false)
   const [filtrosAbertos, setFiltrosAbertos] = useState(false)
   const [activeTab, setActiveTab] = useState('resumo')
   const [mandoContext, setMandoContext] = useState<'CASA_VISITANTE' | 'GERAL'>('CASA_VISITANTE')
@@ -75,11 +79,32 @@ export function DashboardLigaClient({
   const [jogadores, setJogadores] = useState<any | null>(null)
   const [isCalculatingJogadores, setIsCalculatingJogadores] = useState(false)
 
+  // `previsao` sempre traz a parte descritiva; `projecao` só existe quando o modelo rodou
+  const projecao = previsao && previsao.previsaoDisponivel !== false ? previsao : null
+  const motivoSemProjecao = previsao && previsao.previsaoDisponivel === false ? previsao.motivoIndisponivel : undefined
+
   const nomeTimeCasa = useMemo(() => times.find(t => t.id === filtros.homeTeamId)?.name ?? '', [times, filtros.homeTeamId])
   const nomeTimeVisitante = useMemo(() => times.find(t => t.id === filtros.awayTeamId)?.name ?? '', [times, filtros.awayTeamId])
 
+  // Amostra APLICADA (a do último "Recalcular"), para o gráfico de Evolução mostrar exatamente
+  // os jogos que entraram no cálculo — inclusive o corte por odds, que o cliente não tem como
+  // refazer. Se ela não for deste confronto/contexto, vale o filtro local de rodadas e meses.
+  const amostraEvolucao = useMemo(() => {
+    const candidatas = [estatisticas?.amostra, previsao?.amostra]
+    return candidatas.find(a =>
+      a &&
+      (a.contexto ?? 'CASA_VISITANTE') === mandoContext &&
+      a.home.teamId === filtros.homeTeamId &&
+      a.away.teamId === filtros.awayTeamId
+    ) ?? null
+  }, [estatisticas, previsao, mandoContext, filtros.homeTeamId, filtros.awayTeamId])
+
   const partidasParaEvolucaoHome = useMemo(() => {
     if (!filtros.homeTeamId) return []
+    if (amostraEvolucao) {
+      const ids = new Set(amostraEvolucao.home.matchIds)
+      return partidasIniciais.filter(p => ids.has(p.id))
+    }
     let matches = partidasIniciais.filter(p => p.homeTeamId === filtros.homeTeamId || p.awayTeamId === filtros.homeTeamId)
     
     // Filtro de Mando (CASA_VISITANTE = apenas jogos em casa)
@@ -100,10 +125,14 @@ export function DashboardLigaClient({
     }
     
     return matches
-  }, [partidasIniciais, filtros.homeTeamId, mandoContext, filtros.roundFrom, filtros.roundTo, filtros.months])
+  }, [partidasIniciais, amostraEvolucao, filtros.homeTeamId, mandoContext, filtros.roundFrom, filtros.roundTo, filtros.months])
 
   const partidasParaEvolucaoAway = useMemo(() => {
     if (!filtros.awayTeamId) return []
+    if (amostraEvolucao) {
+      const ids = new Set(amostraEvolucao.away.matchIds)
+      return partidasIniciais.filter(p => ids.has(p.id))
+    }
     let matches = partidasIniciais.filter(p => p.homeTeamId === filtros.awayTeamId || p.awayTeamId === filtros.awayTeamId)
     
     // Filtro de Mando (CASA_VISITANTE = apenas jogos fora de casa)
@@ -124,7 +153,7 @@ export function DashboardLigaClient({
     }
     
     return matches
-  }, [partidasIniciais, filtros.awayTeamId, mandoContext, filtros.roundFrom, filtros.roundTo, filtros.months])
+  }, [partidasIniciais, amostraEvolucao, filtros.awayTeamId, mandoContext, filtros.roundFrom, filtros.roundTo, filtros.months])
 
   const handleFiltrosChange = (updates: Partial<typeof filtros>) => {
     if (updates.homeTeamId !== undefined) setters.setHomeTeamId(updates.homeTeamId)
@@ -174,12 +203,21 @@ export function DashboardLigaClient({
   const fetchPrevisao = async (paramsObj: Record<string, string>) => {
     setIsCalculating(true)
     setError(null)
+    setSemHistorico(false)
     try {
       const params = new URLSearchParams(paramsObj)
       const res = await fetch(`/api/ligas/${liga.slug}/previsao?${params}`)
-      const json = await res.json()
-      if (!res.ok) {
-        setError(json.message || json.error || 'Erro desconhecido')
+      // Um 5xx da plataforma (timeout, etc.) pode não vir em JSON
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !json?.data) {
+        if (res.status >= 500 || res.status === 404 || !json) {
+          // Falha ao montar o confronto: não há o que mostrar. Limpa o cálculo anterior para
+          // não deixar números de outro confronto na tela e avisa no lugar do conteúdo.
+          setPrevisao(null)
+          setSemHistorico(true)
+        } else {
+          setError(json.message || json.error || 'Erro desconhecido')
+        }
         return
       }
       setPrevisao(json.data)
@@ -297,6 +335,7 @@ export function DashboardLigaClient({
         onConfrontoDefinido={(mandanteId, visitanteId) => {
           handleFiltrosChange({ homeTeamId: mandanteId, awayTeamId: visitanteId })
           resetFiltros()
+          setSemHistorico(false)
           setFiltrosAbertos(false)
         }}
         onCalcular={handleCalcularInicial}
@@ -315,11 +354,13 @@ export function DashboardLigaClient({
       {/* Conteúdo */}
       {previsao ? (
         <div className="space-y-6 animate-in fade-in duration-500">
-          <BannerModeloWarning 
-            nbWarning={previsao.nbWarning}
-            rhoClamped={previsao.rhoClamped}
-            modeloSelecionado={previsao.modeloSelecionado || previsao.modelo}
-          />
+          {projecao && (
+            <BannerModeloWarning 
+              nbWarning={projecao.nbWarning}
+              rhoClamped={projecao.rhoClamped}
+              modeloSelecionado={projecao.modeloSelecionado || projecao.modelo}
+            />
+          )}
 
           <FiltrosAvancados
             filtros={filtros}
@@ -400,6 +441,31 @@ export function DashboardLigaClient({
               </div>
             )}
 
+            {activeTab !== 'resumo' && activeTab !== 'jogadores' && estatisticas?.amostra && (
+              <div className="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-sm font-semibold animate-in fade-in">
+                <span className="flex gap-1.5">
+                  <span className="font-normal text-muted-foreground">{nomeTimeCasa}:</span>
+                  <ContadorAmostra
+                    resumo={estatisticas.amostra.home}
+                    rotulo={estatisticas.amostra.contexto === 'GERAL' ? 'jogos' : 'jogos em casa'}
+                  />
+                </span>
+                <span className="flex gap-1.5">
+                  <span className="font-normal text-muted-foreground">{nomeTimeVisitante}:</span>
+                  <ContadorAmostra
+                    resumo={estatisticas.amostra.away}
+                    rotulo={estatisticas.amostra.contexto === 'GERAL' ? 'jogos' : 'jogos fora'}
+                  />
+                </span>
+              </div>
+            )}
+
+            {activeTab === 'jogadores' && previsao.amostra?.filtrosAtivos && (
+              <p className="mb-4 text-xs text-muted-foreground animate-in fade-in">
+                Os Filtros Avançados não se aplicam às estatísticas de jogadores.
+              </p>
+            )}
+
             <TabsContent value="resumo" className="outline-none space-y-6">
               <PainelMedias
             medias={previsao.medias}
@@ -413,32 +479,38 @@ export function DashboardLigaClient({
             ligaMediasXG={previsao.ligaMediasXG}
             xgDisponivel={previsao.xgDisponivel}
             dispersao={dispersao}
+            amostra={previsao.amostra}
+            projecaoIndisponivel={!projecao}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
-            {/* Modelos — ESQUERDA */}
-            <div>
-              <SeletorModelo
-                modo={modelo}
-                onChange={handleModeloChange}
-                warnings={previsao.warnings}
-                modeloSelecionado={previsao.modeloSelecionado}
-                vereditoDispersao={previsao.vereditoDispersao}
-                sinaisTriagem={previsao.sinaisTriagem}
-              />
-            </div>
+          {projecao ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+              {/* Modelos — ESQUERDA */}
+              <div>
+                <SeletorModelo
+                  modo={modelo}
+                  onChange={handleModeloChange}
+                  warnings={projecao.warnings}
+                  modeloSelecionado={projecao.modeloSelecionado}
+                  vereditoDispersao={projecao.vereditoDispersao}
+                  sinaisTriagem={projecao.sinaisTriagem}
+                />
+              </div>
 
-            {/* Lambdas — DIREITA */}
-            <div>
-              <SeletorLambda
-                todosLambdas={previsao.todosLambdas}
-                composicao={previsao.composicao}
-                lambdaAtivo={previsao.lambdaMethodAtivo}
-                xgDisponivel={previsao.xgDisponivel}
-                onChange={handleLambdaChange}
-              />
+              {/* Lambdas — DIREITA */}
+              <div>
+                <SeletorLambda
+                  todosLambdas={projecao.todosLambdas}
+                  composicao={projecao.composicao}
+                  lambdaAtivo={projecao.lambdaMethodAtivo}
+                  xgDisponivel={projecao.xgDisponivel}
+                  onChange={handleLambdaChange}
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <AvisoPrevisaoIndisponivel titulo="Modelos e λ" motivo={motivoSemProjecao} />
+          )}
 
           {/* SEÇÃO 3: MERCADOS E VALOR */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -451,13 +523,17 @@ export function DashboardLigaClient({
               />
             </div>
             <div className="lg:col-span-7">
-              <PainelMercados
-                mercados={previsao.mercados}
-                evPorMercado={previsao.evPorMercado}
-                homeTeamName={nomeTimeCasa}
-                awayTeamName={nomeTimeVisitante}
-                oddsMercado={oddsMercado}
-              />
+              {projecao ? (
+                <PainelMercados
+                  mercados={projecao.mercados}
+                  evPorMercado={projecao.evPorMercado}
+                  homeTeamName={nomeTimeCasa}
+                  awayTeamName={nomeTimeVisitante}
+                  oddsMercado={oddsMercado}
+                />
+              ) : (
+                <AvisoPrevisaoIndisponivel titulo="Probabilidades e valor esperado" />
+              )}
             </div>
           </div>
 
@@ -468,19 +544,23 @@ export function DashboardLigaClient({
           )}
 
           {/* SEÇÃO 4: VISUALIZAÇÕES MATRIZ E HANDICAPS */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-7">
-              <PainelMatrizPlacares
-                matrizPlacares={previsao.matrizPlacares}
-                homeTeamName={nomeTimeCasa}
-                awayTeamName={nomeTimeVisitante}
-                modelo={previsao.modelo}
-              />
+          {projecao ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              <div className="lg:col-span-7">
+                <PainelMatrizPlacares
+                  matrizPlacares={projecao.matrizPlacares}
+                  homeTeamName={nomeTimeCasa}
+                  awayTeamName={nomeTimeVisitante}
+                  modelo={projecao.modelo}
+                />
+              </div>
+              <div className="lg:col-span-5">
+                <PainelProjecaoHandicaps matrizPlacares={projecao.matrizPlacares} />
+              </div>
             </div>
-            <div className="lg:col-span-5">
-              <PainelProjecaoHandicaps matrizPlacares={previsao.matrizPlacares} />
-            </div>
-          </div>
+          ) : (
+            <AvisoPrevisaoIndisponivel titulo="Matriz de placares e handicaps" />
+          )}
 
           {/* SEÇÃO 5: EVOLUÇÃO DE GOLS */}
           <div className="w-full">
@@ -521,6 +601,15 @@ export function DashboardLigaClient({
                )}
             </TabsContent>
           </Tabs>
+        </div>
+      ) : semHistorico ? (
+        <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed rounded-lg bg-muted/20 animate-in fade-in">
+          <AlertCircle className="w-6 h-6 text-yellow-500 mb-3" />
+          <h3 className="text-lg font-semibold mb-2">Nenhum histórico disponível</h3>
+          <p className="text-muted-foreground max-w-md">
+            Não encontramos histórico de jogos para analisar {nomeTimeCasa && nomeTimeVisitante ? `${nomeTimeCasa} x ${nomeTimeVisitante}` : 'este confronto'} nesta
+            temporada. Tente outro confronto ou volte mais tarde, quando houver jogos registrados.
+          </p>
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center p-12 text-center border border-dashed rounded-lg bg-muted/20">

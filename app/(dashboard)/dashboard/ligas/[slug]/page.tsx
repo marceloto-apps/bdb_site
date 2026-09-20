@@ -110,6 +110,7 @@ export default async function LigaDashboardPage({ params }: { params: { slug: st
 
   // Serializar partidas para client (Date -> string)
   const partidasIniciais = partidas.map(p => ({
+    id: p.id,
     round: p.round,
     utcDate: p.utcDate.toISOString(),
     homeTeamId: p.homeTeamId,

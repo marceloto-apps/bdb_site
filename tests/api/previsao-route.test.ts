@@ -201,4 +201,71 @@ describe('GET /api/ligas/[slug]/previsao', () => {
     
     spy.mockRestore()
   })
+
+  describe('Filtros Avançados e amostra insuficiente', () => {
+    const T1 = 'cm2a2q0o0000108ld2x202xyz'
+    const T2 = 'cm2a2q0o0000008ld2x201xyz'
+
+    // 40 jogos: T1 em casa nas rodadas 1-10 e fora nas 11-20; T2 em casa nas 21-30 e fora nas 31-40
+    const montarJogos = (total = 40) => Array.from({ length: total }).map((_, i) => {
+      let home = 'tx', away = 'ty'
+      if (i < 10) { home = T1; away = 'cm2a2q0o0000308ld2x204xyz' }
+      else if (i < 20) { home = 'cm2a2q0o0000308ld2x204xyz'; away = T1 }
+      else if (i < 30) { home = T2; away = 'cm2a2q0o0000408ld2x205xyz' }
+      else { home = 'cm2a2q0o0000408ld2x205xyz'; away = T2 }
+      return {
+        id: `m${i}`,
+        fthg: i % 3,
+        ftag: i % 2,
+        homeTeamId: home,
+        awayTeamId: away,
+        utcDate: new Date(`2026-05-${(i % 28) + 1}T20:00:00Z`),
+        round: i + 1,
+        odds: [],
+      }
+    })
+
+    const chamar = async (qs: string, jogos = montarJogos()) => {
+      ;(prisma.competition.findUnique as any).mockResolvedValue({ id: 'c1', seasons: [{ id: 's1', year: 2026 }] })
+      ;(prisma.match.findFirst as any).mockResolvedValue(null)
+      ;(prisma.match.findMany as any).mockResolvedValue(jogos)
+      const req = new NextRequest(`${baseUrl}?homeTeamId=${T1}&awayTeamId=${T2}&${qs}`)
+      const res = await GET(req, { params: { slug: 'brazil-serie-a' } })
+      return { res, json: await res.json() }
+    }
+
+    it('modelos com decay também respeitam o filtro de rodadas', async () => {
+      const { res, json } = await chamar('modelo=DIXON_COLES&roundFrom=4')
+
+      expect(res.status).toBe(200)
+      expect(json.data.previsaoDisponivel).toBe(true)
+      expect(json.data.medias.home.jogosCasa).toBe(7)
+      expect(json.data.amostra.home).toMatchObject({ total: 10, usados: 7, foraPeriodo: 3 })
+      expect(json.data.amostra.filtrosAtivos).toBe(true)
+    })
+
+    it('filtro apertado demais devolve 200 sem projeção, com a parte descritiva', async () => {
+      const { res, json } = await chamar('modelo=AUTO&roundFrom=9')
+
+      expect(res.status).toBe(200)
+      expect(json.data.previsaoDisponivel).toBe(false)
+      expect(json.data.motivoIndisponivel).toContain('Relaxe os filtros')
+      expect(json.data.medias.home.jogosCasa).toBe(2)
+      expect(json.data.forcas.home).toBeDefined()
+      expect(json.data.oddsFaixasDisponiveisCasa).toHaveLength(9)
+      expect(json.data.matrizPlacares).toBeUndefined()
+      expect(json.data.mercados).toBeUndefined()
+    })
+
+    it('liga com menos de 20 jogos devolve 200 sem projeção', async () => {
+      const { res, json } = await chamar('modelo=AUTO', montarJogos(12))
+
+      expect(res.status).toBe(200)
+      expect(json.data.previsaoDisponivel).toBe(false)
+      expect(json.data.medias.home.jogosCasa).toBe(10)
+      // visitante sem jogo nenhum: médias 0, nunca NaN/null
+      expect(json.data.medias.away.mgv).toBe(0)
+      expect(json.data.forcas.away.fcAtV).toBe(0)
+    })
+  })
 })

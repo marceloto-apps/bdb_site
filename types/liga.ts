@@ -1,6 +1,7 @@
 import type { LambdaMethod, LambdasCalculados, LambdaComposicao, MediasTimeXG, ForcasTimeXG, MediasLigaXG } from '@/lib/analytics/types'
 import type { MediasTime, ForcasTime } from '@/lib/analytics/forca-time'
 import type { MediasLigaCalculadas } from '@/lib/analytics/medias'
+import type { ResumoAmostra, ContextoMando } from '@/lib/analytics/amostra'
 
 export interface TimeOption {
   id: string
@@ -64,6 +65,7 @@ export interface MercadosModel {
 }
 
 export interface PrevisaoResponse {
+  previsaoDisponivel?: true
   modelo: ModeloEstatistico
   medias: {
     home: MediasTime
@@ -96,6 +98,7 @@ export interface PrevisaoResponse {
   ligaMediasXG?: MediasLigaXG | null
   oddsFaixasDisponiveisCasa: boolean[]
   oddsFaixasDisponiveisVisitante: boolean[]
+  amostra?: AmostraConfronto
 
   modeloSelecionado?: ModeloEstatistico
   rankingModelos?: ModeloRanking[]
@@ -112,6 +115,14 @@ export interface PrevisaoResponse {
   }
 }
 
+// Jogos que entraram no cálculo depois dos Filtros Avançados (ver lib/analytics/amostra.ts)
+export interface AmostraConfronto {
+  filtrosAtivos: boolean
+  contexto?: ContextoMando
+  home: ResumoAmostra
+  away: ResumoAmostra
+}
+
 export interface ModeloRanking {
   modelo: ModeloEstatistico
   aic: number
@@ -120,7 +131,23 @@ export interface ModeloRanking {
   confianca: 'ALTA' | 'MEDIA' | 'BAIXA' | null
 }
 
-export type PrevisaoState = PrevisaoResponse
+/**
+ * Amostra que não sustenta o modelo (time com < 4 jogos num mando, liga com < 20 jogos, filtros
+ * apertados demais): a API responde 200 só com a parte descritiva, e a tela avisa no lugar da
+ * projeção em vez de esconder estatísticas, odds e jogadores.
+ */
+export type PrevisaoIndisponivel = Pick<
+  PrevisaoResponse,
+  | 'medias' | 'forcas' | 'xgDisponivel' | 'xgJogosDisponiveis'
+  | 'mediasHomeXG' | 'mediasAwayXG' | 'forcasHomeXG' | 'forcasAwayXG' | 'ligaMediasXG'
+  | 'oddsFaixasDisponiveisCasa' | 'oddsFaixasDisponiveisVisitante' | 'amostra'
+> & {
+  previsaoDisponivel: false
+  motivoIndisponivel: string
+  modelo: ModoModelo
+}
+
+export type PrevisaoState = PrevisaoResponse | PrevisaoIndisponivel
 
 export interface MapaValorFaixa {
   faixa: { label: string; min: number; max: number }

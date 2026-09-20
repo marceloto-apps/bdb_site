@@ -107,6 +107,34 @@ function getFrequencias(jogos: Match[]): FrequenciasObservadas {
   }
 }
 
+/**
+ * Mesmas médias de `calcularMediasTime`, SEM o mínimo de jogos: é só descrição da amostra
+ * (mando sem jogo fica com média 0). Serve para o painel continuar mostrando o que existe
+ * quando a amostra não sustenta a previsão — nunca usar como insumo de λ.
+ */
+export function calcularMediasTimeDescritivas(teamId: string, jogos: Match[]): MediasTime {
+  const jogosConcluidos = jogos.filter((j) => j.fthg !== null && j.ftag !== null)
+
+  const jogosCasa = jogosConcluidos.filter(j => j.homeTeamId === teamId)
+  const jogosFora = jogosConcluidos.filter(j => j.awayTeamId === teamId)
+  const media = (soma: number, n: number) => (n > 0 ? soma / n : 0)
+
+  return {
+    mgc: media(jogosCasa.reduce((s, j) => s + (j.fthg as number), 0), jogosCasa.length),
+    mgsc: media(jogosCasa.reduce((s, j) => s + (j.ftag as number), 0), jogosCasa.length),
+    mgv: media(jogosFora.reduce((s, j) => s + (j.ftag as number), 0), jogosFora.length),
+    mgsv: media(jogosFora.reduce((s, j) => s + (j.fthg as number), 0), jogosFora.length),
+    jogosCasa: jogosCasa.length,
+    jogosFora: jogosFora.length,
+    dispersaoCasa: getDispersao(jogosCasa.map(j => j.fthg as number)),
+    dispersaoFora: getDispersao(jogosFora.map(j => j.ftag as number)),
+    freqCasa: getFrequencias(jogosCasa),
+    freqFora: getFrequencias(jogosFora),
+    formaCasa: getForma(jogosCasa, true),
+    formaFora: getForma(jogosFora, false),
+  }
+}
+
 export function calcularMediasTime(teamId: string, jogos: Match[]): MediasTime {
   const jogosConcluidos = jogos.filter((j) => j.fthg !== null && j.ftag !== null)
   

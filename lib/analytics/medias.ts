@@ -126,6 +126,36 @@ export function calcularMediasTimeXG(
 }
 
 /**
+ * Mesmas médias de `calcularMediasTimeXG`, SEM o mínimo de jogos — só descrição da amostra,
+ * para o painel quando a previsão está indisponível. `null` se o time não tem jogo com xG.
+ */
+export function calcularMediasTimeXGDescritivas(
+  teamId: string,
+  jogos: MatchComStats[]
+): MediasTimeXG | null {
+  const jogosComXG = jogos.filter(
+    j => j.stats?.homeXg != null && j.stats?.awayXg != null
+  )
+
+  const jogosCasa = jogosComXG.filter(j => j.homeTeamId === teamId)
+  const jogosFora = jogosComXG.filter(j => j.awayTeamId === teamId)
+  if (jogosCasa.length === 0 && jogosFora.length === 0) return null
+
+  const media = (soma: number, n: number) => (n > 0 ? soma / n : 0)
+
+  return {
+    xgFC: media(jogosCasa.reduce((s, j) => s + j.stats!.homeXg!, 0), jogosCasa.length),
+    xgSC: media(jogosCasa.reduce((s, j) => s + j.stats!.awayXg!, 0), jogosCasa.length),
+    xgFV: media(jogosFora.reduce((s, j) => s + j.stats!.awayXg!, 0), jogosFora.length),
+    xgSV: media(jogosFora.reduce((s, j) => s + j.stats!.homeXg!, 0), jogosFora.length),
+    jogosCasa: jogosCasa.length,
+    jogosFora: jogosFora.length,
+    dispersaoCasa: getDispersao(jogosCasa.map(j => j.stats!.homeXg!)),
+    dispersaoFora: getDispersao(jogosFora.map(j => j.stats!.awayXg!)),
+  }
+}
+
+/**
  * Calcula forças individuais do time via xG.
  * Estrutura idêntica a calcularForcasTime, usando xG como input.
  */

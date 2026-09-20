@@ -1722,9 +1722,9 @@ Os Modelos 2, 3 e 4 são evoluções deliberadas — não devem replicar comport
 | **Correção τ(ρ)** | ❌ Não tem | ✅ Modelo 2 exclusivamente |
 | **Validação de amostra mínima** | ❌ Calcula com qualquer N | ✅ Bloqueia se time tem < 5 jogos casa/fora |
 | **Validação de liga** | ❌ Calcula com qualquer total | ✅ Bloqueia se liga tem < 20 jogos |
-| **Filtros de odd no DASH** | ✅ Afeta visualização | ✅ Afeta visualização (mas não o modelo) |
+| **Filtros do DASH (rodadas, meses, odds)** | ✅ Afeta visualização | ✅ Definem a amostra do time em TODOS os modelos e abas (`lib/analytics/amostra.ts`); nos Modelos 2–4 o decay pondera os jogos que sobraram. Parâmetros de liga (μ, ρ, π, variância) seguem globais |
 | **Goleada Casa/Visit** | ✅ h≥4 e diferença ≥3 | ✅ Mesma definição |
-| **Tratamento de #N/A** | ⚠️ Mostra `#N/A` na célula | ✅ Retorna erro `INSUFFICIENT_DATA` na API |
+| **Tratamento de #N/A** | ⚠️ Mostra `#N/A` na célula | ✅ `/previsao` responde 200 com `previsaoDisponivel: false` + `motivoIndisponivel` e só a parte descritiva; a tela avisa no lugar da projeção e mantém estatísticas, odds e jogadores |
 
 ### 16.1 O que os Modelos Avançados melhoram sobre a planilha
 

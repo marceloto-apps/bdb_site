@@ -4,6 +4,7 @@ import { auth } from '@/auth'
 import { previsaoQuerySchema } from '@/lib/validations/liga'
 import { getSeasonDateFilter } from '@/lib/utils/season-filter'
 import { buildTeamMatchStats } from '@/lib/analytics/estatisticas-builder'
+import { construirAmostraTime, temFiltroAtivo } from '@/lib/analytics/amostra'
 
 export async function GET(
   req: Request,
@@ -89,10 +90,11 @@ export async function GET(
         // substitui as da TheStatsAPI em `MatchOdds`, porque a unique da tabela não deixa as
         // duas fontes conviverem na mesma casa. Nas ligas em que o Flashscore não cota a
         // bet365 (USL, J2, Rússia…), o histórico antigo segue aqui em vez de a amostra sumir.
+        // Vêm os dois `oddsType`: a amostra é cortada pela odd de referência (fechamento, senão
+        // abertura) e só o cálculo de profit usa o tipo escolhido no toggle — ver `paraProfit`.
         odds: {
           where: {
             bookmaker: { name: 'Bet365' },
-            oddsType: targetOddsType,
           },
           orderBy: { createdAt: 'desc' }, // Tenta pegar a mais recente
           include: { market: true }
@@ -105,64 +107,16 @@ export async function GET(
     // Remove duplicates because a match between homeTeam and awayTeam satisfies multiple OR conditions
     const uniqueMatches = Array.from(new Map(todosOsJogos.map(item => [item.id, item])).values())
 
-    let jogosFiltrados = [...uniqueMatches]
+    // Amostra de cada time sob os Filtros Avançados — mesma função usada em /previsao
+    const contexto = query.mandoContext ?? 'CASA_VISITANTE'
+    const amostraHome = construirAmostraTime(uniqueMatches, homeTeam.id, 'home', query, contexto)
+    const amostraAway = construirAmostraTime(uniqueMatches, awayTeam.id, 'away', query, contexto)
 
-    if (query.roundFrom || query.roundTo) {
-      jogosFiltrados = jogosFiltrados.filter(j => {
-        if (query.roundFrom && j.round != null && j.round < query.roundFrom) return false
-        if (query.roundTo && j.round != null && j.round > query.roundTo) return false
-        return true
-      })
-    }
+    const paraProfit = (jogos: typeof uniqueMatches) =>
+      jogos.map(j => ({ ...j, odds: j.odds.filter(o => o.oddsType === targetOddsType) }))
 
-    if (query.months) {
-      const allowedMonths = query.months.split(',').map(Number)
-      jogosFiltrados = jogosFiltrados.filter(j => {
-        const month = new Date(j.utcDate).getMonth() + 1
-        return allowedMonths.includes(month)
-      })
-    }
-
-    // Filtro de odds - suporte a faixas não-contíguas
-    const parseFaixas = (csv: string) =>
-      csv.split(',').map(f => {
-        const [min, max] = f.split('-').map(Number)
-        return { min, max }
-      })
-
-    const faixasCasa = query.oddsCasaFaixas ? parseFaixas(query.oddsCasaFaixas) : null
-    const faixasVis = query.oddsVisFaixas ? parseFaixas(query.oddsVisFaixas) : null
-
-    const filtrarJogosPorOdds = (teamId: string, jogos: typeof uniqueMatches) => {
-      if (!faixasCasa && !faixasVis) return jogos
-
-      return jogos.filter(j => {
-        const isHome = j.homeTeamId === teamId
-        const isAway = j.awayTeamId === teamId
-
-        if (isHome && faixasCasa) {
-          const oddCasa = j.odds.find((o: any) => o.selection === 'home')?.odds
-          if (oddCasa && !faixasCasa.some(f => oddCasa >= f.min && oddCasa <= f.max)) return false
-        }
-        if (isAway && faixasVis) {
-          const oddVis = j.odds.find((o: any) => o.selection === 'away')?.odds
-          if (oddVis && !faixasVis.some(f => oddVis >= f.min && oddVis <= f.max)) return false
-        }
-        return true
-      })
-    }
-
-    let homeMatches = jogosFiltrados
-    let awayMatches = jogosFiltrados
-
-    if (query.mandoContext === 'CASA_VISITANTE' || !query.mandoContext) {
-      homeMatches = jogosFiltrados.filter(j => j.homeTeamId === homeTeam.id)
-      awayMatches = jogosFiltrados.filter(j => j.awayTeamId === awayTeam.id)
-    }
-
-    // Aplicar filtros de odds de forma independente
-    homeMatches = filtrarJogosPorOdds(homeTeam.id, homeMatches)
-    awayMatches = filtrarJogosPorOdds(awayTeam.id, awayMatches)
+    const homeMatches = paraProfit(amostraHome.jogos)
+    const awayMatches = paraProfit(amostraAway.jogos)
 
     const homeStats = buildTeamMatchStats(homeTeam.id, homeTeam.name, homeMatches)
     const awayStats = buildTeamMatchStats(awayTeam.id, awayTeam.name, awayMatches)
@@ -171,6 +125,12 @@ export async function GET(
       data: {
         homeStats,
         awayStats,
+        amostra: {
+          filtrosAtivos: temFiltroAtivo(query),
+          contexto,
+          home: amostraHome.resumo,
+          away: amostraAway.resumo,
+        },
       },
     })
   } catch (error) {

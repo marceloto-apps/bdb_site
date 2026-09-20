@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma'
 import { gerarSlug } from '@/lib/utils/slug'
 import { auth } from '@/auth'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET() {
   try {
     const categorias = await prisma.category.findMany({

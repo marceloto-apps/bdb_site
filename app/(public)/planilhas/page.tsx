@@ -16,11 +16,16 @@ export const metadata = seo({
 })
 
 export default async function PlanilhasPage() {
-  // Busca planilhas free do banco
-  const planilhasFree = await prisma.spreadsheet.findMany({
-    where: { isPremium: false },
-    orderBy: { order: 'asc' },
-  })
+  // Busca planilhas free do banco com fallback defensivo
+  let planilhasFree: any[] = []
+  try {
+    planilhasFree = await prisma.spreadsheet.findMany({
+      where: { isPremium: false },
+      orderBy: { order: 'asc' },
+    })
+  } catch (error) {
+    console.error('Erro ao buscar planilhas no banco de dados:', error)
+  }
 
   return (
     <main className="min-h-screen">

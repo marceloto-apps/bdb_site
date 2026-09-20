@@ -1,6 +1,8 @@
 import { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const SITE_URL = 'https://bigdatabet.com.br'
 
@@ -32,17 +34,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ]
 
-  const articles = await prisma.article.findMany({
-    where: { status: 'PUBLICADO' },
-    select: { slug: true, updatedAt: true },
-  })
+  try {
+    const articles = await prisma.article.findMany({
+      where: { status: 'PUBLICADO' },
+      select: { slug: true, updatedAt: true },
+    })
 
-  const dynamicPages: MetadataRoute.Sitemap = articles.map((article) => ({
-    url: `${SITE_URL}/artigos/${article.slug}`,
-    lastModified: article.updatedAt,
-    changeFrequency: 'weekly',
-    priority: 0.7,
-  }))
+    const dynamicPages: MetadataRoute.Sitemap = articles.map((article) => ({
+      url: `${SITE_URL}/artigos/${article.slug}`,
+      lastModified: article.updatedAt,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    }))
 
-  return [...staticPages, ...dynamicPages]
+    return [...staticPages, ...dynamicPages]
+  } catch (error) {
+    console.error('[sitemap] Erro ao buscar artigos do banco de dados:', error)
+    return staticPages
+  }
 }

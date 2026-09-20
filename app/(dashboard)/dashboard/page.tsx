@@ -1,22 +1,32 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { BookOpen, Bookmark, Clock } from 'lucide-react'
+import { Trophy, BookOpen, ChevronRight, Clock, Bookmark } from 'lucide-react'
 import { requireAuth } from '@/lib/auth-helpers'
 import { carregarVisaoGeral } from '@/lib/dashboard/visao-geral'
+import { carregarJogosDoDia } from '@/lib/dashboard/jogos-do-dia'
+import { DashboardJogosDoDia } from '@/components/dashboard/DashboardJogosDoDia'
+import { DashboardAcessosRapidos } from '@/components/dashboard/DashboardAcessosRapidos'
 import { DashboardArtigoCard } from '@/components/dashboard/DashboardArtigoCard'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 export const metadata: Metadata = {
-  title: 'Visão Geral',
+  title: 'Visão Geral - BDB',
 }
 
 export default async function DashboardPage() {
   const user = await requireAuth()
-  const dados = await carregarVisaoGeral(user.id)
 
-  const { usuario, ultimasLeituras, favoritosRecentes, estatisticas } = dados
+  // Carregar jogos do dia e dados do perfil/artigos em paralelo
+  const [dadosArtigos, dadosJogos] = await Promise.all([
+    carregarVisaoGeral(user.id),
+    carregarJogosDoDia(user.id),
+  ])
 
-  // Saudação dinâmica com fuso horário de SP
+  const { usuario, ultimasLeituras, favoritosRecentes } = dadosArtigos
+  const { partidas, ligas, estatisticas, dataReferencia, isVip } = dadosJogos
+
+  // Saudação dinâmica com fuso horário de São Paulo
   const horaSP = parseInt(
     new Intl.DateTimeFormat('pt-BR', {
       hour: 'numeric',
@@ -30,153 +40,141 @@ export default async function DashboardPage() {
     horaSP < 18 ? 'Boa tarde' :
     'Boa noite'
 
-  const userFirstName = usuario.name?.split(' ')[0] || 'Visitante'
-
-  // Data formatada com fuso horário de SP
-  const dataFormatada = new Intl.DateTimeFormat('pt-BR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'America/Sao_Paulo',
-  }).format(new Date())
-
-  // Pluralização
-  const labelLeituras = estatisticas.totalLeituras === 1 ? 'Artigo lido' : 'Artigos lidos'
-  const labelFavoritos = estatisticas.totalFavoritos === 1 ? 'Favorito salvo' : 'Favoritos salvos'
+  const userFirstName = usuario.name?.split(' ')[0] || 'Membro'
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500 pb-10">
-      {/* Bloco 1 — Saudação */}
-      <div className="flex flex-col gap-1">
-        <h1 className="font-display text-3xl font-bold tracking-tight">
-          {saudacao}, {userFirstName}! 👋
-        </h1>
-        <p className="text-muted-foreground capitalize">
-          {dataFormatada}
-        </p>
+    <div className="space-y-10 animate-in fade-in duration-500 pb-12 max-w-7xl mx-auto">
+      {/* Bloco 1 — Header & Saudação */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-border/40">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="font-display text-3xl font-bold tracking-tight text-white">
+              {saudacao}, {userFirstName}! 👋
+            </h1>
+            <Badge
+              variant="outline"
+              className={
+                isVip
+                  ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/40 text-xs px-2.5 py-0.5 font-semibold'
+                  : 'bg-primary/10 text-primary border-primary/30 text-xs px-2.5 py-0.5 font-medium'
+              }
+            >
+              {isVip ? 'VIP BDB' : 'Plano Gratuito'}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {estatisticas.total > 0
+              ? `Você tem ${estatisticas.total} ${
+                  estatisticas.total === 1 ? 'jogo' : 'jogos'
+                } programados para hoje nas suas ligas.`
+              : 'Acompanhe as análises, ferramentas e novidades do BigDataBet.'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs bg-surface border-border">
+            <Link href="/dashboard/ligas">
+              <Trophy className="w-3.5 h-3.5 text-primary" />
+              Catálogo de Ligas
+            </Link>
+          </Button>
+          <Button asChild size="sm" className="gap-1.5 text-xs bg-primary hover:bg-primary-dark text-black font-semibold">
+            <Link href="/dashboard/ferramentas">
+              Explorar Ferramentas
+              <ChevronRight className="w-3.5 h-3.5" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Bloco 2 — Stats grid 2 cols */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Card 1 */}
-        <div className="bg-surface border border-border rounded-lg p-4 flex flex-col justify-between">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-primary/10 p-2 rounded-full">
-              <BookOpen className="h-5 w-5 text-primary" />
-            </div>
-            <span className="text-sm text-muted-foreground font-medium">{labelLeituras}</span>
-          </div>
-          <div className="mt-2">
-            <span className="font-display text-3xl font-bold">{estatisticas.totalLeituras}</span>
-          </div>
-        </div>
-        
-        {/* Card 2 */}
-        <div className="bg-surface border border-border rounded-lg p-4 flex flex-col justify-between">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-data-blue/10 p-2 rounded-full">
-              <Bookmark className="h-5 w-5 text-data-blue" />
-            </div>
-            <span className="text-sm text-muted-foreground font-medium">{labelFavoritos}</span>
-          </div>
-          <div className="mt-2">
-            <span className="font-display text-3xl font-bold">{estatisticas.totalFavoritos}</span>
-          </div>
-        </div>
-      </div>
+      {/* Bloco 2 — Central de Jogos do Dia (Destaque Principal) */}
+      <DashboardJogosDoDia
+        initialPartidas={partidas}
+        ligas={ligas}
+        estatisticas={estatisticas}
+        dataReferencia={dataReferencia}
+      />
 
-      {/* Bloco 3 — Continue lendo */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-xl font-bold">Continue lendo</h2>
-          <Link 
-            href="/dashboard/historico" 
-            className="text-sm text-primary hover:underline font-medium"
-          >
-            Ver tudo →
-          </Link>
-        </div>
-        
-        {ultimasLeituras.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed border-border rounded-lg bg-surface/50">
-            <div className="bg-muted p-3 rounded-full mb-4">
-              <Clock className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <p className="text-muted-foreground mb-4">
-              Você ainda não leu nenhum artigo.
-            </p>
-            <Button asChild size="sm" className="bg-green-500 text-white hover:bg-green-600">
-              <Link href="/artigos">Explorar artigos →</Link>
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {ultimasLeituras.map((history) => (
-              <DashboardArtigoCard
-                key={history.id}
-                variant="compact"
-                artigo={{
-                  id: history.article.id,
-                  slug: history.article.slug,
-                  title: history.article.title,
-                  thumbnail: history.article.thumbnail,
-                  type: history.article.type,
-                  category: history.article.category,
-                }}
-                dateLabel="Lido em"
-                date={history.readAt}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Bloco 3 — Hub de Acessos Rápidos (Cursos e Ferramentas) */}
+      <DashboardAcessosRapidos />
 
-      {/* Bloco 4 — Seus favoritos */}
-      <section>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-xl font-bold">Seus favoritos</h2>
-          <Link 
-            href="/dashboard/favoritos" 
-            className="text-sm text-primary hover:underline font-medium"
-          >
-            Ver tudo →
-          </Link>
-        </div>
-
-        {favoritosRecentes.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center p-8 border border-dashed border-border rounded-lg bg-surface/50">
-            <div className="bg-muted p-3 rounded-full mb-4">
-              <Bookmark className="h-8 w-8 text-muted-foreground" />
+      {/* Bloco 4 — Histórico e Leituras Recentes (Rodapé Compacto) */}
+      {(ultimasLeituras.length > 0 || favoritosRecentes.length > 0) && (
+        <section className="pt-6 border-t border-border/60 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-muted-foreground" />
+              <h3 className="font-semibold text-base text-text-secondary">
+                Conteúdo & Leituras
+              </h3>
             </div>
-            <p className="text-muted-foreground mb-4">
-              Nenhum favorito salvo ainda.
-            </p>
-            <Button asChild size="sm" className="bg-green-500 text-white hover:bg-green-600">
-              <Link href="/artigos">Explorar artigos →</Link>
-            </Button>
+            <Link
+              href="/dashboard/historico"
+              className="text-xs text-primary hover:underline font-medium"
+            >
+              Ver histórico completo →
+            </Link>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {favoritosRecentes.map((favorite) => (
-              <DashboardArtigoCard
-                key={favorite.id}
-                variant="compact"
-                artigo={{
-                  id: favorite.article.id,
-                  slug: favorite.article.slug,
-                  title: favorite.article.title,
-                  thumbnail: favorite.article.thumbnail,
-                  type: favorite.article.type,
-                  category: favorite.article.category,
-                }}
-                dateLabel="Salvo em"
-                date={favorite.createdAt}
-              />
-            ))}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Últimas leituras */}
+            {ultimasLeituras.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3 h-3" />
+                  Continue Lendo
+                </span>
+                <div className="space-y-2">
+                  {ultimasLeituras.slice(0, 2).map((history) => (
+                    <DashboardArtigoCard
+                      key={history.id}
+                      variant="compact"
+                      artigo={{
+                        id: history.article.id,
+                        slug: history.article.slug,
+                        title: history.article.title,
+                        thumbnail: history.article.thumbnail,
+                        type: history.article.type,
+                        category: history.article.category,
+                      }}
+                      dateLabel="Lido em"
+                      date={history.readAt}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Favoritos */}
+            {favoritosRecentes.length > 0 && (
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <Bookmark className="w-3 h-3 text-data-blue" />
+                  Favoritos Salvos
+                </span>
+                <div className="space-y-2">
+                  {favoritosRecentes.slice(0, 2).map((fav) => (
+                    <DashboardArtigoCard
+                      key={fav.id}
+                      variant="compact"
+                      artigo={{
+                        id: fav.article.id,
+                        slug: fav.article.slug,
+                        title: fav.article.title,
+                        thumbnail: fav.article.thumbnail,
+                        type: fav.article.type,
+                        category: fav.article.category,
+                      }}
+                      dateLabel="Salvo em"
+                      date={fav.createdAt}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </section>
+        </section>
+      )}
     </div>
   )
 }

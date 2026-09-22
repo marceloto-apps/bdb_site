@@ -748,6 +748,9 @@ model MatchOdds {
   line          Float?
   oddsType      OddsType  @default(PREMATCH_CLOSING)
   odds          Float
+  /// Quem escreveu a linha: HISTORICAL (TheStatsAPI) | FLASHSCORE | ... (lib/odds/sources.ts).
+  /// Coluna criada pelo bdb_ingest; sem ela no client, o fallback de odds-mercado com filtro de fonte dava 500.
+  source        String    @default("HISTORICAL") @db.VarChar(20)
 
   createdAt     DateTime  @default(now())
 

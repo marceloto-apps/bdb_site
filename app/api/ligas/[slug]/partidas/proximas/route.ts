@@ -35,41 +35,20 @@ export async function GET(
       return NextResponse.json({ error: 'Liga não encontrada' }, { status: 404 })
     }
 
-    // Encontrar as próximas N rodadas que possuem partidas SCHEDULED
-    const proximasRodadasAgg = await prisma.match.groupBy({
-      by: ['round'],
+    // Buscar partidas agendadas ainda não iniciadas, em ordem cronológica.
+    // O critério é a DATA (mesmo do dashboard "Jogos do Dia"), e não o número da
+    // rodada: jogos adiados e remarcados ficam presos em rodadas antigas e, se
+    // escolhêssemos as menores rodadas, a rodada corrente nunca apareceria.
+    const now = new Date()
+    const agendadas = await prisma.match.findMany({
       where: {
         season: {
           competition: { slug },
           isCurrent: true
         },
         status: 'SCHEDULED',
-        round: { not: null }
-      },
-      orderBy: { round: 'asc' },
-      take: rodadas
-    })
-
-    if (!proximasRodadasAgg || proximasRodadasAgg.length === 0) {
-      return NextResponse.json({
-        data: {
-          partidas: [],
-          rodadaAtual: null
-        }
-      })
-    }
-
-    const rodadasIds = proximasRodadasAgg.map(r => r.round).filter((r): r is number => r !== null)
-
-    // Buscar as partidas que pertencem a essas rodadas
-    const partidas = await prisma.match.findMany({
-      where: {
-        season: {
-          competition: { slug },
-          isCurrent: true
-        },
-        status: 'SCHEDULED',
-        round: { in: rodadasIds }
+        round: { not: null },
+        utcDate: { gte: now }
       },
       orderBy: { utcDate: 'asc' },
       select: {
@@ -84,6 +63,25 @@ export async function GET(
         }
       }
     })
+
+    // As N primeiras rodadas na ordem em que aparecem cronologicamente
+    const rodadasIds: number[] = []
+    for (const p of agendadas) {
+      if (p.round === null || rodadasIds.includes(p.round)) continue
+      rodadasIds.push(p.round)
+      if (rodadasIds.length >= rodadas) break
+    }
+
+    if (rodadasIds.length === 0) {
+      return NextResponse.json({
+        data: {
+          partidas: [],
+          rodadaAtual: null
+        }
+      })
+    }
+
+    const partidas = agendadas.filter(p => p.round !== null && rodadasIds.includes(p.round))
 
     // Retorna o resultado mapeado
     const partidasFormatadas = partidas.map(p => ({

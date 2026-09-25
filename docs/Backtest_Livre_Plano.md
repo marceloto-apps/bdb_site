@@ -219,20 +219,25 @@ flowchart LR
 lib/laboratorio/
   schema/         # catálogo de campos (nome, tipo, unidade, descrição, cobertura)
   features/       # builder point-in-time (puro: recebe jogos passados, devolve linha de features)
-  engine/
-    ast.ts        # tipos do AST + validação
-    parser.ts     # fórmula texto -> AST (gramática própria, sem eval)
-    compile.ts    # AST -> função (colunas tipadas) -> Float64Array / Uint8Array
-    universe.ts   # filtro de universo (ligas, temporadas, datas, cobertura mínima)
-    entries.ts    # resolução de entradas (mercado, seleção, linha, preço, snapshot)
-    settlement.ts # reexporta/estende liquidarAposta (corners, HT)
-    staking.ts    # flat, % banco, Kelly fracionário, caps, ordem cronológica
-    metrics/      # yield, drawdown, clv, inference (t, bootstrap), montecarlo, segments, calibration
-    validation.ts # splits: train/test, por temporada, walk-forward, holdout selado
-    sweep.ts      # varredura de parâmetros + contador de tentativas
-    run.ts        # orquestra tudo; retorna RunResult serializável
-  data/           # leitura de chunks (worker e node), manifest, cache
-  worker/         # ponte Worker <-> UI (postMessage tipado)
+  engine/                       # Fase 2 (feita em 25/09/2026 — docs/Backtest_Livre_Fase2.md)
+    tipos.ts      # Dataset, Estrategia (JSON persistido), Entrada, Staking, Aposta, RunResult
+    ast.ts        # nós do AST + resolução de nomes + validação por unidade
+    parser.ts     # fórmula texto -> AST (gramática própria, sem eval) e AST -> texto
+    compile.ts    # AST -> (i) => number sobre colunas; rank/pct_rank por escopo
+    matematica.ts # no-vig (4 métodos), Poisson/DC/ZIP/NB, linhas e AH sobre a matriz, RNG, hash
+    modelos.ts    # model(MODELO, LAMBDA, JANELA).saida(...)
+    universo.ts   # filtro de universo (ligas, temporadas, datas, fontes, cobertura mínima)
+    entradas.ts   # mercado × seleção × linha × casa × snapshot -> colunas; referência q̂ (CLV)
+    liquidacao.ts # 11 mercados (mesma aritmética do settlement atual + corners, HT, DC, EH, CS)
+    staking.ts    # flat, % banco, Kelly fracionário, to-win
+    metricas.ts   # resultado, caminho/risco, CLV, inferência (t, bootstrap em blocos), segmentos
+    estrategia.ts # prepararEstrategia(): parse, dependências, validação, campos, aviso de leakage
+    run.ts        # orquestra tudo; retorna RunResult serializável e determinístico (hash)
+    catalogo.ts   # ponte com schema/ (única dependência externa do engine)
+    (Fase 5)      # validacao.ts (splits, walk-forward, holdout), sweep.ts (varredura + tentativas), montecarlo, calibração
+  data/           # chunk.ts (leitor formato 1, DecompressionStream/zlib), dataset.ts (manifesto, montagem), r2.ts, servidor.ts
+  worker/         # Fase 3: sessao.ts (núcleo testável + caches), protocolo.ts, laboratorio.worker.ts, cliente.ts
+  api/            # Fase 3: auth (gate), schemas (zod), runs (persistência + tentativas), indicadores
 ```
 
 Regra de ouro: **nada em `lib/laboratorio/engine` importa Prisma, `next` ou DOM**. Tudo é função pura sobre arrays. Isso garante que o mesmo código rode no Worker, em Node e nos testes.
@@ -423,8 +428,8 @@ Painel direito (tearsheet):
 | **0. Fundações** — **feita em 24/09/2026** (`docs/Backtest_Livre_Fase0.md`) | Catálogo v1 com 1.315 campos (`lib/laboratorio/schema/catalogo.ts`, `npm run lab:catalogo`); mapa das 86 ligas só-FPT (`ligas-fpt.ts`); spike (`npm run lab:spike`) em 55 k e 300 k linhas; 13 testes | Metas da §5.3 batidas com folga de 10–30× no cálculo; carga exige chunk por grupos de colunas (§4.3); **revisão do catálogo pelo usuário pendente** |
 | **1a. Feature store — núcleo** — **código feito em 25/09/2026** (`docs/Backtest_Livre_Fase1.md`) | Builder puro + loaders + job em `bdb_ingest` (`src/lib/laboratorio`, `src/jobs/laboratorio-build.ts`); chunks por grupo + manifest; leitura de `bdbs_odds_snapshot`; **sem tabela larga** (D13). Pendente: storage R2, backfill na VPS, ligar `LAB_BUILD_CRON` | Truncar futuro ⇒ linha idêntica ✅; paridade com `MatchTeamStats` 100 % (1.272 comparações) ✅; ρ/π/var point-in-time ✅; bet365 Flashscore = `MatchOdds` em 100 % onde o `MatchOdds` já é Flashscore ✅ (legado TheStatsAPI diverge, documentado); cobertura por liga no manifest ✅ |
 | **1b. Feature store — FPT** — **junto com 1a** (loader único) | Competições virtuais `fpt:<rawLeague>`, times via `team_external_ids` → partida vinculada → `fpt:` provisório (D10), precedência por campo, mercados HT/CS/DC/EH, regra "FPT sem vínculo só em temporada não coberta" | Carry-over 2021–2022 → 2023 ✅; isolamento de jogo só-FPT ✅; placar núcleo = FPT nos vinculados **pendente**; unificar chaves novas da FPT (Primera Federación) **pendente** |
-| **2. Engine** | AST + parser + compilador + universo + entradas + liquidação (incl. HT, DC, EH, CS) + staking + métricas núcleo + `run.ts`; CLI `npx tsx scripts/laboratorio-run.ts estrategia.json` | ≥ 150 testes puros; paridade com o backtest atual numa estratégia 1X2 flat (mesmos jogos, mesmo P&L); 5 exemplos da seção 5.2 executam |
-| **3. Dados e API** | Storage dos chunks + URL assinada por plano; rota `POST /api/laboratorio/run` (Node) para runs salvas; modelos Prisma `BacktestStrategy`, `BacktestRun`, `BacktestIndicator`, `BacktestTrialLog`; middleware | Chunks carregam no Worker com cache; run servidor reproduz o do Worker (mesmo hash) |
+| **2. Engine** — **feita em 25/09/2026** (`docs/Backtest_Livre_Fase2.md`) | AST + parser + compilador + universo + entradas + liquidação (incl. HT, DC, EH, CS) + staking + métricas núcleo + `run.ts`; leitor de chunks (navegador e Node); CLI `npm run lab:run -- estrategia.json`; aviso de leakage | 151 testes puros novos ✅ (165 com o catálogo); paridade 1X2 flat em 3 ligas×temporadas: mesmos jogos e mesmos resultados, odds iguais onde o `MatchOdds` já é Flashscore (as demais diferem só pela fonte legada HISTORICAL) ✅; 5 exemplos da §5.2 executam no núcleo inteiro em 36–733 ms ✅ |
+| **3. Dados e API** — **feita em 25/09/2026** (`docs/Backtest_Livre_Fase3.md`) | Worker (`lib/laboratorio/worker`: Sessao + cache memória/Cache API + cliente tipado); `POST /api/laboratorio/run` (Node); CRUD de estratégias, runs e indicadores; contador de tentativas; modelos Prisma + migração (aplicar com `prisma migrate deploy`) | Sessao = run direto com mesmo hash ✅ (teste); disco = R2 com mesmo hash em 2 universos ✅; 183 testes; `next build` ok |
 | **4. UI** | Página completa (seção 7) com tearsheet, comparação e exportação | Fluxo ponta a ponta com usuário VIP_PRO; Lighthouse sem regressão; mobile utilizável |
 | **5. Validação avançada** | Bootstrap em blocos, estratégia aleatória, walk-forward, holdout selado, varredura + contador de tentativas + deflação, Monte Carlo, calibração | Testes com casos sintéticos de resposta conhecida (ex.: estratégia sem edge deve dar p ≈ uniforme) |
 | **6. Operação** | Paper trading: jogos futuros que batem cada estratégia salva com odd atual e edge; comparação backtest × live; portfólio de estratégias (picks duplicados, drawdown conjunto); documentação do usuário | Estratégia salva gera lista de próximos jogos diariamente; alerta de degradação |

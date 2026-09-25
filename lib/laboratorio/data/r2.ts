@@ -69,3 +69,16 @@ export async function lerJson<T>(chave: string): Promise<T> {
 export function lerLatest(): Promise<LatestDataset> {
   return lerJson<LatestDataset>('latest.json')
 }
+
+/** Lê os bytes de um objeto (chunk) direto do bucket, no servidor. */
+export async function lerBytes(chave: string): Promise<Uint8Array> {
+  if (!chaveValida(chave)) throw new Error(`Chave inválida: ${chave}`)
+  const { client, bucket } = s3()
+  const r = await client.send(new GetObjectCommand({ Bucket: bucket, Key: chave }))
+  const bytes = await r.Body?.transformToByteArray()
+  if (!bytes) throw new Error(`Objeto vazio: ${chave}`)
+  return bytes
+}
+
+/** `Buscador` do dataset para o engine em Node (rota /api/laboratorio/run, CLI sem --dir). */
+export const buscadorR2 = (chave: string): Promise<Uint8Array> => lerBytes(chave)

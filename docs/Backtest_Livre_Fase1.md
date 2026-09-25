@@ -124,7 +124,6 @@ Bucket `bdb-laboratorio` (ENAM) criado pelo usuário, com dois tokens restritos 
 
 ## 6. Pendências e próximos passos
 
-1. **Storage (D13)**: feito (§5.2), com o núcleo inteiro já no bucket. Falta subir o `bdb_ingest` na VPS com as `R2_*` e rodar o primeiro build lá.
-2. **Ligar o cron** (`LAB_BUILD_CRON='30 9 * * *'`) depois do primeiro backfill manual na VPS.
-3. **Fase 1b — pendências de identidade**: unificar `SPAIN Primera Rfef Group 1/2` com `SPAIN 3`; checar placar núcleo × FPT nos vinculados; hora local (fuso) para `match.hour_local` (hoje é hora UTC no núcleo e null na FPT).
-4. **Fase 2 — engine** no site: leitor de chunks (browser + Node), parser/compilador de fórmulas, entradas, liquidação, staking, métricas.
+1. **Storage (D13) e produção**: feito. `bdb_ingest` na VPS com as `R2_*`; primeiro build na VPS em 25/09/2026 (versão `20260925-2031`, 81 competições, 534 chunks, 123.188 linhas, 27 min); cron `laboratorio-build` registrado às 09:30 (`LAB_BUILD_CRON='30 9 * * *'`). Lição do deploy: o `tsc` não copia `.json` para `dist`, por isso catálogo e ligas FPT entram por `import ... with { type: 'json' }`.
+2. **Fase 1b — pendências de identidade**: unificar `SPAIN Primera Rfef Group 1/2` com `SPAIN 3`; checar placar núcleo × FPT nos vinculados; hora local (fuso) para `match.hour_local` (hoje é hora UTC no núcleo e null na FPT).
+3. **Fase 2 — engine** no site: leitor de chunks (browser + Node), parser/compilador de fórmulas, entradas, liquidação, staking, métricas.

@@ -1,0 +1,30 @@
+{
+  "versao": 1,
+  "nome": "Favorito forte (AH ≤ −0.75) em jogo de gols (O/U ≥ 3.0): over",
+  "universo": {
+    "fontes": [
+      "core"
+    ],
+    "tipos": [
+      "LEAGUE"
+    ]
+  },
+  "regra": {
+    "formula": "odds.pinnacle.close.ah.main_line <= -0.75 and odds.pinnacle.close.ou.main_line >= 3.0"
+  },
+  "entradas": [
+    {
+      "mercado": "ou",
+      "selecao": "over",
+      "preco": {
+        "casa": "pinnacle",
+        "snapshot": "close"
+      }
+    }
+  ],
+  "staking": {
+    "metodo": "flat",
+    "unidade": 1
+  },
+  "bancoInicial": 100
+}

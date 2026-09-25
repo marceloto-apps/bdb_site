@@ -17,7 +17,9 @@
     "test:db:up": "docker compose -f docker-compose.test.yml up -d",
     "test:db:down": "docker compose -f docker-compose.test.yml down -v",
     "lab:catalogo": "tsx scripts/laboratorio/gerar-catalogo.ts",
-    "lab:spike": "tsx scripts/laboratorio/spike-engine.ts"
+    "lab:spike": "tsx scripts/laboratorio/spike-engine.ts",
+    "lab:run": "tsx scripts/laboratorio/run.ts",
+    "lab:test": "vitest run tests/laboratorio"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",

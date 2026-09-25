@@ -1,0 +1,34 @@
+{
+  "versao": 1,
+  "nome": "Dixon-Coles (forças, l10) acima do mercado no over 2.5",
+  "universo": {
+    "fontes": [
+      "core"
+    ],
+    "tipos": [
+      "LEAGUE"
+    ]
+  },
+  "parametros": {
+    "p1": 0.05
+  },
+  "regra": {
+    "formula": "model(DC, FORCAS, l10).p_over(2.5) - odds.bet365.close.ou.novig_over_main > $p1 and odds.bet365.close.ou.main_line == 2.5"
+  },
+  "entradas": [
+    {
+      "mercado": "ou",
+      "selecao": "over",
+      "linha": 2.5,
+      "preco": {
+        "casa": "bet365",
+        "snapshot": "close"
+      }
+    }
+  ],
+  "staking": {
+    "metodo": "flat",
+    "unidade": 1
+  },
+  "bancoInicial": 100
+}

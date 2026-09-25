@@ -1,0 +1,30 @@
+{
+  "versao": 1,
+  "nome": "Linha encurtou ≥ 7% na Pinnacle e mandante em forma",
+  "universo": {
+    "fontes": [
+      "core"
+    ],
+    "tipos": [
+      "LEAGUE"
+    ]
+  },
+  "regra": {
+    "formula": "odds.pinnacle.close.1x2.h / odds.pinnacle.open.1x2.h < 0.93 and home.l5.pts_pg >= 1.8"
+  },
+  "entradas": [
+    {
+      "mercado": "1x2",
+      "selecao": "home",
+      "preco": {
+        "casa": "pinnacle",
+        "snapshot": "close"
+      }
+    }
+  ],
+  "staking": {
+    "metodo": "flat",
+    "unidade": 1
+  },
+  "bancoInicial": 100
+}

@@ -1,0 +1,56 @@
+{
+  "versao": 1,
+  "nome": "Lado com maior edge contra a Pinnacle, Kelly 1/4",
+  "universo": {
+    "fontes": [
+      "core"
+    ],
+    "tipos": [
+      "LEAGUE"
+    ]
+  },
+  "indicadores": [
+    {
+      "nome": "edge_h",
+      "expressao": {
+        "formula": "odds.bet365.close.1x2.h * odds.pinnacle.close.1x2.novig_h - 1"
+      }
+    },
+    {
+      "nome": "edge_a",
+      "expressao": {
+        "formula": "odds.bet365.close.1x2.a * odds.pinnacle.close.1x2.novig_a - 1"
+      }
+    },
+    {
+      "nome": "melhor",
+      "expressao": {
+        "formula": "max(edge_h, edge_a)"
+      }
+    }
+  ],
+  "regra": {
+    "formula": "melhor > 0.02"
+  },
+  "entradas": [
+    {
+      "mercado": "1x2",
+      "selecao": {
+        "formula": "if(edge_h >= edge_a, home, away)"
+      },
+      "preco": {
+        "casa": "bet365",
+        "snapshot": "close"
+      }
+    }
+  ],
+  "staking": {
+    "metodo": "kelly",
+    "fracao": 0.25,
+    "cap": 0.05,
+    "prob": {
+      "formula": "if(edge_h >= edge_a, odds.pinnacle.close.1x2.novig_h, odds.pinnacle.close.1x2.novig_a)"
+    }
+  },
+  "bancoInicial": 1000
+}

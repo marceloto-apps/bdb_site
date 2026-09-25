@@ -1,0 +1,38 @@
+{
+  "versao": 1,
+  "nome": "Edge da abertura bet365 contra o fechamento Pinnacle (mandante)",
+  "universo": {
+    "fontes": [
+      "core"
+    ],
+    "tipos": [
+      "LEAGUE"
+    ]
+  },
+  "indicadores": [
+    {
+      "nome": "edge_h",
+      "expressao": {
+        "formula": "odds.bet365.open.1x2.h * odds.pinnacle.close.1x2.novig_h - 1"
+      }
+    }
+  ],
+  "regra": {
+    "formula": "edge_h > 0.03"
+  },
+  "entradas": [
+    {
+      "mercado": "1x2",
+      "selecao": "home",
+      "preco": {
+        "casa": "bet365",
+        "snapshot": "open"
+      }
+    }
+  ],
+  "staking": {
+    "metodo": "flat",
+    "unidade": 1
+  },
+  "bancoInicial": 100
+}

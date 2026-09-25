@@ -1,0 +1,31 @@
+{
+  "versao": 1,
+  "nome": "xG combinado alto e over 2.5 barato",
+  "universo": {
+    "fontes": [
+      "core"
+    ],
+    "tipos": [
+      "LEAGUE"
+    ]
+  },
+  "regra": {
+    "formula": "(home.venue.l10.xg_for + away.venue.l10.xg_against) / 2 > 1.7 and implied(odds.bet365.close.ou.over_2_5) < 0.55"
+  },
+  "entradas": [
+    {
+      "mercado": "ou",
+      "selecao": "over",
+      "linha": 2.5,
+      "preco": {
+        "casa": "bet365",
+        "snapshot": "close"
+      }
+    }
+  ],
+  "staking": {
+    "metodo": "flat",
+    "unidade": 1
+  },
+  "bancoInicial": 100
+}

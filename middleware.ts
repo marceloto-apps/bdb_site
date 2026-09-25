@@ -54,7 +54,8 @@ export default auth((req) => {
     pathname.startsWith('/api/admin') ||
     pathname.startsWith('/api/bolao') ||
     pathname.startsWith('/api/aulas') ||
-    pathname.startsWith('/api/backtest')
+    pathname.startsWith('/api/backtest') ||
+    pathname.startsWith('/api/laboratorio')
   ) {
     if (!session) {
       return NextResponse.json(
@@ -77,6 +78,7 @@ export const config = {
     '/api/bolao/:path*',
     '/api/aulas/:path*',
     '/api/backtest/:path*',
+    '/api/laboratorio/:path*',
   ],
 }
 

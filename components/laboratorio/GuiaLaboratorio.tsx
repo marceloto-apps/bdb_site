@@ -37,6 +37,9 @@ const GLOSSARIO: { termo: string; def: string }[] = [
   { termo: 'Escopo (all, venue)', def: 'all = todos os jogos do time; venue = só em casa (para o mandante) ou só fora (para o visitante).' },
   { termo: 'xG', def: 'Gols esperados: qualidade das chances criadas, medida pelas finalizações. Disponível nas ligas principais.' },
   { termo: 'Elo', def: 'Força do time num único número, atualizado jogo a jogo. Diferenças de 100 pontos ≈ 64% de chance para o mais forte em campo neutro.' },
+  { termo: 'Explorar (aposta cega)', def: 'Fazer a mesma aposta em todos os jogos do universo, sem regra, e olhar o resultado liga por liga. Serve para achar onde há vantagem antes de escrever qualquer regra.' },
+  { termo: 'Faixa (cruzamento)', def: 'Divisão dos jogos em grupos de mesmo tamanho por uma estatística: baixo, médio e alto (tercis) ou quartos. Mostra se a estatística muda o resultado da aposta.' },
+  { termo: 'Persistência', def: 'Em quantas temporadas com amostra a aposta deu lucro naquela liga. 3 de 3 é um sinal; 1 de 3 é ruído.' },
   { termo: 'Holdout selado', def: 'A temporada mais recente de cada liga fica escondida enquanto você ajusta a estratégia. Ao abrir o selo (só para estratégias salvas, e fica registrado), ela vira o teste final.' },
   { termo: 'Walk-forward', def: 'Divide o tempo em janelas; em cada uma, a estratégia (e seus parâmetros, quando há varredura) é definida com os jogos anteriores e avaliada nos seguintes. Só o resultado fora da amostra conta.' },
   { termo: 'WFE (eficiência do walk-forward)', def: 'Yield fora da amostra dividido pelo yield no treino. Perto de 1 é ótimo; abaixo de 0,5 o ajuste não se transfere para o futuro.' },
@@ -75,6 +78,11 @@ export function GuiaLaboratorio({ funcoes, onCarregarExemplo }: { funcoes: Funca
             </TabsList>
 
             <TabsContent value="passos" className="space-y-3 text-sm">
+              <div className="rounded-md border border-border p-3 space-y-1">
+                <p className="font-semibold">Antes de tudo: o modo Explorar</p>
+                <p className="text-muted-foreground">Marque algumas apostas básicas (mandante, empate, over 2.5…) e clique em Explorar. Cada aposta é feita em todos os jogos e a matriz mostra, liga por liga, onde ela teria pago. Cruze com uma estatística (forma, xG, odd…) para ver se ela muda o resultado. Encontrou uma célula boa, com ★ e persistência alta? Clique nela e em “Levar ao Laboratório”: ela vira uma estratégia pronta no modo Estratégia, com a última temporada selada, para você refinar e validar.</p>
+              </div>
+              <p className="font-semibold">Modo Estratégia, em 6 passos</p>
               <ol className="list-decimal pl-5 space-y-2">
                 <li><b>Universo.</b> Escolha as ligas e temporadas. Para começar, deixe “Ligas padrão” com as Ligas do BDB e só campeonatos: é a base mais completa e a mesma do Backtest tradicional.</li>
                 <li><b>Indicadores.</b> Opcional. Crie cálculos com nome para reutilizar (ex.: <span className="font-mono">edge_h</span>). O catálogo lista todos os dados disponíveis por jogo; clique num item para copiar o nome técnico.</li>

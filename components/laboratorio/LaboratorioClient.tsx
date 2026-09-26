@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
-import { Beaker, Play } from 'lucide-react'
+import { Beaker, Compass, FlaskConical, Play } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { criarLaboratorio, ErroLaboratorio, type ClienteLaboratorio, type ProgressoUI } from '@/lib/laboratorio/worker/cliente'
 import type { Estrategia } from '@/lib/laboratorio/engine/tipos'
@@ -18,6 +18,11 @@ import { PainelRegras } from './PainelRegras'
 import { PainelEntradas } from './PainelEntradas'
 import { PainelStaking } from './PainelStaking'
 import { PainelValidacao } from './PainelValidacao'
+import { PainelExplorar, type ConfigExplorar } from './PainelExplorar'
+import { Explorador } from './Explorador'
+import { apostasDaCesta, CESTA_PADRAO, ESTATISTICAS, estrategiaDaCelula, type CelulaUI, type ResultadoExploracaoUI } from '@/lib/laboratorio/ui/explorador'
+import type { Cruzamento } from '@/lib/laboratorio/engine/explorar'
+import type { Universo } from '@/lib/laboratorio/engine/tipos'
 import { Tearsheet } from './Tearsheet'
 import { EstrategiasSalvas } from './EstrategiasSalvas'
 import { GuiaLaboratorio } from './GuiaLaboratorio'
@@ -35,6 +40,7 @@ const INICIAL: Estrategia = {
   validacao: { holdout: 'selado', folds: 'temporada', walkForward: { janelas: 4, expandindo: true }, monteCarlo: { caminhos: 2000, ruinaPct: 0.5 } },
 }
 const CORES = ['#22c55e', '#3b82f6', '#eab308', '#a855f7', '#f97316']
+const EXPLORAR_INICIAL: ConfigExplorar = { apostas: CESTA_PADRAO, casas: ['bet365'], estatistica: null, formulaLivre: '', cortes: 'tercis', nMin: 100 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, { credentials: 'same-origin', headers: { 'content-type': 'application/json' }, ...init })
@@ -62,6 +68,12 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
   const [atualId, setAtualId] = useState<string | null>(null)
   const [atualNome, setAtualNome] = useState('')
   const [erroPreparo, setErroPreparo] = useState<string | null>(null)
+  // modo Explorar
+  const [modo, setModo] = useState<'explorar' | 'estrategia'>('explorar')
+  const [cfgExp, setCfgExp] = useState<ConfigExplorar>(EXPLORAR_INICIAL)
+  const [universoExp, setUniversoExp] = useState<Universo>({ fontes: ['core'], tipos: ['LEAGUE'] })
+  const [exploracao, setExploracao] = useState<{ resultado: ResultadoExploracaoUI; universo: Universo; apostas: ReturnType<typeof apostasDaCesta>; cruz: Cruzamento | null } | null>(null)
+  const [explorando, setExplorando] = useState(false)
 
   const atualizar = useCallback((patch: Partial<Estrategia>) => setEstrategia((e) => ({ ...e, ...patch })), [])
   const carregarListas = useCallback(async () => {
@@ -150,6 +162,36 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
       await carregarListas()
     } catch (e) { toast({ title: 'Não foi possível salvar o run', description: (e as Error).message, variant: 'destructive' }) }
   }
+  const cruzamentoAtual = (): Cruzamento | null => {
+    if (!cfgExp.estatistica) return null
+    if (cfgExp.estatistica === 'livre') return cfgExp.formulaLivre.trim() ? { rotulo: cfgExp.formulaLivre.trim(), formula: cfgExp.formulaLivre.trim(), cortes: cfgExp.cortes } : null
+    const e = ESTATISTICAS.find((x) => x.id === cfgExp.estatistica)
+    return e ? { rotulo: e.rotulo, formula: e.formula, cortes: cfgExp.cortes } : null
+  }
+  const explorar = async () => {
+    if (!lab.current) return
+    const apostas = apostasDaCesta(cfgExp.apostas, cfgExp.casas)
+    if (!apostas.length) { toast({ title: 'Marque pelo menos uma aposta e uma casa', variant: 'destructive' }); return }
+    const cruz = cruzamentoAtual()
+    setExplorando(true); setProgresso(null)
+    try {
+      const r = await lab.current.explorar({ universo: universoExp, apostas, cruzamento: cruz ?? undefined }, setProgresso)
+      setExploracao({ resultado: r.resultado as ResultadoExploracaoUI, universo: universoExp, apostas, cruz })
+      if (r.carga) toast({ title: 'Exploração pronta', description: `${r.carga.chunks} blocos · ${(r.carga.bytes / 1048576).toFixed(1)} MB${r.carga.doCache ? ` (${r.carga.doCache} do cache)` : ''} · ${r.carga.ms} ms` })
+    } catch (e) {
+      const err = e as ErroLaboratorio
+      toast({ title: err.message || 'Falha ao explorar', description: err.erros?.slice(0, 3).join(' · '), variant: 'destructive' })
+    } finally { setExplorando(false); setProgresso(null) }
+  }
+  const levarAoLaboratorio = (c: CelulaUI) => {
+    if (!exploracao) return
+    try {
+      const e = estrategiaDaCelula(exploracao.resultado, c, exploracao.universo, exploracao.apostas, exploracao.cruz)
+      setEstrategia({ ...INICIAL, ...e }); setAtualId(null); setAtualNome(''); setRunsSalvos([]); setRun(null)
+      setModo('estrategia')
+      toast({ title: 'Estratégia montada', description: `${e.nome}. Ajuste a regra e execute.` })
+    } catch (err) { toast({ title: 'Não foi possível montar a estratégia', description: (err as Error).message, variant: 'destructive' }) }
+  }
   const abrirSelo = async () => {
     if (!atualId) return
     if (!confirm('Abrir o selo inclui a última temporada de cada liga no run e fica registrado nesta estratégia. Faça isso só quando a regra estiver pronta. Continuar?')) return
@@ -188,9 +230,36 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
           <p className="text-muted-foreground text-sm">Monte uma estratégia com odds e estatísticas, escolha o que apostar e veja se ela teria dado lucro de verdade. {resumo && <span className="text-xs">Dados {resumo.versao} · {resumo.totalLinhas.toLocaleString('pt-BR')} jogos · {resumo.competicoes.length} competições.</span>}</p>
           {erroPreparo && <p className="text-sm text-data-red mt-2">Não foi possível preparar o Laboratório: {erroPreparo}</p>}
         </div>
-        <GuiaLaboratorio funcoes={funcoes} onCarregarExemplo={carregarExemplo} />
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-md border border-border overflow-hidden">
+            <button type="button" className={`px-3 py-1.5 text-sm flex items-center gap-1 ${modo === 'explorar' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`} onClick={() => setModo('explorar')}><Compass className="w-4 h-4" />Explorar</button>
+            <button type="button" className={`px-3 py-1.5 text-sm flex items-center gap-1 ${modo === 'estrategia' ? 'bg-primary text-primary-foreground' : 'bg-card text-muted-foreground hover:text-foreground'}`} onClick={() => setModo('estrategia')}><FlaskConical className="w-4 h-4" />Estratégia</button>
+          </div>
+          <GuiaLaboratorio funcoes={funcoes} onCarregarExemplo={(e) => { carregarExemplo(e); setModo('estrategia') }} />
+        </div>
       </div>
 
+      {modo === 'explorar' && (
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="lg:col-span-4 space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-4 sticky top-4 z-10 flex items-center gap-2">
+            <Button className="flex-1" disabled={!pronto || explorando} onClick={() => void explorar()}>
+              <Compass className="w-4 h-4 mr-2" />{explorando ? 'Explorando…' : pronto ? 'Explorar' : 'Preparando…'}
+            </Button>
+          </div>
+          <Accordion type="multiple" defaultValue={['jogos', 'apostas']} className="bg-card border border-border rounded-2xl px-4">
+            <AccordionItem value="jogos"><AccordionTrigger>1. Jogos considerados</AccordionTrigger><AccordionContent><PainelUniverso universo={universoExp} onChange={setUniversoExp} resumo={resumo} /></AccordionContent></AccordionItem>
+            <AccordionItem value="apostas"><AccordionTrigger>2. Apostas e estatística</AccordionTrigger><AccordionContent><PainelExplorar cfg={cfgExp} onChange={setCfgExp} referencias={referencias} /></AccordionContent></AccordionItem>
+          </Accordion>
+          <p className="text-xs text-muted-foreground px-1">Achou uma célula interessante? Clique nela e em “Levar ao Laboratório”: a aposta, a liga e a faixa viram uma estratégia pronta no modo Estratégia, com a última temporada selada.</p>
+        </div>
+        <div className="lg:col-span-8">
+          <Explorador resultado={exploracao?.resultado ?? null} executando={explorando} progresso={progresso} nMin={cfgExp.nMin} onLevar={levarAoLaboratorio} />
+        </div>
+      </div>
+      )}
+
+      {modo === 'estrategia' && (
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-4 space-y-4">
           <div className="bg-card border border-border rounded-2xl p-4 sticky top-4 z-10 flex items-center gap-2">
@@ -218,6 +287,7 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
             onValidar={() => void executar(true)} seloAberto={!!atualId && !!salvas.find((s) => s.id === atualId)?.holdoutAberto} />
         </div>
       </div>
+      )}
     </div>
     </TooltipProvider>
   )

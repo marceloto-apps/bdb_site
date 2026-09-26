@@ -106,5 +106,11 @@ export const DICAS = {
   selecaoAleatoria: 'Mesmas apostas (mercado, lado, casa), mas em jogos sorteados do universo. Se a regra não escolher jogos melhores que o acaso, o yield real fica dentro dessa distribuição.',
   calibracao: 'Compara a probabilidade que a estratégia estima com o que aconteceu e com a probabilidade justa da Pinnacle. Só faz sentido quando a regra ou o Kelly usam uma probabilidade.',
   brier: 'Erro quadrático médio da probabilidade (0 = perfeito). Menor que o da referência = prevê melhor que o mercado.',
+  // Explorar
+  cesta: 'Cada aposta marcada é feita em TODOS os jogos do universo, com 1 unidade. Não há regra: a ideia é ver em quais ligas e situações a aposta cega já paga (ou perde pouco).',
+  cruzamento: 'Divide os jogos em faixas de uma estatística (ex.: forma do mandante baixa, média, alta) e mostra o resultado de cada aposta em cada faixa. É a forma mais simples de ver se a estatística "explica" alguma vantagem.',
+  nMin: 'Células com menos apostas que isso ficam apagadas: resultados com poucas apostas são quase sempre sorte.',
+  celulas: 'Quantas células (liga × aposta × faixa) têm amostra suficiente. Quanto mais células você olha, mais fácil achar uma boa por acaso; por isso o p-valor de cada célula é deflacionado por esse número.',
+  persistencia: 'Em quantas temporadas (com amostra) a aposta deu lucro naquela liga. 3 de 3 vale muito mais que 1 de 3.',
   ece: 'Expected Calibration Error: diferença média entre a probabilidade prevista e a frequência observada, por faixa. Abaixo de 3% é bem calibrada.',
 } as const

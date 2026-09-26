@@ -3,6 +3,7 @@
  * o Worker responde com `progresso` (0..n vezes) e um `resultado` ou `erro` com o mesmo id.
  */
 import type { Estrategia } from '../engine/tipos'
+import type { OpcoesExploracao } from '../engine/explorar'
 import type { Manifest } from '../data/dataset'
 
 export interface CatalogoJson { versao: string; campos: { key: string; tipo: string }[] }
@@ -11,6 +12,7 @@ export type PedidoWorker =
   | { t: 'preparar'; id: number; catalogo: CatalogoJson; manifest: Manifest; endpointDataset: string }
   | { t: 'executar'; id: number; estrategia: Estrategia; opcoes?: { bootstrap?: number; maxApostas?: number; extras?: boolean; validacao?: boolean; tentativasPrevias?: number } }
   | { t: 'validar'; id: number; estrategia: Estrategia }
+  | { t: 'explorar'; id: number; opcoes: OpcoesExploracao }
   | { t: 'limpar'; id: number }
 
 export type RespostaWorker =

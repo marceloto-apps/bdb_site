@@ -37,6 +37,13 @@ ctx.onmessage = async (ev: MessageEvent<PedidoWorker>) => {
         responder({ t: 'resultado', id: p.id, resultado: serializarRun(resultado), carga })
         return
       }
+      case 'explorar': {
+        if (!sessao) throw new Error('Sessão não preparada')
+        idAtual = p.id
+        const { resultado, carga } = await sessao.explorar(p.opcoes)
+        responder({ t: 'resultado', id: p.id, resultado: JSON.parse(JSON.stringify(resultado, (_k, v) => (typeof v === 'number' && Number.isNaN(v) ? null : v))), carga })
+        return
+      }
       case 'limpar': {
         sessao?.limpar()
         responder({ t: 'pronto', id: p.id, versao: sessao?.versao ?? '' })

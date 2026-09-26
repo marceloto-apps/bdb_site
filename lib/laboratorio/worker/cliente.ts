@@ -8,6 +8,7 @@
  *   lab.encerrar()
  */
 import type { Estrategia } from '../engine/tipos'
+import type { OpcoesExploracao } from '../engine/explorar'
 import type { PedidoWorker, RespostaWorker } from './protocolo'
 import type { Manifest } from '../data/dataset'
 
@@ -19,6 +20,7 @@ export interface ClienteLaboratorio {
   preparar: (opcoes?: { versao?: string }) => Promise<{ versao: string; resumo: unknown; catalogo: unknown }>
   validar: (estrategia: Estrategia) => Promise<Extract<RespostaWorker, { t: 'validacao' }>>
   executar: (estrategia: Estrategia, opcoes?: { bootstrap?: number; maxApostas?: number; extras?: boolean; validacao?: boolean; tentativasPrevias?: number; aoProgresso?: (p: ProgressoUI) => void }) => Promise<{ resultado: unknown; carga?: { chunks: number; bytes: number; ms: number; doCache: number } }>
+  explorar: (opcoes: OpcoesExploracao, aoProgresso?: (p: ProgressoUI) => void) => Promise<{ resultado: unknown; carga?: { chunks: number; bytes: number; ms: number; doCache: number } }>
   limpar: () => Promise<void>
   encerrar: () => void
 }
@@ -60,6 +62,10 @@ export function criarLaboratorio(endpoints = { catalogo: '/api/laboratorio/catal
     async executar(estrategia, opcoes) {
       const { aoProgresso, ...resto } = opcoes ?? {}
       const r = (await enviar({ t: 'executar', estrategia, opcoes: resto }, aoProgresso)) as Extract<RespostaWorker, { t: 'resultado' }>
+      return { resultado: r.resultado, carga: r.carga }
+    },
+    async explorar(opcoes, aoProgresso) {
+      const r = (await enviar({ t: 'explorar', opcoes }, aoProgresso)) as Extract<RespostaWorker, { t: 'resultado' }>
       return { resultado: r.resultado, carga: r.carga }
     },
     async limpar() { await enviar({ t: 'limpar' }) },

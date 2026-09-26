@@ -9,6 +9,7 @@
 import { aplicarHoldout, carregarDataset, filtroDoUniverso, infoCompeticoes, resolverAliases, type Buscador, type Manifest } from '../data/dataset'
 import { catalogoDe, ErroEstrategia, prepararEstrategia, type Catalogo } from '../engine/estrategia'
 import { executarCompilada } from '../engine/run'
+import { explorar, prepararExploracao, type OpcoesExploracao, type ResultadoExploracao } from '../engine/explorar'
 import type { Estrategia, RunResult } from '../engine/tipos'
 
 export interface CacheBytes {
@@ -90,6 +91,23 @@ export class Sessao {
       validacao: opcoes.validacao, tentativasPrevias: opcoes.tentativasPrevias, holdout,
       aoProgresso: (fase, feitos, total) => this.op.aoProgresso?.({ fase: fase as FaseProgresso, feitos, total }),
     })
+    return { resultado, carga: { chunks: carga.chunks, bytes: carga.bytes, ms: Date.now() - t0, doCache: stats.doCache } }
+  }
+
+  /** Explorador de vantagens: apostas básicas em todo o universo, por liga × temporada (× faixa de estatística). */
+  async explorar(opcoes: OpcoesExploracao): Promise<{ resultado: ResultadoExploracao; carga: { chunks: number; bytes: number; ms: number; doCache: number } }> {
+    const universo = resolverAliases(opcoes.universo, this.manifest)
+    const prep = prepararExploracao({ ...opcoes, universo }, this.catalogo)
+    const stats = { doCache: 0 }
+    const t0 = Date.now()
+    const carga = await carregarDataset({
+      manifest: this.manifest, campos: prep.camposUsados, filtro: filtroDoUniverso(universo, this.manifest),
+      buscar: (k) => this.buscarComCache(k, stats), paralelo: 6,
+      aoProgresso: (feitos, total) => this.op.aoProgresso?.({ fase: 'baixando', feitos, total }),
+    })
+    this.op.aoProgresso?.({ fase: 'executando', feitos: 0, total: 1 })
+    const { info, nomes } = infoCompeticoes(this.manifest)
+    const resultado = explorar(prep, carga.dataset, { competicoesInfo: info, nomesCompeticoes: nomes })
     return { resultado, carga: { chunks: carga.chunks, bytes: carga.bytes, ms: Date.now() - t0, doCache: stats.doCache } }
   }
 

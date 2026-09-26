@@ -60,7 +60,7 @@ Feedback dos testes: "Núcleo", "Só-FPT", "Perna" e as chaves das fórmulas nã
 | Antes | Agora |
 | --- | --- |
 | 1. Universo · Ligas | 1. Jogos considerados (universo) · Competições; modos "Ligas padrão (recomendado)", "Escolher uma a uma" |
-| Núcleo / Só-FPT | Fonte dos jogos: "Ligas do BDB (bet365 + Pinnacle)" / "Ligas extras (Football-Data)"; na lista liga a liga, "· FPT" virou "· extra" |
+| Núcleo / Só-FPT | Fonte dos jogos: "Ligas do BDB (bet365 + Pinnacle)" / "Ligas extras (FutPythonTrader)"; na lista liga a liga, "· FPT" virou "· extra" |
 | Ligas / Copas | Tipo de competição: "Campeonatos (pontos corridos)" / "Copas e torneios internacionais" |
 | Excluir rodadas iniciais · Cobertura mínima | Ignorar as primeiras rodadas · Só jogos que tenham (rótulos das odds por extenso) |
 | 2. Indicadores e catálogo | 2. Dados e indicadores; catálogo mostra o rótulo em português em cima e a chave técnica embaixo; grupos em português (Partida, Odds, Movimento do mercado, Estatísticas dos times, Médias da liga); unidades traduzidas |

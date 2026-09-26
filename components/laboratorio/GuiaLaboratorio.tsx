@@ -12,7 +12,7 @@ import type { FuncaoUI } from '@/lib/laboratorio/ui/tipos'
 const GLOSSARIO: { termo: string; def: string }[] = [
   { termo: 'Universo', def: 'Conjunto de jogos que a estratégia pode considerar: quais ligas, temporadas, datas e fontes. Tudo o que vem depois só olha para esses jogos.' },
   { termo: 'Ligas do BDB', def: 'Ligas acompanhadas diariamente pelo site, com odds da bet365 e da Pinnacle (abertura e fechamento). É a mesma base do Backtest tradicional.' },
-  { termo: 'Ligas extras (Football-Data)', def: 'Ligas que só existem na base histórica Football-Data. Mais jogos, porém menos colunas de odds e estatísticas.' },
+  { termo: 'Ligas extras (FutPythonTrader)', def: 'Ligas que só existem na base histórica FutPythonTrader (FPT). Mais jogos, porém menos colunas de odds e estatísticas.' },
   { termo: 'Indicador', def: 'Um cálculo com nome, por exemplo edge_h = odd da bet365 × probabilidade justa da Pinnacle − 1. Depois de criado, o nome pode ser usado na regra, na escolha do lado e no stake.' },
   { termo: 'Regra de seleção', def: 'Condição que o jogo precisa cumprir para gerar aposta. Pode ser montada no modo Visual (menus) ou escrita como fórmula.' },
   { termo: 'Aposta (entrada)', def: 'O que é apostado em cada jogo selecionado: mercado, lado, linha, casa e momento da odd. Uma estratégia pode ter mais de uma aposta por jogo.' },

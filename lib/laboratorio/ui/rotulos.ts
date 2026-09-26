@@ -45,7 +45,7 @@ export const rotuloTipo = (t: string): string => ROTULO_TIPO[t] ?? t
 export const DICAS = {
   // 1. Universo
   fonteBdb: 'Ligas que o BDB acompanha diariamente, com odds da bet365 e da Pinnacle. É a mesma base do Backtest tradicional e a mais completa.',
-  fonteExtra: 'Ligas que só existem na base histórica Football-Data (FPT). Aumentam a amostra, mas têm menos colunas de odds e estatísticas.',
+  fonteExtra: 'Ligas que só existem na base histórica FutPythonTrader (FPT). Aumentam a amostra, mas têm menos colunas de odds e estatísticas.',
   tipoLiga: 'Campeonatos por pontos corridos (Brasileirão, Premier League…).',
   tipoCopa: 'Mata-mata e torneios internacionais de clubes (Copa do Brasil, Libertadores…).',
   temporadas: 'Deixe vazio para usar todas. "24/25" é uma temporada europeia; "2025" é anual, como o Brasileirão.',

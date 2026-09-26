@@ -75,10 +75,39 @@ holdout (que muda o universo); `Universo.temporadasExcluidas`; `EstrategiaCompil
 2. Varredura com 3+ parâmetros não tem heatmap (só tabela); varredura com staking Kelly recompila a probabilidade a cada combinação (ok, mas mais lenta).
 3. Fase 6 (operação): paper trading, comparação backtest × live, portfólio.
 
-## 5. Roteiro de teste no navegador
+## 5. Roteiro de teste no navegador (passo a passo, sem conhecimento prévio)
 
-1. Carregar o exemplo "Modelo Dixon-Coles acima do mercado no over 2.5" pelo guia; conferir no passo 6 o selo fechado e a varredura `$p1` de 0,02 a 0,10.
-2. Executar; abrir a aba Validação: cartão "Última temporada selada" com os jogos ocultos; clicar "Rodar validação avançada" e ver a barra "Varrendo parâmetros… n/9".
-3. Abas Varredura (heatmap não aparece com 1 parâmetro; tabela ordenada e PBO), Monte Carlo (histograma vermelho, chance de lucro), Calibração (skill negativo).
-4. Salvar a estratégia (passo 7); no passo 6 clicar "Abrir o selo", confirmar; executar de novo; aba Validação mostra "anteriores × última temporada".
-5. Recarregar a página e carregar a estratégia: passo 6 mostra "Última temporada aberta" sem opção de fechar; a lista mostra "selo aberto".
+Pré-requisitos: estar logado em https://www.bigdatabet.com.br com um usuário que tem o plano do Backtest
+(VIP PRO) e a Vercel já ter publicado o commit `49b7987` ou posterior (o rodapé do resultado mostra
+"engine 0.2.0").
+
+**Teste A — carregar um exemplo e ver o selo**
+1. Menu lateral → "Laboratório" (ícone de frasco, badge "Novo"). Espere o botão verde do topo do formulário mudar de "Preparando…" para "Executar".
+2. No canto superior direito, clique em "Como usar". Abre um painel lateral. Clique na aba "Exemplos".
+3. No terceiro cartão, "Modelo Dixon-Coles acima do mercado no over 2.5", clique em "Carregar exemplo". O painel fecha e aparece um aviso verde "Exemplo carregado".
+4. No formulário à esquerda, clique em "6. Validação avançada" para abrir o passo. Confira: cadeado verde "Última temporada selada"; "Varredura dos parâmetros $p" mostra a linha `$p1` ligada, de 0,02 até 0,1, passo 0,01, e o texto "9 combinações".
+   Se o passo 6 estiver mostrando "Defina parâmetros no passo 5…", o exemplo não carregou: repita o passo 3.
+
+**Teste B — executar e rodar a validação**
+5. Clique em "Executar" (topo do formulário). Espere o resultado aparecer à direita (cards, gráfico e abas). Na primeira execução do dia a barra "Baixando dados…" pode levar 10 a 40 s.
+6. Nas abas abaixo do gráfico, clique em "Validação ●". Deve aparecer o cartão "Última temporada selada. N jogos de M temporadas ficaram de fora deste run" e um botão "Rodar validação avançada".
+7. Clique em "Rodar validação avançada". No topo do resultado aparece uma barra fina com "Varrendo parâmetros… 1/9 … 9/9" e depois "Validando…". Leva cerca de 5 a 15 s. Ao terminar, aviso verde "Validação concluída".
+8. Ainda na aba Validação, confira: tabela "Cortes por temporada" com uma linha por temporada; bloco "Walk-forward (parâmetros escolhidos no treino)" com quatro cards (Yield fora da amostra, Yield no treino, Eficiência, Janelas) e uma tabela com a coluna "Parâmetros" preenchida (p1=0,0x); abaixo, o gráfico do lucro fora da amostra.
+
+**Teste C — as outras três abas**
+9. Aba "Varredura": quatro cards no topo (Tentativas = 9 + as registradas, p-valor deflacionado, t deflacionado, Veredito); depois "Melhor combinação", "PBO" e "Combinações = 9"; por fim uma tabela com 9 linhas ordenadas por yield. Não há mapa de calor porque só existe um parâmetro (aparece com dois).
+10. Aba "Monte Carlo": cards "Lucro final (mediana)", "Chance de lucro", "Maior queda típica", "Chance de ruína"; histograma vermelho/verde; gráfico com 12 linhas; bloco "Seleção aleatória nos mesmos jogos" com o valor de z.
+11. Aba "Calibração": cards Brier, Skill, Log-loss, ECE (para este exemplo o skill é negativo e o ECE alto: o modelo é pior que o mercado, e é isso que a aba deve mostrar); gráfico de pontos com a linha diagonal tracejada; tabela por faixa.
+12. Volte ao card "p-valor" no topo: a linha pequena passou a mostrar "deflacionado … · N tentativas".
+
+**Teste D — salvar e abrir o selo**
+13. Abra "7. Salvar e carregar" e clique em "Salvar estratégia". Dê o nome "Teste selo" e confirme. Aviso "Estratégia salva".
+14. Abra "6. Validação avançada". O botão "Abrir o selo" agora está ativo (antes de salvar ele fica cinza). Clique; leia a confirmação do navegador e clique em OK. Aviso "Selo aberto". O cartão fica amarelo: "Última temporada aberta".
+15. Clique em "Executar" de novo e depois em "Rodar validação avançada". Na aba Validação aparece a tabela com duas linhas: "Temporadas anteriores" e "Última temporada (holdout)", cada uma com n, yield, lucro, acerto, CLV e p.
+
+**Teste E — o selo fica registrado**
+16. Recarregue a página (F5). Abra "7. Salvar e carregar": na lista "Minhas estratégias", a linha "Teste selo" mostra o badge "selo aberto". Clique no nome para carregar.
+17. Abra "6. Validação avançada": o cartão está amarelo, "Última temporada aberta", e não existe botão para selar de novo. Esse é o comportamento esperado: o selo só abre uma vez por estratégia.
+18. Opcional: apague "Teste selo" pelo ícone de lixeira na lista.
+
+O que reportar se algo falhar: o número do passo, o texto exato de qualquer aviso vermelho, e um print da tela.

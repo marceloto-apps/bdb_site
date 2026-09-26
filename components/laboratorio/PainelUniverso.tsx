@@ -90,7 +90,7 @@ export function PainelUniverso({ universo, onChange, resumo }: { universo: Unive
               <label key={c.key} className="flex items-center gap-2 text-sm">
                 <Checkbox checked={(universo.competicoes ?? []).includes(c.key)} onCheckedChange={() => toggleLiga(c.key)} />
                 <span className="truncate">{c.nome}</span>
-                <span className="text-muted-foreground text-xs ml-auto whitespace-nowrap" title={c.soFpt ? 'Liga extra (Football-Data)' : 'Liga do BDB'}>{c.pais}{c.soFpt ? ' · extra' : ''} · {c.linhas.toLocaleString('pt-BR')} jogos</span>
+                <span className="text-muted-foreground text-xs ml-auto whitespace-nowrap" title={c.soFpt ? 'Liga extra (FutPythonTrader)' : 'Liga do BDB'}>{c.pais}{c.soFpt ? ' · extra' : ''} · {c.linhas.toLocaleString('pt-BR')} jogos</span>
               </label>
             ))}
           </div>
@@ -115,7 +115,7 @@ export function PainelUniverso({ universo, onChange, resumo }: { universo: Unive
       <div className="space-y-2 text-sm">
         <Rotulo className="text-xs">Fonte dos jogos</Rotulo>
         <label className="flex items-center gap-2"><Switch checked={fontes.includes('core')} onCheckedChange={(v) => setFonte('core', v)} />Ligas do BDB <span className="text-muted-foreground text-xs">(bet365 + Pinnacle)</span><Dica texto={DICAS.fonteBdb} /></label>
-        <label className="flex items-center gap-2"><Switch checked={fontes.includes('fpt')} onCheckedChange={(v) => setFonte('fpt', v)} />Ligas extras <span className="text-muted-foreground text-xs">(Football-Data)</span><Dica texto={DICAS.fonteExtra} /></label>
+        <label className="flex items-center gap-2"><Switch checked={fontes.includes('fpt')} onCheckedChange={(v) => setFonte('fpt', v)} />Ligas extras <span className="text-muted-foreground text-xs">(FutPythonTrader)</span><Dica texto={DICAS.fonteExtra} /></label>
         <Rotulo className="text-xs">Tipo de competição</Rotulo>
         <label className="flex items-center gap-2"><Switch checked={!universo.tipos || universo.tipos.includes('LEAGUE')} onCheckedChange={(v) => onChange({ ...universo, tipos: v ? undefined : ['CUP', 'INTERNATIONAL_CLUBS'] })} />Campeonatos <span className="text-muted-foreground text-xs">(pontos corridos)</span><Dica texto={DICAS.tipoLiga} /></label>
         <label className="flex items-center gap-2"><Switch checked={!universo.tipos || universo.tipos.includes('CUP')} onCheckedChange={(v) => onChange({ ...universo, tipos: v ? undefined : ['LEAGUE'] })} />Copas e torneios internacionais<Dica texto={DICAS.tipoCopa} /></label>

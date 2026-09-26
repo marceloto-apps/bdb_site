@@ -28,8 +28,7 @@ import {
   RefreshCw,
   Gauge,
   Coins,
-  CreditCard
-} from 'lucide-react'
+  CreditCard, Beaker } from 'lucide-react'
 
 interface DashboardSidebarContentProps {
   userRole?: string
@@ -90,6 +89,17 @@ export function DashboardSidebarContent({ userRole, onLinkClick }: DashboardSide
                   <span>Backtest</span>
                 </div>
                 <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Em breve</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild isActive={pathname === '/dashboard/laboratorio'} tooltip="Laboratório de Estratégias">
+              <Link href="/dashboard/laboratorio" className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2">
+                  <Beaker />
+                  <span>Laboratório</span>
+                </div>
+                <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full whitespace-nowrap">Novo</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

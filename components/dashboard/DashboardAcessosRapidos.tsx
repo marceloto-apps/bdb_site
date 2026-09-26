@@ -16,8 +16,7 @@ import {
   FileSpreadsheet,
   Coins,
   ChevronRight,
-  Sparkles,
-} from 'lucide-react'
+  Sparkles, Beaker } from 'lucide-react'
 
 interface ItemAcessoRapido {
   titulo: string
@@ -31,6 +30,16 @@ interface ItemAcessoRapido {
 }
 
 const ferramentas: ItemAcessoRapido[] = [
+  {
+    titulo: 'Laboratório de Estratégias',
+    descricao: 'Backtest livre: combine odds e estatísticas por fórmula, valide com CLV e drawdown',
+    href: '/dashboard/laboratorio',
+    icone: Beaker,
+    corIcone: 'text-emerald-400',
+    bgIcone: 'bg-emerald-500/10',
+    badge: 'VIP PRO',
+    badgeVariant: 'secondary',
+  },
   {
     titulo: 'Over/Under 2.5',
     descricao: 'Projeção de odds justas para a linha 2.5 via Poisson',

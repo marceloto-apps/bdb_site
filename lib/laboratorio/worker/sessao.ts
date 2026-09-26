@@ -119,7 +119,12 @@ export function buscadorAssinado(endpoint: string, fetchFn: typeof fetch = fetch
   })
   return async (chave) => {
     const url = await urlDe(chave)
-    const r = await fetchFn(url)
+    let r: Response
+    try { r = await fetchFn(url) } catch (e) {
+      // sem status HTTP = o navegador bloqueou (quase sempre CORS do bucket para esta origem)
+      const origem = typeof location !== 'undefined' ? location.origin : 'esta origem'
+      throw new Error(`Download do dataset bloqueado pelo navegador para ${origem}: confira a política CORS do bucket R2 (AllowedOrigins precisa incluir ${origem}). Detalhe: ${(e as Error).message}`)
+    }
     if (!r.ok) throw new Error(`${chave}: HTTP ${r.status}`)
     return new Uint8Array(await r.arrayBuffer())
   }

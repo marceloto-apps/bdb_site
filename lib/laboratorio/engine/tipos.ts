@@ -56,6 +56,58 @@ export interface Universo {
   excluirRodadasIniciais?: number
   /** campos que precisam ser não-nulos para o jogo entrar no universo */
   coberturaMinima?: string[]
+  /** chaves de temporada excluídas (holdout selado: última temporada de cada competição) */
+  temporadasExcluidas?: string[]
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Validação avançada (Fase 5, §6.6–6.7 do plano)
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface Validacao {
+  /** selado = última temporada de cada competição fica fora do run; aberto = entra e é reportada à parte */
+  holdout?: 'selado' | 'aberto'
+  /** folds temporais: por rótulo de temporada ou por ano civil */
+  folds?: 'temporada' | 'ano'
+  /** walk-forward: nº de janelas iguais no tempo (2..8); treino expansivo (padrão) ou só a janela anterior */
+  walkForward?: { janelas: number; expandindo?: boolean }
+  /** varredura dos parâmetros `$p`: faixa por parâmetro (máx. 200 combinações) */
+  varredura?: Record<string, { de: number; ate: number; passo: number }>
+  /** Monte Carlo sobre as apostas do run: caminhos (padrão 2000) e fração de queda que conta como ruína (padrão 0.5) */
+  monteCarlo?: { caminhos?: number; ruinaPct?: number }
+  /** calibração: expressão de probabilidade (da seleção apostada) a comparar com o resultado e com a referência */
+  calibracao?: { prob: Expressao }
+}
+
+export interface ResumoFold { chave: string; de: number; ate: number; n: number; turnover: number; lucro: number; yield: number; hitRate: number; clvNovigMedio: number; tYield: number; pValor: number }
+export interface JanelaWalkForward { k: number; de: number; ate: number; parametros: Record<string, number> | null; nTreino: number; yieldTreino: number; nTeste: number; yieldTeste: number; lucroTeste: number; clvTeste: number }
+export interface ComboVarredura { parametros: Record<string, number>; n: number; turnover: number; lucro: number; yield: number; hitRate: number; clvNovigMedio: number; pValor: number; mdd: number }
+
+export interface ValidacaoResult {
+  holdout: { modo: 'selado' | 'aberto' | 'nenhum'; temporadas: number; jogosOcultos: number | null; anteriores: ResumoFold | null; holdout: ResumoFold | null }
+  folds: { tipo: 'temporada' | 'ano'; itens: ResumoFold[]; positivos: number; total: number }
+  walkForward: {
+    janelas: JanelaWalkForward[]; expandindo: boolean; otimizado: boolean
+    nOos: number; yieldOos: number; lucroOos: number; yieldIs: number; wfe: number; oosCumulativo: number[]
+  } | null
+  varredura: {
+    parametros: string[]; combos: ComboVarredura[]; melhor: ComboVarredura | null; truncada: boolean
+    pbo: number; pboTestes: number
+    heatmap: { x: number[]; y: number[]; yield: (number | null)[][]; n: number[][] } | null
+  } | null
+  deflacao: { tentativas: number; tentativasPrevias: number; pValor: number; pValorDeflacionado: number; tYield: number; tDeflacionado: number; tEsperadoMax: number; provavelSelecao: boolean }
+  monteCarlo: {
+    caminhos: number; ruinaPct: number; n: number
+    lucroFinal: { p5: number; p25: number; p50: number; p75: number; p95: number }
+    mdd: { p50: number; p95: number; p99: number }
+    mddPct: { p50: number; p95: number; p99: number }
+    probLucro: number; probRuina: number
+    histograma: { de: number; ate: number; n: number }[]
+    amostras: number[][]
+    selecaoAleatoria: { sorteios: number; yieldReal: number; yieldMedio: number; desvio: number; z: number; pValor: number } | null
+  } | null
+  calibracao: { formula: string; n: number; brier: number; brierRef: number; logLoss: number; logLossRef: number; ece: number; skill: number; bins: { pMedio: number; freq: number; n: number }[] } | null
+  tempoMs: number
 }
 
 export type SelecaoFixa =
@@ -112,6 +164,8 @@ export interface Estrategia {
   seed?: number
   /** nº de reamostras do bootstrap em blocos (0 desliga) */
   bootstrap?: number
+  /** validação avançada (Fase 5) */
+  validacao?: Validacao
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -265,6 +319,8 @@ export interface RunResult {
   avisos: Aviso[]
   camposUsados: string[]
   tempoMs: number
+  /** presente quando o run foi pedido com validação avançada */
+  validacao?: ValidacaoResult
 }
 
-export const ENGINE_VERSAO = '0.1.0'
+export const ENGINE_VERSAO = '0.2.0'

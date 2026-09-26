@@ -52,5 +52,16 @@
       "formula": "if(edge_h >= edge_a, odds.pinnacle.close.1x2.novig_h, odds.pinnacle.close.1x2.novig_a)"
     }
   },
-  "bancoInicial": 1000
+  "bancoInicial": 1000,
+  "validacao": {
+    "holdout": "aberto",
+    "folds": "temporada",
+    "walkForward": {
+      "janelas": 4
+    },
+    "monteCarlo": {
+      "caminhos": 2000,
+      "ruinaPct": 0.5
+    }
+  }
 }

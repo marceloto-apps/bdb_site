@@ -1,6 +1,6 @@
 /**
  * GET    /api/laboratorio/estrategias/[id] → estratégia (minha ou pública) com definição
- * PATCH  /api/laboratorio/estrategias/[id] → { nome?, descricao?, definicao?, publica? } (só a dona)
+ * PATCH  /api/laboratorio/estrategias/[id] → { nome?, descricao?, definicao?, publica?, holdoutAberto?: true } (só a dona; o selo nunca volta a fechar)
  * DELETE /api/laboratorio/estrategias/[id] (só a dona; runs ficam com strategyId nulo)
  */
 import { NextResponse } from 'next/server'

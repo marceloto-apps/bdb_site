@@ -9,12 +9,12 @@ export interface CatalogoJson { versao: string; campos: { key: string; tipo: str
 
 export type PedidoWorker =
   | { t: 'preparar'; id: number; catalogo: CatalogoJson; manifest: Manifest; endpointDataset: string }
-  | { t: 'executar'; id: number; estrategia: Estrategia; opcoes?: { bootstrap?: number; maxApostas?: number; extras?: boolean } }
+  | { t: 'executar'; id: number; estrategia: Estrategia; opcoes?: { bootstrap?: number; maxApostas?: number; extras?: boolean; validacao?: boolean; tentativasPrevias?: number } }
   | { t: 'validar'; id: number; estrategia: Estrategia }
   | { t: 'limpar'; id: number }
 
 export type RespostaWorker =
-  | { t: 'progresso'; id: number; fase: 'baixando' | 'decodificando' | 'executando'; feitos: number; total: number }
+  | { t: 'progresso'; id: number; fase: 'baixando' | 'decodificando' | 'executando' | 'validando' | 'varrendo'; feitos: number; total: number }
   | { t: 'resultado'; id: number; resultado: unknown; carga?: { chunks: number; bytes: number; ms: number; doCache: number } }
   | { t: 'validacao'; id: number; ok: boolean; erros: string[]; avisos: string[]; camposUsados: string[]; indicadores: { nome: string; tipo: string }[] }
   | { t: 'pronto'; id: number; versao: string }

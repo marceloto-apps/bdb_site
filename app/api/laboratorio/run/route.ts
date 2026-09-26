@@ -1,6 +1,6 @@
 /**
  * POST /api/laboratorio/run → executa a estratégia no servidor (mesmo engine do Worker, mesmo hash).
- * Body: { estrategia, salvar?, strategyId?, maxApostas?, bootstrap? }
+ * Body: { estrategia, salvar?, strategyId?, maxApostas?, bootstrap?, validacao?, tentativasPrevias? }
  * Uso: runs salvos/reproduzíveis e clientes sem Worker. Para a UI interativa o Worker é o caminho.
  */
 import { NextResponse } from 'next/server'
@@ -22,9 +22,9 @@ export async function POST(req: Request) {
   if (!r2Configurado()) return NextResponse.json({ error: 'DATASET_INDISPONIVEL' }, { status: 503 })
   const parsed = runPostSchema.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ error: 'INVALID_PARAMETERS', details: parsed.error.flatten() }, { status: 400 })
-  const { estrategia, salvar, strategyId, maxApostas, bootstrap } = parsed.data
+  const { estrategia, salvar, strategyId, maxApostas, bootstrap, validacao, tentativasPrevias } = parsed.data
   try {
-    const { resultado, carga } = await executarNoServidor(estrategia as Estrategia, { bootstrap, maxApostas: maxApostas ?? LIMITE_APOSTAS_SALVAS, extras: false })
+    const { resultado, carga } = await executarNoServidor(estrategia as Estrategia, { bootstrap, maxApostas: maxApostas ?? LIMITE_APOSTAS_SALVAS, extras: false, validacao, tentativasPrevias })
     const serial = serializarRun(resultado) as RunSerializado
     const tentativas = await registrarTentativa(u.userId, estrategia as Estrategia, strategyId)
     let runId: string | null = null

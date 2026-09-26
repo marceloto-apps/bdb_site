@@ -37,6 +37,14 @@ const GLOSSARIO: { termo: string; def: string }[] = [
   { termo: 'Escopo (all, venue)', def: 'all = todos os jogos do time; venue = só em casa (para o mandante) ou só fora (para o visitante).' },
   { termo: 'xG', def: 'Gols esperados: qualidade das chances criadas, medida pelas finalizações. Disponível nas ligas principais.' },
   { termo: 'Elo', def: 'Força do time num único número, atualizado jogo a jogo. Diferenças de 100 pontos ≈ 64% de chance para o mais forte em campo neutro.' },
+  { termo: 'Holdout selado', def: 'A temporada mais recente de cada liga fica escondida enquanto você ajusta a estratégia. Ao abrir o selo (só para estratégias salvas, e fica registrado), ela vira o teste final.' },
+  { termo: 'Walk-forward', def: 'Divide o tempo em janelas; em cada uma, a estratégia (e seus parâmetros, quando há varredura) é definida com os jogos anteriores e avaliada nos seguintes. Só o resultado fora da amostra conta.' },
+  { termo: 'WFE (eficiência do walk-forward)', def: 'Yield fora da amostra dividido pelo yield no treino. Perto de 1 é ótimo; abaixo de 0,5 o ajuste não se transfere para o futuro.' },
+  { termo: 'Tentativas e deflação', def: 'Cada variação avaliada de uma ideia é uma tentativa. Com muitas tentativas, algum resultado bom aparece por sorte; o p-valor deflacionado corrige isso: 1 − (1 − p)^N.' },
+  { termo: 'PBO (probabilidade de overfit)', def: 'Em quantas divisões treino/teste a melhor combinação de parâmetros no treino ficou abaixo da mediana no teste. Acima de 50% é sinal de ajuste excessivo.' },
+  { termo: 'Monte Carlo', def: 'Refaz as mesmas apostas milhares de vezes em ordem sorteada, com o stake escolhido, para ver a faixa de lucro final, a maior queda típica e a chance de ruína.' },
+  { termo: 'Seleção aleatória', def: 'Mesmas apostas em jogos sorteados do universo. Mede se a regra escolhe jogos melhores que o acaso (z acima de 2 = sim).' },
+  { termo: 'Calibração (Brier, ECE)', def: 'Quão bem a probabilidade estimada bate com a frequência observada. Brier menor que o da Pinnacle = prevê melhor que o mercado; ECE abaixo de 3% = bem calibrada.' },
 ]
 
 const CAMPOS_EXEMPLO: { chave: string; leia: string }[] = [
@@ -73,7 +81,8 @@ export function GuiaLaboratorio({ funcoes, onCarregarExemplo }: { funcoes: Funca
                 <li><b>Regra de seleção.</b> Diga quais jogos entram. No modo Visual você combina condições com menus; no modo Fórmula você escreve o texto. Os dois geram a mesma coisa.</li>
                 <li><b>Apostas.</b> O que apostar em cada jogo selecionado: mercado, lado, linha, casa e se a odd é a de abertura ou fechamento. Quase sempre uma aposta basta.</li>
                 <li><b>Stake e banco.</b> Comece com stake flat de 1 unidade: ele mede a qualidade da seleção sem o efeito do dimensionamento. Kelly e % do banco vêm depois.</li>
-                <li><b>Executar e ler.</b> Olhe nesta ordem: aviso vermelho (vazamento de futuro invalida tudo), número de apostas (menos de 300 é pouco), CLV no-vig e beat rate (vantagem real), yield e p-valor (resultado), drawdown (risco).</li>
+                <li><b>Validação avançada.</b> Deixe a última temporada selada enquanto ajusta. Defina faixas para os parâmetros $p se quiser varrer. Depois de executar, use “Rodar validação avançada” nas abas Validação, Monte Carlo, Varredura e Calibração.</li>
+                <li><b>Executar e ler.</b> Olhe nesta ordem: aviso vermelho (vazamento de futuro invalida tudo), número de apostas (menos de 300 é pouco), CLV e beat rate (vantagem real), yield e p-valor deflacionado (resultado), walk-forward fora da amostra (estabilidade), drawdown e Monte Carlo (risco). Só então abra o selo.</li>
               </ol>
               <p className="text-muted-foreground">Salvar a estratégia (passo 6) guarda a definição; salvar o run guarda o resultado e conta uma tentativa, para você saber quantas variações já testou na mesma ideia.</p>
             </TabsContent>

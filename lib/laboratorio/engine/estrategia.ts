@@ -31,6 +31,8 @@ export interface EstrategiaCompilada {
   regra: No | null
   entradas: EntradaCompilada[]
   stakingProb: No | null
+  /** expressão de probabilidade para a calibração (validacao.calibracao.prob) */
+  calibracaoProb: No | null
   /** campos do catálogo que o run lê (fórmulas + odds das entradas + referência + base) */
   camposUsados: string[]
   avisos: Aviso[]
@@ -163,6 +165,19 @@ export function prepararEstrategia(e: Estrategia, cat: Catalogo): EstrategiaComp
   if ((s?.metodo === 'pct_banco' || s?.metodo === 'kelly') && !(e.bancoInicial && e.bancoInicial > 0)) erros.push(`Staking ${s.metodo}: informe bancoInicial > 0`)
   if (e.stopDrawdown !== undefined && !(e.stopDrawdown > 0 && e.stopDrawdown < 1)) erros.push('stopDrawdown deve estar em (0, 1)')
 
+  // validação avançada
+  let calibracaoProb: No | null = null
+  const va = e.validacao
+  if (va?.calibracao?.prob && (va.calibracao.prob.ast || va.calibracao.prob.formula?.trim())) {
+    const r = prepararNo(va.calibracao.prob, 'Calibração (probabilidade)')
+    if (r) { calibracaoProb = r.ast; if (r.tipo === 'odd') erros.push('Calibração: a expressão deve ser uma probabilidade, não uma odd') }
+  }
+  if (va?.walkForward && !(Number.isInteger(va.walkForward.janelas) && va.walkForward.janelas >= 2 && va.walkForward.janelas <= 8)) erros.push('Walk-forward: janelas entre 2 e 8')
+  for (const [nome, f] of Object.entries(va?.varredura ?? {})) {
+    if (!(nome in (e.parametros ?? {}))) erros.push(`Varredura: parâmetro $${nome} não existe em parametros`)
+    if (!(f.passo > 0) || !(f.ate >= f.de)) erros.push(`Varredura: faixa inválida para $${nome} (de ≤ até, passo > 0)`)
+  }
+
   // universo
   const u = e.universo
   if (u?.de && u?.ate && u.de > u.ate) erros.push('Universo: data inicial maior que a final')
@@ -173,6 +188,7 @@ export function prepararEstrategia(e: Estrategia, cat: Catalogo): EstrategiaComp
   for (const ind of indicadores) camposReferenciados(ind.ast).forEach((k) => camposFormulas.add(k))
   if (regra) camposReferenciados(regra).forEach((k) => camposFormulas.add(k))
   if (stakingProb) camposReferenciados(stakingProb).forEach((k) => camposFormulas.add(k))
+  if (calibracaoProb) camposReferenciados(calibracaoProb).forEach((k) => camposFormulas.add(k))
   for (const ec of entradas) for (const a of [ec.selecaoAst, ec.linhaAst, ec.condicaoAst]) if (a) camposReferenciados(a).forEach((k) => camposFormulas.add(k))
   const usaFechamento = Array.from(camposFormulas).filter((k) => /\.close\./.test(k) || /^derived\.[a-z0-9_]+\.(move_|line_shift_)/.test(k))
   if (usaFechamento.length) for (const ec of entradas) if (ec.entrada.preco.snapshot === 'open') {
@@ -180,7 +196,7 @@ export function prepararEstrategia(e: Estrategia, cat: Catalogo): EstrategiaComp
   }
 
   if (erros.length) throw new ErroEstrategia(erros)
-  return { estrategia: e, indicadores, regra, entradas, stakingProb, camposUsados: Array.from(campos), avisos }
+  return { estrategia: e, indicadores, regra, entradas, stakingProb, calibracaoProb, camposUsados: Array.from(campos), avisos }
 }
 
 export function unidadeDoIndicador(ec: EstrategiaCompilada, nome: string): Unidade | undefined {

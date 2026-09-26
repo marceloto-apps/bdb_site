@@ -47,7 +47,7 @@ ler a fórmula de volta; o que não cabe no builder continua disponível no modo
 0. ~~Rótulos de temporada mistos ("24/25" no núcleo, "2024/2025" na FPT)~~ — unificado na fonte em 26/09/2026 (`rotuloTemporada` no loader do `bdb_ingest`, commit `c7c5249`); vale a partir do próximo build da feature store.
 
 1. Validar no navegador (roteiro acima); ajustar Lighthouse/mobile se algo regredir.
-2. Fase 5 (validação avançada) entra como novas abas do tearsheet: Validação (folds, walk-forward, holdout selado), Monte Carlo, Varredura (`$p`), Calibração.
+2. ~~Fase 5 (validação avançada)~~ — feita em 26/09/2026 (`docs/Backtest_Livre_Fase5.md`): passo 6 + abas Validação, Monte Carlo, Varredura e Calibração.
 3. Contagem de jogos selecionados "ao vivo" hoje é a do último run; um `contar` no Worker (sem métricas) pode atualizar ao digitar quando os chunks já estão em cache.
 4. Autocomplete da fórmula usa `datalist` nativo (funciona no input do builder; no `textarea` do modo fórmula é só via catálogo/cópia).
 5. ~~Nomenclatura e glossário~~ — feito em 26/09/2026, ver §5.

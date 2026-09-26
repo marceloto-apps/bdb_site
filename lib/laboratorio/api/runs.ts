@@ -29,6 +29,7 @@ export interface RunSerializado {
   avisos: unknown
   camposUsados: string[]
   tempoMs: number
+  validacao?: unknown
 }
 
 /** Reduz séries longas do caminho/CLV a no máximo `pontos` amostras (para o gráfico salvo). */
@@ -46,6 +47,7 @@ export function resumoParaBanco(r: RunSerializado): Prisma.InputJsonValue {
   const clv = r.clv as Record<string, unknown>
   return {
     nSelecionados: r.nSelecionados, kpis: r.kpis, inferencia: r.inferencia, segmentos: r.segmentos, avisos: r.avisos, camposUsados: r.camposUsados, tempoMs: r.tempoMs,
+    validacao: r.validacao ?? null,
     caminho: { ...caminho, banco: amostrar(caminho.banco), cumulativo: amostrar(caminho.cumulativo), underwater: amostrar(caminho.underwater) },
     clv: { ...clv, esperadoCumulativo: amostrar(clv.esperadoCumulativo), clvCumulativo: amostrar(clv.clvCumulativo) },
   } as Prisma.InputJsonValue

@@ -17,6 +17,7 @@ import { PainelIndicadores } from './PainelIndicadores'
 import { PainelRegras } from './PainelRegras'
 import { PainelEntradas } from './PainelEntradas'
 import { PainelStaking } from './PainelStaking'
+import { PainelValidacao } from './PainelValidacao'
 import { Tearsheet } from './Tearsheet'
 import { EstrategiasSalvas } from './EstrategiasSalvas'
 import { GuiaLaboratorio } from './GuiaLaboratorio'
@@ -31,6 +32,7 @@ const INICIAL: Estrategia = {
   bancoInicial: 100,
   bootstrap: 1000,
   seed: 42,
+  validacao: { holdout: 'selado', folds: 'temporada', walkForward: { janelas: 4, expandindo: true }, monteCarlo: { caminhos: 2000, ruinaPct: 0.5 } },
 }
 const CORES = ['#22c55e', '#3b82f6', '#eab308', '#a855f7', '#f97316']
 
@@ -92,13 +94,14 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
     return () => clearTimeout(t)
   }, [estrategia, pronto])
 
-  const executar = async () => {
+  const executar = async (validacao = false) => {
     if (!lab.current) return
     setExecutando(true); setProgresso(null)
     try {
-      const r = await lab.current.executar(estrategia, { aoProgresso: setProgresso, extras: true })
+      const tentativasPrevias = atualId ? (salvas.find((s) => s.id === atualId)?.tentativas ?? 0) : 0
+      const r = await lab.current.executar(estrategia, { aoProgresso: setProgresso, extras: true, validacao, tentativasPrevias })
       setRun(r.resultado as RunUI)
-      if (r.carga) toast({ title: 'Resultado pronto', description: `${r.carga.chunks} blocos · ${(r.carga.bytes / 1048576).toFixed(1)} MB${r.carga.doCache ? ` (${r.carga.doCache} do cache)` : ''} · ${r.carga.ms} ms` })
+      if (r.carga) toast({ title: validacao ? 'Validação concluída' : 'Resultado pronto', description: `${r.carga.chunks} blocos · ${(r.carga.bytes / 1048576).toFixed(1)} MB${r.carga.doCache ? ` (${r.carga.doCache} do cache)` : ''} · ${r.carga.ms} ms` })
     } catch (e) {
       const err = e as ErroLaboratorio
       toast({ title: err.message || 'Falha ao executar', description: err.erros?.slice(0, 3).join(' · '), variant: 'destructive' })
@@ -124,6 +127,7 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
       const r = await api<{ data: { id: string; nome: string; definicao: Estrategia; minha: boolean } }>(`/api/laboratorio/estrategias/${id}`)
       setEstrategia({ ...INICIAL, ...r.data.definicao })
       setAtualId(r.data.minha ? r.data.id : null); setAtualNome(r.data.minha ? r.data.nome : `${r.data.nome} (cópia)`)
+      if (!r.data.minha && r.data.definicao.validacao?.holdout === 'aberto') setEstrategia((e) => ({ ...e, validacao: { ...(e.validacao ?? {}), holdout: 'selado' } }))
       const runs = r.data.minha ? await api<{ data: RunSalvoUI[] }>(`/api/laboratorio/runs?strategyId=${id}`) : { data: [] }
       setRunsSalvos(runs.data)
     } catch (e) { toast({ title: 'Não foi possível carregar', description: (e as Error).message, variant: 'destructive' }) }
@@ -145,6 +149,16 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
       if (atualId) setRunsSalvos((await api<{ data: RunSalvoUI[] }>(`/api/laboratorio/runs?strategyId=${atualId}`)).data)
       await carregarListas()
     } catch (e) { toast({ title: 'Não foi possível salvar o run', description: (e as Error).message, variant: 'destructive' }) }
+  }
+  const abrirSelo = async () => {
+    if (!atualId) return
+    if (!confirm('Abrir o selo inclui a última temporada de cada liga no run e fica registrado nesta estratégia. Faça isso só quando a regra estiver pronta. Continuar?')) return
+    try {
+      await api(`/api/laboratorio/estrategias/${atualId}`, { method: 'PATCH', body: JSON.stringify({ holdoutAberto: true, definicao: { ...estrategia, validacao: { ...(estrategia.validacao ?? {}), holdout: 'aberto' } } }) })
+      atualizar({ validacao: { ...(estrategia.validacao ?? {}), holdout: 'aberto' } })
+      toast({ title: 'Selo aberto', description: 'Execute de novo para ver a última temporada separada na aba Validação.' })
+      await carregarListas()
+    } catch (e) { toast({ title: 'Não foi possível abrir o selo', description: (e as Error).message, variant: 'destructive' }) }
   }
   const salvarIndicador = async (nome: string, formula: string) => {
     try { await api('/api/laboratorio/indicadores', { method: 'POST', body: JSON.stringify({ nome, formula }) }); toast({ title: `Indicador ${nome} salvo` }); await carregarListas() }
@@ -192,14 +206,16 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
             <AccordionItem value="regras"><AccordionTrigger>3. Regra: quais jogos entram</AccordionTrigger><AccordionContent><PainelRegras regra={estrategia.regra} onChange={(r) => atualizar({ regra: r })} referencias={referencias} validacao={errosRegra} nSelecionados={run?.nSelecionados ?? null} nUniverso={run?.nUniverso ?? null} /></AccordionContent></AccordionItem>
             <AccordionItem value="entradas"><AccordionTrigger>4. Apostas</AccordionTrigger><AccordionContent><PainelEntradas entradas={estrategia.entradas} onChange={(e) => atualizar({ entradas: e })} /></AccordionContent></AccordionItem>
             <AccordionItem value="staking"><AccordionTrigger>5. Stake, banco e opções</AccordionTrigger><AccordionContent><PainelStaking estrategia={estrategia} onChange={atualizar} /></AccordionContent></AccordionItem>
-            <AccordionItem value="salvas"><AccordionTrigger>6. Salvar e carregar</AccordionTrigger><AccordionContent><EstrategiasSalvas salvas={salvas} atualId={atualId} atualNome={atualNome || estrategia.nome || ''} runs={runsSalvos} onSalvar={salvarEstrategia} onCarregar={carregarEstrategia} onDuplicar={duplicarEstrategia} onApagar={apagarEstrategia} onSalvarRun={salvarRun} temRun={!!run} /></AccordionContent></AccordionItem>
+            <AccordionItem value="validacao"><AccordionTrigger>6. Validação avançada</AccordionTrigger><AccordionContent><PainelValidacao estrategia={estrategia} onChange={atualizar} seloAbertoNoServidor={!!atualId && !!salvas.find((s) => s.id === atualId)?.holdoutAberto} podeAbrirSelo={!!atualId} onAbrirSelo={() => void abrirSelo()} nSalvas={salvas.length} /></AccordionContent></AccordionItem>
+            <AccordionItem value="salvas"><AccordionTrigger>7. Salvar e carregar</AccordionTrigger><AccordionContent><EstrategiasSalvas salvas={salvas} atualId={atualId} atualNome={atualNome || estrategia.nome || ''} runs={runsSalvos} onSalvar={salvarEstrategia} onCarregar={carregarEstrategia} onDuplicar={duplicarEstrategia} onApagar={apagarEstrategia} onSalvarRun={salvarRun} temRun={!!run} /></AccordionContent></AccordionItem>
           </Accordion>
         </div>
 
         <div className="lg:col-span-8">
           <Tearsheet run={run} executando={executando} progresso={progresso} comparados={comparados}
             onGuardar={() => { if (run && comparados.length < 5) setComparados([...comparados, { rotulo: `${atualNome || estrategia.nome || 'Run'} · ${run.hash.slice(0, 6)}`, run, cor: CORES[comparados.length] }]) }}
-            onRemoverComparado={(k) => setComparados(comparados.filter((_, i) => i !== k))} />
+            onRemoverComparado={(k) => setComparados(comparados.filter((_, i) => i !== k))}
+            onValidar={() => void executar(true)} seloAberto={!!atualId && !!salvas.find((s) => s.id === atualId)?.holdoutAberto} />
         </div>
       </div>
     </div>

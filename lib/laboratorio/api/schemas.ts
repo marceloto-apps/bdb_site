@@ -42,6 +42,16 @@ export const universoSchema = z.object({
   tipos: z.array(z.enum(['LEAGUE', 'CUP', 'INTERNATIONAL_CLUBS', 'NATIONAL_TEAMS'])).max(4).optional(),
   excluirRodadasIniciais: z.number().int().min(0).max(38).optional(),
   coberturaMinima: z.array(z.string().max(80)).max(50).optional(),
+  temporadasExcluidas: z.array(z.string().max(120)).max(2000).optional(),
+})
+
+export const validacaoSchema = z.object({
+  holdout: z.enum(['selado', 'aberto']).optional(),
+  folds: z.enum(['temporada', 'ano']).optional(),
+  walkForward: z.object({ janelas: z.number().int().min(2).max(8), expandindo: z.boolean().optional() }).optional(),
+  varredura: z.record(z.string().max(30), z.object({ de: z.number(), ate: z.number(), passo: z.number().positive() })).optional(),
+  monteCarlo: z.object({ caminhos: z.number().int().min(100).max(10000).optional(), ruinaPct: z.number().gt(0).lte(1).optional() }).optional(),
+  calibracao: z.object({ prob: expressao }).optional(),
 })
 
 export const estrategiaSchema = z.object({
@@ -59,6 +69,7 @@ export const estrategiaSchema = z.object({
   referencia: preco.optional(),
   seed: z.number().int().optional(),
   bootstrap: z.number().int().min(0).max(5000).optional(),
+  validacao: validacaoSchema.optional(),
 })
 
 export type EstrategiaJson = z.infer<typeof estrategiaSchema>
@@ -70,6 +81,9 @@ export const runPostSchema = z.object({
   strategyId: z.string().max(40).optional(),
   maxApostas: z.number().int().min(0).max(5000).optional(),
   bootstrap: z.number().int().min(0).max(5000).optional(),
+  /** anexa a validação avançada (Fase 5) */
+  validacao: z.boolean().optional(),
+  tentativasPrevias: z.number().int().min(0).max(100000).optional(),
 })
 
 export const salvarRunSchema = z.object({
@@ -92,6 +106,7 @@ export const salvarRunSchema = z.object({
     avisos: z.array(z.record(z.unknown())),
     camposUsados: z.array(z.string()),
     tempoMs: z.number(),
+    validacao: z.record(z.unknown()).optional(),
   }),
 })
 
@@ -101,7 +116,7 @@ export const estrategiaPostSchema = z.object({
   definicao: estrategiaSchema,
   publica: z.boolean().optional(),
 })
-export const estrategiaPatchSchema = estrategiaPostSchema.partial()
+export const estrategiaPatchSchema = estrategiaPostSchema.partial().extend({ holdoutAberto: z.literal(true).optional() })
 
 export const indicadorPostSchema = z.object({
   nome: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/, 'nome de identificador').max(40),

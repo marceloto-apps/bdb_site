@@ -2,7 +2,7 @@
  * Tipos do lado da UI: o RunResult chega serializado do Worker/servidor (Float64Array → number[],
  * NaN → null, Infinity → 'Infinity'), e o catálogo/manifesto vêm de /api/laboratorio/catalogo.
  */
-import type { Aposta, Aviso, Drawdown, Kpis, Segmento } from '../engine/tipos'
+import type { Aposta, Aviso, Drawdown, Kpis, Segmento, ValidacaoResult } from '../engine/tipos'
 
 type Serial<T> = { [K in keyof T]: T[K] extends Float64Array ? number[] : T[K] extends number ? number | null : T[K] extends [number, number] | null ? [number, number] | null : T[K] }
 
@@ -24,6 +24,10 @@ export interface InferenciaUI {
 }
 export type ApostaUI = Serial<Omit<Aposta, 'extras'>> & { extras?: Record<string, number | string | null> }
 
+/** Serialização profunda: todo number pode chegar como null (NaN no engine). */
+type Nulo<T> = T extends number ? number | null : T extends (infer U)[] ? Nulo<U>[] : T extends object ? { [K in keyof T]: Nulo<T[K]> } : T
+export type ValidacaoUI = Nulo<ValidacaoResult>
+
 export interface RunUI {
   hash: string
   datasetVersao: string | null
@@ -41,6 +45,7 @@ export interface RunUI {
   avisos: Aviso[]
   camposUsados: string[]
   tempoMs: number
+  validacao?: ValidacaoUI
 }
 
 export interface CampoUI { key: string; label: string; tipo: string; bloco: string; descricao: string; fontes: string[]; cobertura?: Record<string, number>; virtual?: boolean }

@@ -27,6 +27,7 @@ export function aplicarUniverso(ds: Dataset, u: Universo | undefined, competicoe
 
   const comps = u.competicoes?.length ? new Set(u.competicoes) : null
   const seasons = u.temporadas?.length ? new Set(u.temporadas) : null
+  const excluidas = u.temporadasExcluidas?.length ? new Set(u.temporadasExcluidas) : null
   const labels = u.temporadasLabel?.length ? new Set(u.temporadasLabel) : null
   const de = u.de ? Date.parse(u.de) : NaN
   const ate = u.ate ? Date.parse(u.ate.length <= 10 ? `${u.ate}T23:59:59.999Z` : u.ate) : NaN
@@ -44,6 +45,7 @@ export function aplicarUniverso(ds: Dataset, u: Universo | undefined, competicoe
     let ok = true
     if (comps && comp) ok = comps.has(comp[i] ?? '')
     if (ok && seasons && season) ok = seasons.has(season[i] ?? '')
+    if (ok && excluidas && season) ok = !excluidas.has(season[i] ?? '')
     if (ok && labels && seasonLabel) ok = labels.has(seasonLabel[i] ?? '')
     if (ok && data) {
       const d = data[i]

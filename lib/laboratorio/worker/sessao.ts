@@ -6,7 +6,7 @@
  * Cache em dois níveis: memória (bytes por chave, reaproveitados entre runs) e persistente
  * (`CacheBytes`, ex.: Cache API), ambos por chave versionada `<versao>/<dir>/<grupo>.bin`.
  */
-import { carregarDataset, filtroDoUniverso, infoCompeticoes, resolverAliases, type Buscador, type Manifest } from '../data/dataset'
+import { aplicarHoldout, carregarDataset, filtroDoUniverso, infoCompeticoes, resolverAliases, type Buscador, type Manifest } from '../data/dataset'
 import { catalogoDe, ErroEstrategia, prepararEstrategia, type Catalogo } from '../engine/estrategia'
 import { executarCompilada } from '../engine/run'
 import type { Estrategia, RunResult } from '../engine/tipos'
@@ -16,7 +16,8 @@ export interface CacheBytes {
   gravar: (chave: string, bytes: Uint8Array) => Promise<void>
 }
 
-export interface Progresso { fase: 'baixando' | 'decodificando' | 'executando'; feitos: number; total: number }
+export type FaseProgresso = 'baixando' | 'decodificando' | 'executando' | 'validando' | 'varrendo'
+export interface Progresso { fase: FaseProgresso; feitos: number; total: number }
 
 export interface OpcoesSessao {
   catalogo: { campos: { key: string; tipo: string }[] }
@@ -27,6 +28,8 @@ export interface OpcoesSessao {
   memoriaMax?: number
   aoProgresso?: (p: Progresso) => void
 }
+
+export interface OpcoesExecucao { bootstrap?: number; maxApostas?: number; extras?: boolean; validacao?: boolean; tentativasPrevias?: number }
 
 export class Sessao {
   private readonly catalogo: Catalogo
@@ -69,9 +72,9 @@ export class Sessao {
     return bytes
   }
 
-  async executar(estrategia: Estrategia, opcoes: { bootstrap?: number; maxApostas?: number; extras?: boolean } = {}): Promise<{ resultado: RunResult; carga: { chunks: number; bytes: number; ms: number; doCache: number } }> {
+  async executar(estrategia: Estrategia, opcoes: OpcoesExecucao = {}): Promise<{ resultado: RunResult; carga: { chunks: number; bytes: number; ms: number; doCache: number } }> {
     const ec = prepararEstrategia(estrategia, this.catalogo)
-    const universo = resolverAliases(estrategia.universo, this.manifest)
+    const { universo, holdout } = aplicarHoldout(resolverAliases(estrategia.universo, this.manifest), estrategia.validacao?.holdout, this.manifest)
     const stats = { doCache: 0 }
     const t0 = Date.now()
     const carga = await carregarDataset({
@@ -84,6 +87,8 @@ export class Sessao {
     const resultado = executarCompilada({ ...ec, estrategia: { ...estrategia, universo } }, carga.dataset, {
       catalogo: this.catalogo, competicoesInfo: info, nomesCompeticoes: nomes, nomesTimes: new Map(Object.entries(this.manifest.times ?? {})),
       bootstrap: opcoes.bootstrap, maxApostas: opcoes.maxApostas, extras: opcoes.extras ?? true,
+      validacao: opcoes.validacao, tentativasPrevias: opcoes.tentativasPrevias, holdout,
+      aoProgresso: (fase, feitos, total) => this.op.aoProgresso?.({ fase: fase as FaseProgresso, feitos, total }),
     })
     return { resultado, carga: { chunks: carga.chunks, bytes: carga.bytes, ms: Date.now() - t0, doCache: stats.doCache } }
   }

@@ -4,13 +4,14 @@
  *   npm run lab:run -- estrategia.json                       # dataset do R2 (latest), via token do site
  *   npm run lab:run -- estrategia.json --dir=C:/dados/lab    # chunks locais (LAB_OUT_DIR do bdb_ingest)
  *   npm run lab:run -- estrategia.json --versao=20260925-2031 --apostas=20 --json=saida.json --csv=apostas.csv
+ *   npm run lab:run -- estrategia.json --validacao --tentativas=3  # Fase 5: holdout, folds, walk-forward, varredura, Monte Carlo, calibração
  *
  * Carrega só os grupos/colunas que a estratégia referencia e imprime o tearsheet resumido.
  */
 import { config } from 'dotenv'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { carregarDataset, filtroDoUniverso, infoCompeticoes, resolverAliases, type Buscador, type Manifest } from '../../lib/laboratorio/data/dataset'
+import { aplicarHoldout, carregarDataset, filtroDoUniverso, infoCompeticoes, resolverAliases, type Buscador, type Manifest } from '../../lib/laboratorio/data/dataset'
 import { catalogoPadrao } from '../../lib/laboratorio/engine/catalogo'
 import { ErroEstrategia, prepararEstrategia } from '../../lib/laboratorio/engine/estrategia'
 import { executarCompilada, serializarRun } from '../../lib/laboratorio/engine/run'
@@ -76,7 +77,7 @@ function csvApostas(r: RunResult): string {
 
 async function main() {
   const arquivo = process.argv.slice(2).find((a) => !a.startsWith('--'))
-  if (!arquivo) { console.error('Uso: npm run lab:run -- estrategia.json [--dir=pasta] [--versao=X] [--apostas=N] [--json=saida.json] [--csv=apostas.csv] [--bootstrap=N] [--sem-extras]'); process.exit(2) }
+  if (!arquivo) { console.error('Uso: npm run lab:run -- estrategia.json [--dir=pasta] [--versao=X] [--apostas=N] [--json=saida.json] [--csv=apostas.csv] [--bootstrap=N] [--sem-extras] [--validacao] [--tentativas=N]'); process.exit(2) }
   const estrategia = JSON.parse(await readFile(arquivo, 'utf-8')) as Estrategia
   const cat = catalogoPadrao()
   let ec
@@ -90,7 +91,8 @@ async function main() {
   const fonte = dir ? await buscadorLocal(dir) : await buscadorR2()
   const versao = arg('versao') ?? (await fonte.latest())
   const manifest = JSON.parse(new TextDecoder().decode(await fonte.buscar(`${versao}/manifest.json`))) as Manifest
-  const universo = resolverAliases(estrategia.universo, manifest)
+  const { universo, holdout } = aplicarHoldout(resolverAliases(estrategia.universo, manifest), estrategia.validacao?.holdout, manifest)
+  if (estrategia.validacao?.holdout === 'selado') console.log(`Holdout selado: ${holdout.jogosOcultos} jogos da última temporada de ${holdout.temporadas.size} competições fora do run`)
   const t0 = Date.now()
   const carga = await carregarDataset({ manifest, campos: ec.camposUsados, filtro: filtroDoUniverso(universo, manifest), buscar: fonte.buscar, paralelo: 8 })
   console.log(`Dataset ${versao}: ${carga.chunks} chunks, ${carga.dataset.n} linhas, ${(carga.bytes / 1048576).toFixed(1)} MB em ${Date.now() - t0} ms${carga.camposAusentes.length ? ` · sem dados: ${carga.camposAusentes.join(', ')}` : ''}`)
@@ -100,12 +102,29 @@ async function main() {
   const r = executarCompilada({ ...ec, estrategia: { ...estrategia, universo } }, carga.dataset, {
     catalogo: cat, competicoesInfo: info, nomesCompeticoes: nomes, nomesTimes, extras: !flag('sem-extras'),
     bootstrap: arg('bootstrap') ? Number(arg('bootstrap')) : undefined,
+    validacao: flag('validacao'), tentativasPrevias: arg('tentativas') ? Number(arg('tentativas')) : 0, holdout,
+    aoProgresso: (fase, feitos, total) => { if (fase === 'varrendo') process.stdout.write(`  varredura ${feitos}/${total}   `) },
   })
   imprimir(r, Number(arg('apostas') ?? 10))
+  if (r.validacao) imprimirValidacao(r.validacao)
   const json = arg('json')
   if (json) { await writeFile(json, JSON.stringify(serializarRun(r), null, 1)); console.log(`\nResultado gravado em ${json}`) }
   const csv = arg('csv')
   if (csv) { await writeFile(csv, csvApostas(r)); console.log(`Apostas gravadas em ${csv}`) }
+}
+
+function imprimirValidacao(v: NonNullable<RunResult['validacao']>) {
+  const p = (x: number, c = 2) => (Number.isFinite(x) ? `${(x * 100).toFixed(c)}%` : '—')
+  const n = (x: number, c = 2) => (Number.isFinite(x) ? x.toFixed(c) : '—')
+  console.log(`
+── Validação avançada (${v.tempoMs} ms) ──`)
+  console.log(`Holdout: ${v.holdout.modo}${v.holdout.jogosOcultos !== null ? ` · ${v.holdout.jogosOcultos} jogos ocultos` : ''}${v.holdout.holdout ? ` · anteriores n=${v.holdout.anteriores?.n} yield ${p(v.holdout.anteriores?.yield ?? NaN)} | holdout n=${v.holdout.holdout.n} yield ${p(v.holdout.holdout.yield)} clv ${p(v.holdout.holdout.clvNovigMedio)}` : ''}`)
+  console.log(`Folds (${v.folds.tipo}): ${v.folds.positivos}/${v.folds.total} positivos · ` + v.folds.itens.map((f) => `${f.chave}: n=${f.n} ${p(f.yield, 1)}`).join(' · '))
+  if (v.walkForward) console.log(`Walk-forward${v.walkForward.otimizado ? ' (otimizado)' : ''}: OOS n=${v.walkForward.nOos} yield ${p(v.walkForward.yieldOos)} · IS ${p(v.walkForward.yieldIs)} · WFE ${n(v.walkForward.wfe)} · ` + v.walkForward.janelas.map((j) => `[${j.parametros ? Object.entries(j.parametros).map(([k, x]) => `${k}=${x}`).join(',') + ' ' : ''}treino ${p(j.yieldTreino, 1)} → teste n=${j.nTeste} ${p(j.yieldTeste, 1)}]`).join(' '))
+  if (v.varredura) console.log(`Varredura ${v.varredura.parametros.join('×')}: ${v.varredura.combos.length} combos${v.varredura.truncada ? ' (truncada)' : ''} · melhor ${v.varredura.melhor ? JSON.stringify(v.varredura.melhor.parametros) + ` n=${v.varredura.melhor.n} yield ${p(v.varredura.melhor.yield)}` : '—'} · PBO ${p(v.varredura.pbo, 0)} (${v.varredura.pboTestes} testes)`)
+  console.log(`Deflação: ${v.deflacao.tentativas} tentativas · p ${n(v.deflacao.pValor, 4)} → ${n(v.deflacao.pValorDeflacionado, 4)} · t ${n(v.deflacao.tYield)} → ${n(v.deflacao.tDeflacionado)}${v.deflacao.provavelSelecao ? ' · PROVÁVEL SELEÇÃO' : ''}`)
+  if (v.monteCarlo) { const m = v.monteCarlo; console.log(`Monte Carlo (${m.caminhos}): lucro P5 ${n(m.lucroFinal.p5, 1)} P50 ${n(m.lucroFinal.p50, 1)} P95 ${n(m.lucroFinal.p95, 1)} · MDD P50 ${n(m.mdd.p50, 1)} P95 ${n(m.mdd.p95, 1)} P99 ${n(m.mdd.p99, 1)} · P(lucro) ${p(m.probLucro, 0)} · P(ruína ≥ ${p(m.ruinaPct, 0)}) ${p(m.probRuina, 1)}${m.selecaoAleatoria ? ` · seleção aleatória: yield ${p(m.selecaoAleatoria.yieldMedio)} ± ${p(m.selecaoAleatoria.desvio)} → z ${n(m.selecaoAleatoria.z)} p ${n(m.selecaoAleatoria.pValor, 3)}` : ''}`) }
+  if (v.calibracao) { const c = v.calibracao; console.log(`Calibração (${c.n}): Brier ${n(c.brier, 4)} vs ref ${n(c.brierRef, 4)} · skill ${p(c.skill, 1)} · log-loss ${n(c.logLoss, 4)} vs ${n(c.logLossRef, 4)} · ECE ${p(c.ece, 1)}`) }
 }
 
 main().catch((e) => { console.error(e); process.exit(1) })

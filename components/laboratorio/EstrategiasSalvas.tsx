@@ -50,6 +50,7 @@ export function EstrategiasSalvas({ salvas, atualId, atualNome, runs, onSalvar, 
                 <span className="text-muted-foreground ml-1">· {s.runs} resultado(s) · {s.tentativas} tentativa(s)</span>
               </button>
               {!s.minha && <Badge variant="secondary" className="text-[10px]">pública</Badge>}
+              {s.holdoutAberto && <Badge variant="outline" className="text-[10px]" title="O selo da última temporada já foi aberto">selo aberto</Badge>}
               <Button variant="ghost" size="icon" className="h-6 w-6" title="Carregar" onClick={() => void onCarregar(s.id)}><FolderOpen className="w-3 h-3" /></Button>
               <Button variant="ghost" size="icon" className="h-6 w-6" title="Duplicar" onClick={() => void onDuplicar(s.id)}><Copy className="w-3 h-3" /></Button>
               {s.minha && <Button variant="ghost" size="icon" className="h-6 w-6" title="Apagar" onClick={() => { if (confirm(`Apagar "${s.nome}"?`)) void onApagar(s.id) }}><Trash2 className="w-3 h-3" /></Button>}

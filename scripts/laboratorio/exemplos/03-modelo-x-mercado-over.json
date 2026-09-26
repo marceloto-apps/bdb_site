@@ -30,5 +30,29 @@
     "metodo": "flat",
     "unidade": 1
   },
-  "bancoInicial": 100
+  "bancoInicial": 100,
+  "validacao": {
+    "holdout": "selado",
+    "folds": "temporada",
+    "walkForward": {
+      "janelas": 4,
+      "expandindo": true
+    },
+    "varredura": {
+      "p1": {
+        "de": 0.02,
+        "ate": 0.1,
+        "passo": 0.01
+      }
+    },
+    "monteCarlo": {
+      "caminhos": 2000,
+      "ruinaPct": 0.5
+    },
+    "calibracao": {
+      "prob": {
+        "formula": "model(DC, FORCAS, l10).p_over(2.5)"
+      }
+    }
+  }
 }

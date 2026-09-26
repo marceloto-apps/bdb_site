@@ -93,6 +93,7 @@ export function filtroDoUniverso(u: Universo | undefined, manifest: Manifest): (
   const comps = ua?.competicoes?.length ? new Set(ua.competicoes) : null
   const seasons = ua?.temporadas?.length ? new Set(ua.temporadas) : null
   const labels = ua?.temporadasLabel?.length ? new Set(ua.temporadasLabel) : null
+  const excluidas = ua?.temporadasExcluidas?.length ? new Set(ua.temporadasExcluidas) : null
   const de = ua?.de ? Date.parse(ua.de) : NaN
   const ate = ua?.ate ? Date.parse(ua.ate.length <= 10 ? `${ua.ate}T23:59:59.999Z` : ua.ate) : NaN
   const fem = new Set(manifest.competicoes.filter((c) => c.feminino).map((c) => c.key))
@@ -102,6 +103,7 @@ export function filtroDoUniverso(u: Universo | undefined, manifest: Manifest): (
     if (comps && !comps.has(c.competitionKey)) return false
     if (seasons && !seasons.has(c.seasonKey)) return false
     if (labels && !labels.has(c.seasonLabel)) return false
+    if (excluidas && excluidas.has(c.seasonKey)) return false
     if (fem.has(c.competitionKey)) return false
     if (tipos && tiposOk && !tiposOk.has(tipos.get(c.competitionKey) ?? '')) return false
     if (!Number.isNaN(de) && Date.parse(c.ate) < de) return false
@@ -177,4 +179,33 @@ export function infoCompeticoes(manifest: Manifest): { info: Map<string, { tipo?
   const nomes = new Map<string, string>()
   for (const c of manifest.competicoes) { info.set(c.key, { tipo: c.tipo, feminino: c.feminino }); nomes.set(c.key, c.nome) }
   return { info, nomes }
+}
+
+/** Última temporada de cada competição no manifesto (holdout selado, §6.6): competição → chave da temporada. */
+export function temporadasHoldout(manifest: Pick<Manifest, 'chunks'>): Map<string, string> {
+  const ultima = new Map<string, { seasonKey: string; ate: string }>()
+  for (const c of manifest.chunks) {
+    const atual = ultima.get(c.competitionKey)
+    if (!atual || c.ate > atual.ate || (c.ate === atual.ate && c.seasonKey > atual.seasonKey)) ultima.set(c.competitionKey, { seasonKey: c.seasonKey, ate: c.ate })
+  }
+  return new Map(Array.from(ultima.entries()).map(([k, v]) => [k, v.seasonKey]))
+}
+
+export interface HoldoutResolvido {
+  universo: Universo | undefined
+  holdout: { temporadas: Map<string, string>; jogosOcultos: number | null }
+}
+
+/**
+ * Aplica o holdout da estratégia ao universo (já com aliases resolvidos): quando selado, exclui a
+ * última temporada de cada competição e conta os jogos deixados de fora (pelos chunks do manifesto).
+ */
+export function aplicarHoldout(universo: Universo | undefined, modo: 'selado' | 'aberto' | undefined, manifest: Manifest): HoldoutResolvido {
+  const temporadas = temporadasHoldout(manifest)
+  if (modo !== 'selado') return { universo, holdout: { temporadas, jogosOcultos: null } }
+  const chaves = new Set(temporadas.values())
+  const passa = filtroDoUniverso(universo, manifest)
+  let jogosOcultos = 0
+  for (const c of manifest.chunks) if (chaves.has(c.seasonKey) && passa(c)) jogosOcultos += c.linhas
+  return { universo: { ...(universo ?? {}), temporadasExcluidas: Array.from(chaves) }, holdout: { temporadas, jogosOcultos } }
 }

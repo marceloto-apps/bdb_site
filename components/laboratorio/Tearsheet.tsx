@@ -11,6 +11,7 @@ import { baixarTexto, csvApostas } from '@/lib/laboratorio/ui/csv'
 import { corSinal, dataCurta, inteiro, num, pct, sinal } from '@/lib/laboratorio/ui/formato'
 import { DICAS, ROTULO_AVISO, ROTULO_RESULTADO, rotuloMercado, rotuloSelecao } from '@/lib/laboratorio/ui/rotulos'
 import { Dica } from './Dica'
+import { AbaCalibracao, AbaMonteCarlo, AbaValidacao, AbaVarredura, BotaoValidar } from './Validacao'
 import type { RunComparado, RunUI } from '@/lib/laboratorio/ui/tipos'
 
 const TOOLTIP = { backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '10px', color: 'hsl(var(--foreground))', fontSize: 12 }
@@ -34,13 +35,16 @@ function amostrar<T>(xs: T[], max = 800): T[] {
   return out
 }
 
-export function Tearsheet({ run, executando, progresso, comparados, onGuardar, onRemoverComparado }: {
+export function Tearsheet({ run, executando, progresso, comparados, onGuardar, onRemoverComparado, onValidar, seloAberto }: {
   run: RunUI | null
   executando: boolean
   progresso: { fase: string; feitos: number; total: number } | null
   comparados: RunComparado[]
   onGuardar: () => void
   onRemoverComparado: (k: number) => void
+  /** roda o mesmo run com a validação avançada (Fase 5) */
+  onValidar: () => void
+  seloAberto: boolean
 }) {
   const [pagina, setPagina] = useState(0)
   const serie = useMemo(() => {
@@ -67,7 +71,7 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
     return (
       <div className="min-h-[450px] flex items-center justify-center bg-card rounded-2xl border border-border p-8">
         <div className="w-full max-w-md text-center space-y-3">
-          <p className="text-sm">{progresso?.fase === 'baixando' ? `Baixando dados… ${progresso.feitos}/${progresso.total}` : progresso?.fase === 'executando' ? 'Executando…' : 'Preparando…'}</p>
+          <p className="text-sm">{progresso?.fase === 'baixando' ? `Baixando dados… ${progresso.feitos}/${progresso.total}` : progresso?.fase === 'executando' ? 'Executando…' : progresso?.fase === 'varrendo' ? `Varrendo parâmetros… ${progresso.feitos}/${progresso.total}` : progresso?.fase === 'validando' ? `Validando… ${progresso.feitos}/${progresso.total}` : 'Preparando…'}</p>
           <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary transition-all" style={{ width: progresso && progresso.total ? `${Math.round((progresso.feitos / progresso.total) * 100)}%` : '10%' }} /></div>
         </div>
       </div>
@@ -80,8 +84,16 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
   const apostasPag = run.apostas.slice(pagina * porPagina, (pagina + 1) * porPagina)
   const exportar = () => baixarTexto(`laboratorio_${run.hash}.csv`, csvApostas(run.apostas as never))
 
+  const val = run.validacao
   return (
     <div className="space-y-4">
+      {executando && progresso && (
+        <div className="bg-card border border-border rounded-md px-3 py-2 text-xs flex items-center gap-3">
+          <span className="text-muted-foreground whitespace-nowrap">{progresso.fase === 'varrendo' ? `Varrendo parâmetros… ${progresso.feitos}/${progresso.total}` : progresso.fase === 'validando' ? `Validando… ${progresso.feitos}/${progresso.total}` : progresso.fase === 'baixando' ? `Baixando dados… ${progresso.feitos}/${progresso.total}` : 'Executando…'}</span>
+          <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden"><div className="h-full bg-primary transition-all" style={{ width: progresso.total ? `${Math.round((progresso.feitos / progresso.total) * 100)}%` : '10%' }} /></div>
+        </div>
+      )}
+      {val?.deflacao.provavelSelecao && <p className="text-xs rounded-md px-3 py-1.5 border border-data-yellow/50 bg-data-yellow/10 text-data-yellow"><b className="uppercase text-[10px] mr-1">Tentativas</b>Significativo antes de descontar as {inteiro(val.deflacao.tentativas)} tentativas (p {num(val.deflacao.pValor, 3)}), mas não depois (p deflacionado {num(val.deflacao.pValorDeflacionado, 3)}): resultado provavelmente por seleção.</p>}
       {run.avisos.length > 0 && (
         <div className="space-y-1">
           {run.avisos.map((a, i) => <p key={i} className={`text-xs rounded-md px-3 py-1.5 border ${a.tipo === 'leakage' ? 'border-data-red/50 bg-data-red/10 text-data-red' : a.tipo === 'amostra' || a.tipo === 'referencia' ? 'border-data-yellow/50 bg-data-yellow/10 text-data-yellow' : 'border-border bg-card text-muted-foreground'}`}><b className="uppercase text-[10px] mr-1">{ROTULO_AVISO[a.tipo] ?? a.tipo}</b>{a.mensagem}</p>)}
@@ -95,7 +107,7 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
         <Card titulo="Maior queda (MDD)" valor={`${num(c.mdd)} u`} sub={`${pct(c.mddPct)} · ${c.mddDuracao} apostas · rec. ${c.mddRecuperacao ?? '—'}`} cor="text-data-red" dica={DICAS.mdd} />
         <Card titulo="CLV (vs. fechamento)" valor={pct(v.clvNovigMedio)} sub={`bateu o fechamento em ${pct(v.beatRate)} · bruto ${pct(v.clvBrutoMedio)}`} cor={corSinal(v.clvNovigMedio)} dica={DICAS.clv} />
         <Card titulo="Yield esperado" valor={pct(v.yieldEsperado)} sub={`${v.nComRef} com referência${v.refSoft ? ` · ${pct(v.refSoft, 0)} sem Pinnacle` : ''}`} cor={corSinal(v.yieldEsperado)} dica={DICAS.yieldEsperado} />
-        <Card titulo="p-valor" valor={num(inf.pValor, 4)} sub={`t ${num(inf.tYield)} · z Buchdahl ${num(inf.zBuchdahl)}`} cor={inf.pValor !== null && inf.pValor < 0.05 ? 'text-primary' : ''} dica={DICAS.pValor} />
+        <Card titulo="p-valor" valor={num(inf.pValor, 4)} sub={val ? `deflacionado ${num(val.deflacao.pValorDeflacionado, 4)} · ${inteiro(val.deflacao.tentativas)} tentativas` : `t ${num(inf.tYield)} · z Buchdahl ${num(inf.zBuchdahl)}`} cor={inf.pValor !== null && inf.pValor < 0.05 ? 'text-primary' : ''} dica={DICAS.pValor} />
         <Card titulo="Faixa do yield (95%)" valor={inf.ic95Yield ? `${pct(inf.ic95Yield[0], 1)} a ${pct(inf.ic95Yield[1], 1)}` : '—'} sub={`bootstrap ${inf.reamostras} · n mín. ${inf.nMinimo === 'Infinity' || inf.nMinimo === null ? '∞' : inteiro(inf.nMinimo)}`} dica={DICAS.ic95} />
         <Card titulo="Sharpe / PF" valor={`${num(c.sharpe, 3)} / ${num(k.profitFactor)}`} sub={`seq. derrotas ${c.maiorSequenciaDerrotas} · sem máx. ${c.maiorSemNovoMaximo}`} dica={DICAS.sharpe} />
       </div>
@@ -133,7 +145,13 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
       <Tabs defaultValue="segmentos">
         <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="segmentos">Segmentos</TabsTrigger><TabsTrigger value="mensal">Mensal</TabsTrigger><TabsTrigger value="risco">Risco e estatística</TabsTrigger><TabsTrigger value="apostas">Apostas ({inteiro(run.apostas.length)})</TabsTrigger><TabsTrigger value="comparar">Comparar ({comparados.length})</TabsTrigger>
+          <TabsTrigger value="validacao">Validação{val ? '' : ' ●'}</TabsTrigger><TabsTrigger value="montecarlo">Monte Carlo</TabsTrigger><TabsTrigger value="varredura">Varredura</TabsTrigger><TabsTrigger value="calibracao">Calibração</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="validacao">{val ? <AbaValidacao v={val} seloAberto={seloAberto} /> : <BotaoValidar executando={executando} onRodar={onValidar} />}</TabsContent>
+        <TabsContent value="montecarlo">{val ? <AbaMonteCarlo v={val} /> : <BotaoValidar executando={executando} onRodar={onValidar} />}</TabsContent>
+        <TabsContent value="varredura">{val ? <AbaVarredura v={val} /> : <BotaoValidar executando={executando} onRodar={onValidar} />}</TabsContent>
+        <TabsContent value="calibracao">{val ? <AbaCalibracao v={val} /> : <BotaoValidar executando={executando} onRodar={onValidar} />}</TabsContent>
 
         <TabsContent value="segmentos"><Segmentos run={run} /></TabsContent>
 
@@ -215,7 +233,7 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
           )}
         </TabsContent>
       </Tabs>
-      <p className="text-[10px] text-muted-foreground">dataset {run.datasetVersao} · catálogo {run.catalogoVersao} · engine {run.engineVersao} · hash {run.hash} · {run.tempoMs} ms</p>
+      <p className="text-[10px] text-muted-foreground">dataset {run.datasetVersao} · catálogo {run.catalogoVersao} · engine {run.engineVersao} · hash {run.hash} · {run.tempoMs} ms{val ? ` · validação ${val.tempoMs} ms` : ''}</p>
     </div>
   )
 }

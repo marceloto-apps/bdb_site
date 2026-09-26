@@ -12,6 +12,7 @@ import { calcularCaminho, calcularClv, calcularInferencia, calcularKpis, segment
 import { dependeDoBanco, estadoInicial, stakeBase, unidadeFlat } from './staking'
 import { ENGINE_VERSAO, type Aposta, type Aviso, type Dataset, type Estrategia, type RunResult } from './tipos'
 import { aplicarUniverso } from './universo'
+import { validarAvancado, type HoldoutInfo } from './validacao'
 
 export interface OpcoesRun {
   catalogo: Catalogo
@@ -24,6 +25,13 @@ export interface OpcoesRun {
   bootstrap?: number
   /** limite de apostas devolvidas em `apostas` (métricas usam todas) */
   maxApostas?: number
+  /** Fase 5: anexa `validacao` ao resultado */
+  validacao?: boolean
+  /** tentativas já registradas para a estratégia (deflação) */
+  tentativasPrevias?: number
+  /** temporadas de holdout por competição (resolvidas pelo manifesto) e jogos ocultos quando selado */
+  holdout?: HoldoutInfo
+  aoProgresso?: (fase: string, feitos: number, total: number) => void
 }
 
 interface Candidata { i: number; k: number; entradaId: string; selecao: string; linha: number | null; odd: number; oddLiq: number; data: number; matchId: string }
@@ -146,14 +154,21 @@ export function executarCompilada(ec: EstrategiaCompilada, dataset: Dataset, op:
   if (nSel > 0 && viesOdds < 0.8) avisos.push({ tipo: 'cobertura', mensagem: `Só ${Math.round(viesOdds * 100)}% dos jogos selecionados têm a odd pedida (viés de disponibilidade)`, valor: viesOdds })
 
   const camposUsados = ec.camposUsados.slice().sort()
-  const hash = M.hash64(JSON.stringify({ e, v: dataset.versao ?? null, engine: ENGINE_VERSAO, n: apostas.length, lucro: kpis.lucro, turnover: kpis.turnover }))
-  return {
+  // o hash ignora as opções de validação (só o holdout muda o universo e, portanto, o resultado)
+  const eHash = { ...e, validacao: e.validacao?.holdout ? { holdout: e.validacao.holdout } : undefined }
+  const hash = M.hash64(JSON.stringify({ e: eHash, v: dataset.versao ?? null, engine: ENGINE_VERSAO, n: apostas.length, lucro: kpis.lucro, turnover: kpis.turnover }))
+  const resultado: RunResult = {
     hash, datasetVersao: dataset.versao ?? null, catalogoVersao: dataset.catalogoVersao ?? null, engineVersao: ENGINE_VERSAO,
     nUniverso: uni.n, nSelecionados: nSel, nApostas: apostas.length,
     kpis, caminho, clv, inferencia, segmentos,
     apostas: op.maxApostas !== undefined ? apostas.slice(0, op.maxApostas) : apostas,
     avisos, camposUsados, tempoMs: Date.now() - t0,
   }
+  if (op.validacao) {
+    resultado.validacao = validarAvancado(ec, dataset, { ...resultado, apostas }, { mascaraUniverso: uni.mascara, ctx, op, rodar: (ec2, ds, op2) => executarCompilada(ec2, ds, op2) })
+    resultado.tempoMs = Date.now() - t0
+  }
+  return resultado
 }
 
 /** Valores dos indicadores e dos campos numéricos da regra, por linha (tabela de apostas/CSV). */

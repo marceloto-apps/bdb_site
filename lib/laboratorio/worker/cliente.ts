@@ -13,12 +13,12 @@ import type { Manifest } from '../data/dataset'
 
 type SemId<T> = T extends unknown ? Omit<T, 'id'> : never
 
-export interface ProgressoUI { fase: 'baixando' | 'decodificando' | 'executando'; feitos: number; total: number }
+export interface ProgressoUI { fase: 'baixando' | 'decodificando' | 'executando' | 'validando' | 'varrendo'; feitos: number; total: number }
 
 export interface ClienteLaboratorio {
   preparar: (opcoes?: { versao?: string }) => Promise<{ versao: string; resumo: unknown; catalogo: unknown }>
   validar: (estrategia: Estrategia) => Promise<Extract<RespostaWorker, { t: 'validacao' }>>
-  executar: (estrategia: Estrategia, opcoes?: { bootstrap?: number; maxApostas?: number; extras?: boolean; aoProgresso?: (p: ProgressoUI) => void }) => Promise<{ resultado: unknown; carga?: { chunks: number; bytes: number; ms: number; doCache: number } }>
+  executar: (estrategia: Estrategia, opcoes?: { bootstrap?: number; maxApostas?: number; extras?: boolean; validacao?: boolean; tentativasPrevias?: number; aoProgresso?: (p: ProgressoUI) => void }) => Promise<{ resultado: unknown; carga?: { chunks: number; bytes: number; ms: number; doCache: number } }>
   limpar: () => Promise<void>
   encerrar: () => void
 }

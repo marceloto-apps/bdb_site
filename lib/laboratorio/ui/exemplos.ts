@@ -8,6 +8,7 @@ export interface Exemplo { id: string; titulo: string; oQueTesta: string; observ
 
 const UNIVERSO_PADRAO = { fontes: ['core'] as ('core' | 'fpt')[], tipos: ['LEAGUE'] as ('LEAGUE' | 'CUP' | 'INTERNATIONAL_CLUBS')[] }
 const FLAT = { metodo: 'flat' as const, unidade: 1 }
+const VALIDACAO = { holdout: 'selado' as const, folds: 'temporada' as const, walkForward: { janelas: 4, expandindo: true }, monteCarlo: { caminhos: 2000, ruinaPct: 0.5 } }
 
 export const EXEMPLOS: Exemplo[] = [
   {
@@ -20,7 +21,7 @@ export const EXEMPLOS: Exemplo[] = [
       indicadores: [{ nome: 'edge_h', expressao: { formula: 'odds.bet365.close.1x2.h * odds.pinnacle.close.1x2.novig_h - 1' } }],
       regra: { formula: 'edge_h > 0.02 and home.l5.pts_pg >= 1.5' },
       entradas: [{ id: 'e1', mercado: '1x2', selecao: 'home', preco: { casa: 'bet365', snapshot: 'close' } }],
-      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42,
+      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42, validacao: VALIDACAO,
     },
   },
   {
@@ -32,19 +33,19 @@ export const EXEMPLOS: Exemplo[] = [
       versao: 1, nome: 'Linha encurtou ≥ 7% e mandante em forma', universo: UNIVERSO_PADRAO,
       regra: { formula: 'odds.pinnacle.close.1x2.h / odds.pinnacle.open.1x2.h < 0.93 and home.l5.pts_pg >= 1.8' },
       entradas: [{ id: 'e1', mercado: '1x2', selecao: 'home', preco: { casa: 'pinnacle', snapshot: 'close' } }],
-      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42,
+      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42, validacao: VALIDACAO,
     },
   },
   {
     id: 'modelo-over',
     titulo: 'Modelo Dixon-Coles acima do mercado no over 2.5',
     oQueTesta: 'Um modelo de gols (forças ataque/defesa dos últimos 10 jogos) que dá ao over 2.5 uma probabilidade pelo menos 5 pontos acima da probabilidade justa da bet365.',
-    observar: 'O limiar está no parâmetro $p1 (passo 5). Mude para 0,03 ou 0,08 e compare os runs na aba Comparar.',
+    observar: 'O limiar está no parâmetro $p1 (passo 5) e já vem com uma varredura de 0,02 a 0,10 no passo 6: rode a validação avançada e veja o mapa de yield e o PBO.',
     estrategia: {
       versao: 1, nome: 'Dixon-Coles × mercado no over 2.5', universo: UNIVERSO_PADRAO, parametros: { p1: 0.05 },
       regra: { formula: 'model(DC, FORCAS, l10).p_over(2.5) - odds.bet365.close.ou.novig_over_main > $p1 and odds.bet365.close.ou.main_line == 2.5' },
       entradas: [{ id: 'e1', mercado: 'ou', selecao: 'over', linha: 2.5, preco: { casa: 'bet365', snapshot: 'close' } }],
-      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42,
+      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42, validacao: { ...VALIDACAO, varredura: { p1: { de: 0.02, ate: 0.1, passo: 0.01 } } },
     },
   },
   {
@@ -56,7 +57,7 @@ export const EXEMPLOS: Exemplo[] = [
       versao: 1, nome: 'Favorito forte + jogo de gols: over', universo: UNIVERSO_PADRAO,
       regra: { formula: 'odds.pinnacle.close.ah.main_line <= -0.75 and odds.pinnacle.close.ou.main_line >= 3.0' },
       entradas: [{ id: 'e1', mercado: 'ou', selecao: 'over', linha: 'main', preco: { casa: 'pinnacle', snapshot: 'close' } }],
-      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42,
+      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42, validacao: VALIDACAO,
     },
   },
   {
@@ -68,7 +69,7 @@ export const EXEMPLOS: Exemplo[] = [
       versao: 1, nome: 'xG alto e over 2.5 barato', universo: UNIVERSO_PADRAO,
       regra: { formula: '(home.venue.l10.xg_for + away.venue.l10.xg_against) / 2 > 1.7 and implied(odds.bet365.close.ou.over_2_5) < 0.55' },
       entradas: [{ id: 'e1', mercado: 'ou', selecao: 'over', linha: 2.5, preco: { casa: 'bet365', snapshot: 'close' } }],
-      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42,
+      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42, validacao: VALIDACAO,
     },
   },
   {
@@ -86,7 +87,7 @@ export const EXEMPLOS: Exemplo[] = [
       regra: { formula: 'melhor > 0.02' },
       entradas: [{ id: 'e1', mercado: '1x2', selecao: { formula: 'if(edge_h >= edge_a, home, away)' }, preco: { casa: 'bet365', snapshot: 'close' } }],
       staking: { metodo: 'kelly', fracao: 0.25, cap: 0.05, prob: { formula: 'if(edge_h >= edge_a, odds.pinnacle.close.1x2.novig_h, odds.pinnacle.close.1x2.novig_a)' } },
-      bancoInicial: 1000, bootstrap: 1000, seed: 42,
+      bancoInicial: 1000, bootstrap: 1000, seed: 42, validacao: VALIDACAO,
     },
   },
 ]

@@ -101,7 +101,7 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
       <div className="bg-card border border-border p-4 rounded-2xl">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Lucro real × esperado × CLV acumulado (u)</p>
-          <div className="flex gap-3 text-[10px]"><span className="text-primary">■ real</span><span className="text-data-blue">■ esperado</span><span className="text-data-yellow">■ CLV</span></div>
+          <div className="flex gap-3 text-[10px]"><span className="text-primary">■ real</span><span className="text-data-blue">┅ esperado</span><span className="text-data-yellow">■ CLV</span></div>
         </div>
         <div className="h-[260px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -112,7 +112,7 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
               <Tooltip contentStyle={TOOLTIP} labelFormatter={(i) => { const p = serie.find((s) => s.i === i); return `Aposta ${Number(i) + 1}${p?.data ? ` · ${dataCurta(p.data)}` : ''}` }} formatter={(val, nome) => [num(Number(val)), nome === 'real' ? 'Real' : nome === 'esperado' ? 'Esperado' : 'CLV']} />
               <ReferenceLine y={0} stroke="hsl(var(--border))" />
               <Line type="monotone" dataKey="real" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} isAnimationActive={false} />
-              <Line type="monotone" dataKey="esperado" stroke="#3b82f6" strokeWidth={1.5} dot={false} isAnimationActive={false} />
+              <Line type="monotone" dataKey="esperado" stroke="#3b82f6" strokeWidth={1.5} strokeDasharray="6 4" dot={false} isAnimationActive={false} />
               <Line type="monotone" dataKey="clv" stroke="#eab308" strokeWidth={1.5} dot={false} isAnimationActive={false} />
             </LineChart>
           </ResponsiveContainer>

@@ -44,6 +44,8 @@ ler a fórmula de volta; o que não cabe no builder continua disponível no modo
 
 ## 4. Pendências
 
+0. ~~Rótulos de temporada mistos ("24/25" no núcleo, "2024/2025" na FPT)~~ — unificado na fonte em 26/09/2026 (`rotuloTemporada` no loader do `bdb_ingest`, commit `c7c5249`); vale a partir do próximo build da feature store.
+
 1. Validar no navegador (roteiro acima); ajustar Lighthouse/mobile se algo regredir.
 2. Fase 5 (validação avançada) entra como novas abas do tearsheet: Validação (folds, walk-forward, holdout selado), Monte Carlo, Varredura (`$p`), Calibração.
 3. Contagem de jogos selecionados "ao vivo" hoje é a do último run; um `contar` no Worker (sem métricas) pode atualizar ao digitar quando os chunks já estão em cache.

@@ -39,7 +39,7 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return body
 }
 
-export function LaboratorioClient({ datasetDisponivel }: { datasetDisponivel: boolean }) {
+export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }: { datasetDisponivel: boolean; variaveisFaltando?: string[] }) {
   const { toast } = useToast()
   const lab = useRef<ClienteLaboratorio | null>(null)
   const [estrategia, setEstrategia] = useState<Estrategia>(INICIAL)
@@ -154,7 +154,12 @@ export function LaboratorioClient({ datasetDisponivel }: { datasetDisponivel: bo
   const errosIndicadores = useMemo(() => (validacao?.erros ?? []).filter((e) => e.startsWith('Indicador')), [validacao])
   const errosRegra = useMemo(() => validacao ? { ok: validacao.ok, erros: validacao.erros.filter((e) => !e.startsWith('Indicador')), avisos: validacao.avisos } : null, [validacao])
 
-  if (!datasetDisponivel) return <div className="p-8 text-center text-muted-foreground">O dataset do Laboratório ainda não está configurado neste ambiente.</div>
+  if (!datasetDisponivel) return (
+    <div className="p-8 text-center text-muted-foreground space-y-2">
+      <p>O dataset do Laboratório ainda não está configurado neste ambiente.</p>
+      {variaveisFaltando.length > 0 && <p className="text-xs">Variáveis ausentes no servidor: <span className="font-mono">{variaveisFaltando.join(', ')}</span>. Na Vercel, confira o nome exato e o ambiente (Production) e faça um novo deploy.</p>}
+    </div>
+  )
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-500">

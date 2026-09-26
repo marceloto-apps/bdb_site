@@ -28,6 +28,11 @@ export function r2Configurado(): boolean {
   return cfg() !== null
 }
 
+/** Nomes das variáveis R2 ausentes (sem valores) — para diagnóstico na UI. */
+export function variaveisR2Faltando(): string[] {
+  return ['R2_ACCOUNT_ID', 'R2_BUCKET', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY'].filter((k) => !process.env[k])
+}
+
 let cliente: S3Client | null = null
 
 function s3(): { client: S3Client; bucket: string } {

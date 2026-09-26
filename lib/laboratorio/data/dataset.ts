@@ -193,7 +193,7 @@ export function temporadasHoldout(manifest: Pick<Manifest, 'chunks'>): Map<strin
 
 export interface HoldoutResolvido {
   universo: Universo | undefined
-  holdout: { temporadas: Map<string, string>; jogosOcultos: number | null }
+  holdout: { temporadas: Map<string, string>; jogosOcultos: number | null; rotulos: string[] }
 }
 
 /**
@@ -202,10 +202,11 @@ export interface HoldoutResolvido {
  */
 export function aplicarHoldout(universo: Universo | undefined, modo: 'selado' | 'aberto' | undefined, manifest: Manifest): HoldoutResolvido {
   const temporadas = temporadasHoldout(manifest)
-  if (modo !== 'selado') return { universo, holdout: { temporadas, jogosOcultos: null } }
   const chaves = new Set(temporadas.values())
+  const rotulos = Array.from(new Set(manifest.chunks.filter((c) => chaves.has(c.seasonKey)).map((c) => c.seasonLabel))).sort()
+  if (modo !== 'selado') return { universo, holdout: { temporadas, jogosOcultos: null, rotulos } }
   const passa = filtroDoUniverso(universo, manifest)
   let jogosOcultos = 0
   for (const c of manifest.chunks) if (chaves.has(c.seasonKey) && passa(c)) jogosOcultos += c.linhas
-  return { universo: { ...(universo ?? {}), temporadasExcluidas: Array.from(chaves) }, holdout: { temporadas, jogosOcultos } }
+  return { universo: { ...(universo ?? {}), temporadasExcluidas: Array.from(chaves) }, holdout: { temporadas, jogosOcultos, rotulos } }
 }

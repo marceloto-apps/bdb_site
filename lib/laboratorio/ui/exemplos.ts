@@ -40,12 +40,12 @@ export const EXEMPLOS: Exemplo[] = [
     id: 'modelo-over',
     titulo: 'Modelo Dixon-Coles acima do mercado no over 2.5',
     oQueTesta: 'Um modelo de gols (forças ataque/defesa dos últimos 10 jogos) que dá ao over 2.5 uma probabilidade pelo menos 5 pontos acima da probabilidade justa da bet365.',
-    observar: 'O limiar está no parâmetro $p1 (passo 5) e já vem com uma varredura de 0,02 a 0,10 no passo 6: rode a validação avançada e veja o mapa de yield e o PBO.',
+    observar: 'O limiar está no parâmetro $p1 (passo 5) e já vem com uma varredura de 0,02 a 0,10 no passo 6: rode a validação avançada e veja a varredura, o PBO e, na aba Calibração, se a probabilidade do modelo bate com a realidade.',
     estrategia: {
       versao: 1, nome: 'Dixon-Coles × mercado no over 2.5', universo: UNIVERSO_PADRAO, parametros: { p1: 0.05 },
       regra: { formula: 'model(DC, FORCAS, l10).p_over(2.5) - odds.bet365.close.ou.novig_over_main > $p1 and odds.bet365.close.ou.main_line == 2.5' },
       entradas: [{ id: 'e1', mercado: 'ou', selecao: 'over', linha: 2.5, preco: { casa: 'bet365', snapshot: 'close' } }],
-      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42, validacao: { ...VALIDACAO, varredura: { p1: { de: 0.02, ate: 0.1, passo: 0.01 } } },
+      staking: FLAT, bancoInicial: 100, bootstrap: 1000, seed: 42, validacao: { ...VALIDACAO, varredura: { p1: { de: 0.02, ate: 0.1, passo: 0.01 } }, calibracao: { prob: { formula: 'model(DC, FORCAS, l10).p_over(2.5)' } } },
     },
   },
   {

@@ -15,7 +15,7 @@ const base = (extra: Partial<Estrategia> = {}): Estrategia => ({
   entradas: [{ id: 'e1', mercado: '1x2', selecao: 'home', preco: { casa: 'bet365', snapshot: 'close' } }],
   staking: { metodo: 'flat', unidade: 1 }, bancoInicial: 100, bootstrap: 100, seed: 3, ...extra,
 })
-const holdout = { temporadas: new Map([['comp-a', 'comp-a-2025'], ['comp-b', 'comp-b-2025']]), jogosOcultos: null }
+const holdout = { temporadas: new Map([['comp-a', 'comp-a-2025'], ['comp-b', 'comp-b-2025']]), jogosOcultos: null, rotulos: ['2025'] }
 const rodar = (e: Estrategia, extra: Record<string, unknown> = {}) => executar(e, ds, { catalogo: cat, validacao: true, holdout, ...extra })
 
 describe('matemática auxiliar', () => {
@@ -45,6 +45,7 @@ describe('holdout selado', () => {
     const r = aplicarHoldout({ competicoes: ['A'] }, 'selado', manifest)
     expect(r.universo?.temporadasExcluidas?.sort()).toEqual(['A-2025', 'B-2425'])
     expect(r.holdout.jogosOcultos).toBe(80)
+    expect(r.holdout.rotulos).toEqual(['2025', '24/25'])
     const passa = filtroDoUniverso(r.universo, manifest)
     expect(manifest.chunks.filter(passa).map((c) => c.seasonKey)).toEqual(['A-2024'])
     expect(aplicarHoldout({ competicoes: ['A'] }, 'aberto', manifest).universo?.temporadasExcluidas).toBeUndefined()
@@ -53,7 +54,7 @@ describe('holdout selado', () => {
     const tudo = rodar(base({ validacao: { holdout: 'aberto' } }))
     const selado = rodar(base({ universo: { temporadasExcluidas: ['comp-a-2025', 'comp-b-2025'] }, validacao: { holdout: 'selado' } }), { holdout: { ...holdout, jogosOcultos: 300 } })
     expect(selado.nUniverso).toBe(300)
-    expect(selado.validacao?.holdout).toMatchObject({ modo: 'selado', jogosOcultos: 300, temporadas: 2 })
+    expect(selado.validacao?.holdout).toMatchObject({ modo: 'selado', jogosOcultos: 300, temporadas: 2, rotulos: ['2025'] })
     expect(selado.apostas.every((a) => a.temporada === '2024')).toBe(true)
     const h = tudo.validacao!.holdout
     expect(h.modo).toBe('aberto')

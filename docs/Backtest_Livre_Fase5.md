@@ -97,7 +97,7 @@ Pré-requisitos: estar logado em https://www.bigdatabet.com.br com um usuário q
 **Teste C — as outras três abas**
 9. Aba "Varredura": quatro cards no topo (Tentativas = 9 + as registradas, p-valor deflacionado, t deflacionado, Veredito); depois "Melhor combinação", "PBO" e "Combinações = 9"; por fim uma tabela com 9 linhas ordenadas por yield. Não há mapa de calor porque só existe um parâmetro (aparece com dois).
 10. Aba "Monte Carlo": cards "Lucro final (mediana)", "Chance de lucro", "Maior queda típica", "Chance de ruína"; histograma vermelho/verde; gráfico com 12 linhas; bloco "Seleção aleatória nos mesmos jogos" com o valor de z.
-11. Aba "Calibração": cards Brier, Skill, Log-loss, ECE (para este exemplo o skill é negativo e o ECE alto: o modelo é pior que o mercado, e é isso que a aba deve mostrar); gráfico de pontos com a linha diagonal tracejada; tabela por faixa.
+11. Aba "Calibração" (o exemplo já traz a expressão `model(DC, FORCAS, l10).p_over(2.5)` no passo 6): cards Brier, Skill, Log-loss, ECE (para este exemplo o skill é negativo e o ECE alto: o modelo é pior que o mercado, e é isso que a aba deve mostrar); gráfico de pontos com a linha diagonal tracejada; tabela por faixa.
 12. Volte ao card "p-valor" no topo: a linha pequena passou a mostrar "deflacionado … · N tentativas".
 
 **Teste D — salvar e abrir o selo**

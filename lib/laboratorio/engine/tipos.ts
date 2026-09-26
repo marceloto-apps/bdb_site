@@ -84,7 +84,7 @@ export interface JanelaWalkForward { k: number; de: number; ate: number; paramet
 export interface ComboVarredura { parametros: Record<string, number>; n: number; turnover: number; lucro: number; yield: number; hitRate: number; clvNovigMedio: number; pValor: number; mdd: number }
 
 export interface ValidacaoResult {
-  holdout: { modo: 'selado' | 'aberto' | 'nenhum'; temporadas: number; jogosOcultos: number | null; anteriores: ResumoFold | null; holdout: ResumoFold | null }
+  holdout: { modo: 'selado' | 'aberto' | 'nenhum'; temporadas: number; rotulos: string[]; jogosOcultos: number | null; anteriores: ResumoFold | null; holdout: ResumoFold | null }
   folds: { tipo: 'temporada' | 'ano'; itens: ResumoFold[]; positivos: number; total: number }
   walkForward: {
     janelas: JanelaWalkForward[]; expandindo: boolean; otimizado: boolean

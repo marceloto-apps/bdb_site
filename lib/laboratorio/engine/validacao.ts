@@ -22,6 +22,8 @@ export interface HoldoutInfo {
   temporadas: Map<string, string>
   /** jogos deixados de fora quando selado (contados no manifesto); null quando desconhecido */
   jogosOcultos: number | null
+  /** rótulos das temporadas de holdout (ex.: "26/27", "2026") */
+  rotulos?: string[]
 }
 
 export interface ContextoValidacao {
@@ -56,7 +58,7 @@ export function validarAvancado(ec: EstrategiaCompilada, dataset: Dataset, run: 
   // ── holdout ──
   const modo = va.holdout ?? 'nenhum'
   const hold = cv.op.holdout
-  let holdout: ValidacaoResult['holdout'] = { modo, temporadas: hold?.temporadas.size ?? 0, jogosOcultos: modo === 'selado' ? (hold?.jogosOcultos ?? null) : null, anteriores: null, holdout: null }
+  let holdout: ValidacaoResult['holdout'] = { modo, temporadas: hold?.temporadas.size ?? 0, rotulos: hold?.rotulos ?? [], jogosOcultos: modo === 'selado' ? (hold?.jogosOcultos ?? null) : null, anteriores: null, holdout: null }
   if (modo === 'aberto' && hold) {
     const comp = dataset.textos.get('match.competition'), season = dataset.textos.get('match.season')
     const ehHoldout = (a: Aposta) => !!comp && !!season && hold.temporadas.get(comp[a.i] ?? '') === (season[a.i] ?? '')

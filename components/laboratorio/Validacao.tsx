@@ -49,8 +49,8 @@ export function AbaValidacao({ v, seloAberto }: { v: ValidacaoUI; seloAberto: bo
       <div className={`rounded-md border px-3 py-2 text-xs flex items-start gap-2 ${h.modo === 'selado' ? 'border-primary/40 bg-primary/5' : 'border-border bg-card'}`}>
         {h.modo === 'selado' ? <Lock className="w-4 h-4 text-primary shrink-0" /> : <Unlock className="w-4 h-4 text-muted-foreground shrink-0" />}
         <div>
-          {h.modo === 'selado' && <p><b>Última temporada selada.</b> {h.jogosOcultos !== null ? `${inteiro(h.jogosOcultos)} jogos de ${h.temporadas} temporadas ficaram de fora deste run.` : `${h.temporadas} temporadas ficaram de fora.`} Abra o selo no passo 6 quando a estratégia estiver pronta.</p>}
-          {h.modo === 'aberto' && <p><b>Selo aberto.</b> A última temporada de cada liga entrou no run e aparece separada abaixo{seloAberto ? '' : ' (esta estratégia não está salva; o registro do selo só vale para estratégias salvas)'}.</p>}
+          {h.modo === 'selado' && <p><b>Última temporada selada{h.rotulos.length ? ` (${h.rotulos.join(', ')})` : ''}.</b> {h.jogosOcultos !== null ? `${inteiro(h.jogosOcultos)} jogos de ${h.temporadas} competições ficaram de fora deste run.` : `${h.temporadas} temporadas ficaram de fora.`} Abra o selo no passo 6 quando a estratégia estiver pronta.</p>}
+          {h.modo === 'aberto' && <p><b>Selo aberto{h.rotulos.length ? ` (${h.rotulos.join(', ')})` : ''}.</b> A última temporada de cada liga entrou no run e aparece separada abaixo{seloAberto ? '' : ' (esta estratégia não está salva; o registro do selo só vale para estratégias salvas)'}.</p>}
           {h.modo === 'nenhum' && <p>Sem holdout configurado.</p>}
         </div>
       </div>
@@ -202,7 +202,7 @@ function Heatmap({ h, px, py }: { h: NonNullable<NonNullable<ValidacaoUI['varred
 
 export function AbaCalibracao({ v }: { v: ValidacaoUI }) {
   const c = v.calibracao
-  if (!c) return <p className="text-xs text-muted-foreground">Sem probabilidade para calibrar. Use Kelly (a probabilidade do stake é calibrada automaticamente) ou informe uma expressão no passo 6.</p>
+  if (!c) return <p className="text-xs text-muted-foreground">Sem probabilidade para calibrar. No passo 6, em “Calibração: probabilidade estimada”, informe a expressão que a estratégia usa como probabilidade (ex.: <span className="font-mono">model(DC, FORCAS, l10).p_over(2.5)</span>) e rode a validação de novo. Com stake Kelly, a probabilidade do stake é usada automaticamente.</p>
   if ((c.n ?? 0) < 10) return <p className="text-xs text-muted-foreground">Poucas apostas com probabilidade e referência ({c.n}).</p>
   const pontos = c.bins.map((b) => ({ x: b.pMedio, y: b.freq, n: b.n }))
   return (

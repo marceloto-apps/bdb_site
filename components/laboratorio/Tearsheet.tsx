@@ -9,14 +9,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Download, Trash2 } from 'lucide-react'
 import { baixarTexto, csvApostas } from '@/lib/laboratorio/ui/csv'
 import { corSinal, dataCurta, inteiro, num, pct, sinal } from '@/lib/laboratorio/ui/formato'
+import { DICAS, ROTULO_AVISO, ROTULO_RESULTADO, rotuloMercado, rotuloSelecao } from '@/lib/laboratorio/ui/rotulos'
+import { Dica } from './Dica'
 import type { RunComparado, RunUI } from '@/lib/laboratorio/ui/tipos'
 
 const TOOLTIP = { backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))', borderRadius: '10px', color: 'hsl(var(--foreground))', fontSize: 12 }
 
 function Card({ titulo, valor, sub, cor, dica }: { titulo: string; valor: string; sub?: string; cor?: string; dica?: string }) {
   return (
-    <div className="bg-card border border-border rounded-xl p-3" title={dica}>
-      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{titulo}</p>
+    <div className="bg-card border border-border rounded-xl p-3">
+      <p className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">{titulo}{dica && <Dica texto={dica} />}</p>
       <p className={`text-lg font-bold font-display ${cor ?? ''}`}>{valor}</p>
       {sub && <p className="text-[11px] text-muted-foreground">{sub}</p>}
     </div>
@@ -82,26 +84,26 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
     <div className="space-y-4">
       {run.avisos.length > 0 && (
         <div className="space-y-1">
-          {run.avisos.map((a, i) => <p key={i} className={`text-xs rounded-md px-3 py-1.5 border ${a.tipo === 'leakage' ? 'border-data-red/50 bg-data-red/10 text-data-red' : a.tipo === 'amostra' || a.tipo === 'referencia' ? 'border-data-yellow/50 bg-data-yellow/10 text-data-yellow' : 'border-border bg-card text-muted-foreground'}`}><b className="uppercase text-[10px] mr-1">{a.tipo}</b>{a.mensagem}</p>)}
+          {run.avisos.map((a, i) => <p key={i} className={`text-xs rounded-md px-3 py-1.5 border ${a.tipo === 'leakage' ? 'border-data-red/50 bg-data-red/10 text-data-red' : a.tipo === 'amostra' || a.tipo === 'referencia' ? 'border-data-yellow/50 bg-data-yellow/10 text-data-yellow' : 'border-border bg-card text-muted-foreground'}`}><b className="uppercase text-[10px] mr-1">{ROTULO_AVISO[a.tipo] ?? a.tipo}</b>{a.mensagem}</p>)}
         </div>
       )}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
         <Card titulo="Apostas" valor={inteiro(k.n)} sub={`${inteiro(run.nSelecionados)} jogos selecionados de ${inteiro(run.nUniverso)}`} />
-        <Card titulo="Yield" valor={pct(k.yield)} sub={`lucro ${sinal(k.lucro)} u · ${inteiro(k.turnover)} u apostados`} cor={corSinal(k.yield)} dica="lucro / total apostado" />
-        <Card titulo="ROI banco" valor={pct(k.roiBanco)} sub={`flat: ${pct(k.yieldFlat)}`} cor={corSinal(k.roiBanco)} />
-        <Card titulo="Hit rate" valor={pct(k.hitRate)} sub={`break-even ${pct(k.breakEvenHit)} · odd média ${num(k.oddMedia)}`} />
-        <Card titulo="Max drawdown" valor={`${num(c.mdd)} u`} sub={`${pct(c.mddPct)} · ${c.mddDuracao} apostas · rec. ${c.mddRecuperacao ?? '—'}`} cor="text-data-red" />
-        <Card titulo="CLV no-vig" valor={pct(v.clvNovigMedio)} sub={`beat rate ${pct(v.beatRate)} · bruto ${pct(v.clvBrutoMedio)}`} cor={corSinal(v.clvNovigMedio)} dica="odd de decisão × prob. justa do fechamento − 1" />
-        <Card titulo="Yield esperado" valor={pct(v.yieldEsperado)} sub={`${v.nComRef} com referência${v.refSoft ? ` · ${pct(v.refSoft, 0)} soft` : ''}`} cor={corSinal(v.yieldEsperado)} />
-        <Card titulo="p-valor" valor={num(inf.pValor, 4)} sub={`t ${num(inf.tYield)} · z Buchdahl ${num(inf.zBuchdahl)}`} cor={inf.pValor !== null && inf.pValor < 0.05 ? 'text-primary' : ''} dica="H0: yield = −margem" />
-        <Card titulo="IC95 yield" valor={inf.ic95Yield ? `${pct(inf.ic95Yield[0], 1)} a ${pct(inf.ic95Yield[1], 1)}` : '—'} sub={`bootstrap ${inf.reamostras} · n mín. ${inf.nMinimo === 'Infinity' || inf.nMinimo === null ? '∞' : inteiro(inf.nMinimo)}`} />
-        <Card titulo="Sharpe / PF" valor={`${num(c.sharpe, 3)} / ${num(k.profitFactor)}`} sub={`seq. derrotas ${c.maiorSequenciaDerrotas} · sem máx. ${c.maiorSemNovoMaximo}`} />
+        <Card titulo="Yield" valor={pct(k.yield)} sub={`lucro ${sinal(k.lucro)} u · ${inteiro(k.turnover)} u apostados`} cor={corSinal(k.yield)} dica={DICAS.yield} />
+        <Card titulo="ROI do banco" valor={pct(k.roiBanco)} sub={`flat: ${pct(k.yieldFlat)}`} cor={corSinal(k.roiBanco)} dica={DICAS.roiBanco} />
+        <Card titulo="Acerto" valor={pct(k.hitRate)} sub={`break-even ${pct(k.breakEvenHit)} · odd média ${num(k.oddMedia)}`} dica={DICAS.hitRate} />
+        <Card titulo="Maior queda (MDD)" valor={`${num(c.mdd)} u`} sub={`${pct(c.mddPct)} · ${c.mddDuracao} apostas · rec. ${c.mddRecuperacao ?? '—'}`} cor="text-data-red" dica={DICAS.mdd} />
+        <Card titulo="CLV (vs. fechamento)" valor={pct(v.clvNovigMedio)} sub={`bateu o fechamento em ${pct(v.beatRate)} · bruto ${pct(v.clvBrutoMedio)}`} cor={corSinal(v.clvNovigMedio)} dica={DICAS.clv} />
+        <Card titulo="Yield esperado" valor={pct(v.yieldEsperado)} sub={`${v.nComRef} com referência${v.refSoft ? ` · ${pct(v.refSoft, 0)} sem Pinnacle` : ''}`} cor={corSinal(v.yieldEsperado)} dica={DICAS.yieldEsperado} />
+        <Card titulo="p-valor" valor={num(inf.pValor, 4)} sub={`t ${num(inf.tYield)} · z Buchdahl ${num(inf.zBuchdahl)}`} cor={inf.pValor !== null && inf.pValor < 0.05 ? 'text-primary' : ''} dica={DICAS.pValor} />
+        <Card titulo="Faixa do yield (95%)" valor={inf.ic95Yield ? `${pct(inf.ic95Yield[0], 1)} a ${pct(inf.ic95Yield[1], 1)}` : '—'} sub={`bootstrap ${inf.reamostras} · n mín. ${inf.nMinimo === 'Infinity' || inf.nMinimo === null ? '∞' : inteiro(inf.nMinimo)}`} dica={DICAS.ic95} />
+        <Card titulo="Sharpe / PF" valor={`${num(c.sharpe, 3)} / ${num(k.profitFactor)}`} sub={`seq. derrotas ${c.maiorSequenciaDerrotas} · sem máx. ${c.maiorSemNovoMaximo}`} dica={DICAS.sharpe} />
       </div>
 
       <div className="bg-card border border-border p-4 rounded-2xl">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Lucro real × esperado × CLV acumulado (u)</p>
-          <div className="flex gap-3 text-[10px]"><span className="text-primary">■ real</span><span className="text-data-blue">┅ esperado</span><span className="text-data-yellow">■ CLV</span></div>
+          <div className="flex gap-3 text-[10px]"><span className="text-primary">■ real</span><span className="text-data-blue">┅ esperado (pela referência)</span><span className="text-data-yellow">■ CLV</span></div>
         </div>
         <div className="h-[260px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -130,7 +132,7 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
 
       <Tabs defaultValue="segmentos">
         <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="segmentos">Segmentos</TabsTrigger><TabsTrigger value="mensal">Mensal</TabsTrigger><TabsTrigger value="risco">Risco</TabsTrigger><TabsTrigger value="apostas">Apostas ({inteiro(run.apostas.length)})</TabsTrigger><TabsTrigger value="comparar">Comparar ({comparados.length})</TabsTrigger>
+          <TabsTrigger value="segmentos">Segmentos</TabsTrigger><TabsTrigger value="mensal">Mensal</TabsTrigger><TabsTrigger value="risco">Risco e estatística</TabsTrigger><TabsTrigger value="apostas">Apostas ({inteiro(run.apostas.length)})</TabsTrigger><TabsTrigger value="comparar">Comparar ({comparados.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="segmentos"><Segmentos run={run} /></TabsContent>
@@ -147,7 +149,7 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
         <TabsContent value="risco">
           <div className="grid sm:grid-cols-2 gap-3 text-sm">
             <div className="bg-card border border-border rounded-xl p-3 space-y-1">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Inferência</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Significância</p>
               <p>Margem média da odd de decisão: <b>{pct(inf.margemMedia)}</b></p>
               <p>t do yield: <b>{num(inf.tYield)}</b> · p-valor (bicaudal): <b>{num(inf.pValor, 4)}</b></p>
               <p>z de Buchdahl: <b>{num(inf.zBuchdahl)}</b> · n mínimo p/ significância: <b>{inf.nMinimo === 'Infinity' || inf.nMinimo === null ? '∞' : inteiro(inf.nMinimo)}</b></p>
@@ -157,10 +159,10 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
               {inf.amostraPequena && <p className="text-data-yellow text-xs">Amostra abaixo de 300 apostas.</p>}
             </div>
             <div className="bg-card border border-border rounded-xl p-3 space-y-1">
-              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Caminho</p>
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Trajetória do banco</p>
               <p>Sharpe {num(c.sharpe, 3)} · Sortino {num(c.sortino, 3)} · Calmar {num(c.calmar, 3)}</p>
               <p>Payoff {num(k.payoff)} · Profit factor {num(k.profitFactor)}</p>
-              <p>W {k.wins} · ½W {k.halfWins} · R {k.refunds} · ½L {k.halfLosses} · L {k.losses} · void {k.voids}</p>
+              <p>Ganhas {k.wins} · meio ganhas {k.halfWins} · devolvidas {k.refunds} · meio perdidas {k.halfLosses} · perdidas {k.losses} · anuladas {k.voids}</p>
               <p className="text-[10px] uppercase tracking-widest text-muted-foreground pt-2">5 maiores drawdowns</p>
               <Table><TableHeader><TableRow><TableHead>u</TableHead><TableHead>%</TableHead><TableHead>duração</TableHead><TableHead>recuperação</TableHead></TableRow></TableHeader>
                 <TableBody>{c.drawdowns.map((d, i) => <TableRow key={i}><TableCell>{num(d.profundidade)}</TableCell><TableCell>{pct(d.profundidadePct)}</TableCell><TableCell>{d.duracao}</TableCell><TableCell>{d.recuperacao ?? 'aberto'}</TableCell></TableRow>)}</TableBody></Table>
@@ -185,9 +187,9 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
                   <TableRow key={i}>
                     <TableCell className="whitespace-nowrap text-xs">{dataCurta(a.data)}</TableCell>
                     <TableCell className="text-xs"><span className="text-muted-foreground">{a.competicao}</span><br />{a.home} × {a.away}</TableCell>
-                    <TableCell className="text-xs font-mono">{a.entradaId} {a.mercado} {a.selecao}{a.linha !== null ? ` ${a.linha}` : ''}</TableCell>
+                    <TableCell className="text-xs"><span className="text-muted-foreground">{a.entradaId} · {rotuloMercado(a.mercado)}</span><br />{rotuloSelecao(a.selecao)}{a.linha !== null ? ` ${a.linha}` : ''}</TableCell>
                     <TableCell>{num(a.odd)}</TableCell><TableCell>{num(a.stake)}</TableCell>
-                    <TableCell><Badge variant={a.resultado === 'WIN' || a.resultado === 'HALF_WIN' ? 'default' : a.resultado === 'LOSS' || a.resultado === 'HALF_LOSS' ? 'destructive' : 'secondary'} className="text-[10px]">{a.resultado}</Badge></TableCell>
+                    <TableCell><Badge variant={a.resultado === 'WIN' || a.resultado === 'HALF_WIN' ? 'default' : a.resultado === 'LOSS' || a.resultado === 'HALF_LOSS' ? 'destructive' : 'secondary'} className="text-[10px]">{ROTULO_RESULTADO[a.resultado] ?? a.resultado}</Badge></TableCell>
                     <TableCell className={corSinal(a.pnl)}>{sinal(a.pnl)}</TableCell>
                     <TableCell className={corSinal(a.clvNovig)}>{pct(a.clvNovig, 1)}</TableCell>
                     <TableCell>{num(a.banco)}</TableCell>
@@ -200,13 +202,13 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
 
         <TabsContent value="comparar">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-muted-foreground">Guarde até 5 runs para comparar lado a lado.</p>
-            <Button size="sm" variant="secondary" disabled={comparados.length >= 5} onClick={onGuardar}>Guardar este run</Button>
+            <p className="text-xs text-muted-foreground">Guarde até 5 resultados para comparar lado a lado.</p>
+            <Button size="sm" variant="secondary" disabled={comparados.length >= 5} onClick={onGuardar}>Guardar este resultado</Button>
           </div>
           {comparados.length > 0 && (
             <div className="overflow-x-auto">
               <Table>
-                <TableHeader><TableRow><TableHead>Run</TableHead><TableHead>n</TableHead><TableHead>Yield</TableHead><TableHead>Lucro</TableHead><TableHead>Hit</TableHead><TableHead>MDD</TableHead><TableHead>CLV</TableHead><TableHead>Beat</TableHead><TableHead>p</TableHead><TableHead /></TableRow></TableHeader>
+                <TableHeader><TableRow><TableHead>Run</TableHead><TableHead>n</TableHead><TableHead>Yield</TableHead><TableHead>Lucro</TableHead><TableHead>Acerto</TableHead><TableHead>MDD</TableHead><TableHead>CLV</TableHead><TableHead>Bateu fech.</TableHead><TableHead>p</TableHead><TableHead /></TableRow></TableHeader>
                 <TableBody>{comparados.map((r, i) => <TableRow key={i}><TableCell><span className="inline-block w-2 h-2 rounded-full mr-1" style={{ background: r.cor }} />{r.rotulo}</TableCell><TableCell>{r.run.kpis.n}</TableCell><TableCell className={corSinal(r.run.kpis.yield)}>{pct(r.run.kpis.yield)}</TableCell><TableCell>{sinal(r.run.kpis.lucro)}</TableCell><TableCell>{pct(r.run.kpis.hitRate)}</TableCell><TableCell>{num(r.run.caminho.mdd)}</TableCell><TableCell className={corSinal(r.run.clv.clvNovigMedio)}>{pct(r.run.clv.clvNovigMedio)}</TableCell><TableCell>{pct(r.run.clv.beatRate)}</TableCell><TableCell>{num(r.run.inferencia.pValor, 3)}</TableCell><TableCell><Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onRemoverComparado(i)}><Trash2 className="w-3 h-3" /></Button></TableCell></TableRow>)}</TableBody>
               </Table>
             </div>
@@ -221,14 +223,14 @@ export function Tearsheet({ run, executando, progresso, comparados, onGuardar, o
 function Segmentos({ run }: { run: RunUI }) {
   const dims = Object.keys(run.segmentos).filter((d) => d !== 'mes')
   const [dim, setDim] = useState(dims[0] ?? 'competicao')
-  const rotulos: Record<string, string> = { competicao: 'Competição', temporada: 'Temporada', odd: 'Faixa de odd', mercado: 'Mercado', entrada: 'Perna', selecao: 'Seleção', favorito: 'Favorito / zebra', ev: 'Faixa de EV', clv: 'Faixa de CLV' }
+  const rotulos: Record<string, string> = { competicao: 'Competição', temporada: 'Temporada', odd: 'Faixa de odd', mercado: 'Mercado', entrada: 'Aposta', selecao: 'Seleção', favorito: 'Favorito / zebra', ev: 'Faixa de EV', clv: 'Faixa de CLV' }
   const segs = run.segmentos[dim] ?? []
   return (
     <div>
       <div className="flex flex-wrap gap-1 mb-2">{dims.map((d) => <Button key={d} size="sm" variant={d === dim ? 'default' : 'outline'} className="h-7 text-xs" onClick={() => setDim(d)}>{rotulos[d] ?? d}</Button>)}</div>
       <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
         <Table>
-          <TableHeader><TableRow><TableHead>{rotulos[dim] ?? dim}</TableHead><TableHead>n</TableHead><TableHead>Yield</TableHead><TableHead>Lucro</TableHead><TableHead>Hit</TableHead><TableHead>Odd</TableHead><TableHead>CLV</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>{rotulos[dim] ?? dim}</TableHead><TableHead>n</TableHead><TableHead>Yield</TableHead><TableHead>Lucro</TableHead><TableHead>Acerto</TableHead><TableHead>Odd</TableHead><TableHead>CLV</TableHead></TableRow></TableHeader>
           <TableBody>{segs.map((s) => <TableRow key={s.chave}><TableCell className="text-xs">{s.chave}</TableCell><TableCell>{s.n}</TableCell><TableCell className={corSinal(s.yield)}>{pct(s.yield)}</TableCell><TableCell>{sinal(s.lucro)}</TableCell><TableCell>{pct(s.hitRate)}</TableCell><TableCell>{num(s.oddMedia)}</TableCell><TableCell className={corSinal(s.clvNovigMedio)}>{pct(s.clvNovigMedio)}</TableCell></TableRow>)}</TableBody>
         </Table>
       </div>

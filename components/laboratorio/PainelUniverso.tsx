@@ -4,21 +4,22 @@ import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { continenteDe, CONTINENTES } from '@/lib/laboratorio/ui/continentes'
+import { DICAS } from '@/lib/laboratorio/ui/rotulos'
 import type { Universo } from '@/lib/laboratorio/engine/tipos'
 import type { CompeticaoUI, ResumoUI } from '@/lib/laboratorio/ui/tipos'
+import { Dica, Rotulo } from './Dica'
 
 type Modo = 'TODAS' | 'PADRAO' | 'CONTINENTE' | 'PAIS' | 'LIGA'
 
 const COBERTURAS = [
-  { key: 'odds.pinnacle.close.1x2.h', rotulo: 'Fechamento Pinnacle 1X2' },
-  { key: 'odds.pinnacle.open.1x2.h', rotulo: 'Abertura Pinnacle 1X2' },
-  { key: 'odds.bet365.close.1x2.h', rotulo: 'Fechamento bet365 1X2' },
-  { key: 'odds.bet365.open.1x2.h', rotulo: 'Abertura bet365 1X2' },
-  { key: 'home.l10.xg_for', rotulo: 'xG (janela 10) do mandante' },
+  { key: 'odds.pinnacle.close.1x2.h', rotulo: 'Odd de fechamento da Pinnacle (1X2)' },
+  { key: 'odds.pinnacle.open.1x2.h', rotulo: 'Odd de abertura da Pinnacle (1X2)' },
+  { key: 'odds.bet365.close.1x2.h', rotulo: 'Odd de fechamento da bet365 (1X2)' },
+  { key: 'odds.bet365.open.1x2.h', rotulo: 'Odd de abertura da bet365 (1X2)' },
+  { key: 'home.l10.xg_for', rotulo: 'xG do mandante (últimos 10 jogos)' },
   { key: 'match.ht_h', rotulo: 'Placar do 1º tempo' },
 ]
 
@@ -46,23 +47,25 @@ export function PainelUniverso({ universo, onChange, resumo }: { universo: Unive
   const toggleLiga = (k: string) => { const atual = universo.competicoes ?? []; aplicar(atual.includes(k) ? atual.filter((x) => x !== k) : [...atual, k]) }
   const toggleLabel = (l: string) => { const atual = universo.temporadasLabel ?? []; const n = atual.includes(l) ? atual.filter((x) => x !== l) : [...atual, l]; onChange({ ...universo, temporadasLabel: n.length ? n : undefined }) }
   const toggleCobertura = (k: string) => { const atual = universo.coberturaMinima ?? []; const n = atual.includes(k) ? atual.filter((x) => x !== k) : [...atual, k]; onChange({ ...universo, coberturaMinima: n.length ? n : undefined }) }
+  const setFonte = (f: 'core' | 'fpt', on: boolean) => { const s = new Set(universo.fontes ?? ['core', 'fpt']); if (on) s.add(f); else s.delete(f); onChange({ ...universo, fontes: Array.from(s) as ('core' | 'fpt')[] }) }
+  const fontes = universo.fontes ?? ['core', 'fpt']
   const nSel = universo.competicoes?.length ?? comps.length
   const ligasFiltradas = comps.filter((c) => !busca || `${c.nome} ${c.pais}`.toLowerCase().includes(busca.toLowerCase()))
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Label>Ligas</Label>
+        <Rotulo className="text-sm">Competições</Rotulo>
         <Badge variant="secondary">{nSel} de {comps.length}</Badge>
       </div>
       <Select value={modo} onValueChange={(v) => mudarModo(v as Modo)}>
         <SelectTrigger><SelectValue /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="PADRAO">Ligas padrão (núcleo + FPT com amostra)</SelectItem>
-          <SelectItem value="TODAS">Todas as ligas do dataset</SelectItem>
+          <SelectItem value="PADRAO">Ligas padrão (recomendado)</SelectItem>
+          <SelectItem value="TODAS">Todas as competições do dataset</SelectItem>
           <SelectItem value="CONTINENTE">Por continente</SelectItem>
           <SelectItem value="PAIS">Por país</SelectItem>
-          <SelectItem value="LIGA">Liga a liga</SelectItem>
+          <SelectItem value="LIGA">Escolher uma a uma</SelectItem>
         </SelectContent>
       </Select>
       {modo === 'CONTINENTE' && (
@@ -81,13 +84,13 @@ export function PainelUniverso({ universo, onChange, resumo }: { universo: Unive
       )}
       {modo === 'LIGA' && (
         <div className="space-y-2">
-          <Input placeholder="Buscar liga ou país…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+          <Input placeholder="Buscar competição ou país…" value={busca} onChange={(e) => setBusca(e.target.value)} />
           <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
             {ligasFiltradas.map((c) => (
               <label key={c.key} className="flex items-center gap-2 text-sm">
                 <Checkbox checked={(universo.competicoes ?? []).includes(c.key)} onCheckedChange={() => toggleLiga(c.key)} />
                 <span className="truncate">{c.nome}</span>
-                <span className="text-muted-foreground text-xs ml-auto whitespace-nowrap">{c.pais}{c.soFpt ? ' · FPT' : ''} · {c.linhas}</span>
+                <span className="text-muted-foreground text-xs ml-auto whitespace-nowrap" title={c.soFpt ? 'Liga extra (Football-Data)' : 'Liga do BDB'}>{c.pais}{c.soFpt ? ' · extra' : ''} · {c.linhas.toLocaleString('pt-BR')} jogos</span>
               </label>
             ))}
           </div>
@@ -95,33 +98,35 @@ export function PainelUniverso({ universo, onChange, resumo }: { universo: Unive
       )}
 
       <div>
-        <Label>Temporadas <span className="text-muted-foreground text-xs">(vazio = todas)</span></Label>
+        <Rotulo className="text-xs" dica={DICAS.temporadas}>Temporadas <span className="text-muted-foreground font-normal">(vazio = todas)</span></Rotulo>
         <div className="flex flex-wrap gap-1 mt-1">
           {labels.map(([l, n]) => {
             const on = (universo.temporadasLabel ?? []).includes(l)
-            return <button key={l} type="button" onClick={() => toggleLabel(l)} className={`px-2 py-0.5 rounded-full text-xs border ${on ? 'bg-primary/20 border-primary text-primary' : 'border-border text-muted-foreground'}`} title={`${n} jogos`}>{l}</button>
+            return <button key={l} type="button" onClick={() => toggleLabel(l)} className={`px-2 py-0.5 rounded-full text-xs border ${on ? 'bg-primary/20 border-primary text-primary' : 'border-border text-muted-foreground'}`} title={`${n.toLocaleString('pt-BR')} jogos`}>{l}</button>
           })}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <div><Label className="text-xs">De</Label><Input type="date" value={universo.de ?? ''} onChange={(e) => onChange({ ...universo, de: e.target.value || undefined })} /></div>
-        <div><Label className="text-xs">Até</Label><Input type="date" value={universo.ate ?? ''} onChange={(e) => onChange({ ...universo, ate: e.target.value || undefined })} /></div>
+        <div><Rotulo className="text-xs">Jogos a partir de</Rotulo><Input type="date" value={universo.de ?? ''} onChange={(e) => onChange({ ...universo, de: e.target.value || undefined })} /></div>
+        <div><Rotulo className="text-xs">Jogos até</Rotulo><Input type="date" value={universo.ate ?? ''} onChange={(e) => onChange({ ...universo, ate: e.target.value || undefined })} /></div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-sm">
-        <label className="flex items-center gap-2"><Switch checked={(universo.fontes ?? ['core', 'fpt']).includes('core')} onCheckedChange={(v) => { const f = new Set(universo.fontes ?? ['core', 'fpt']); if (v) f.add('core'); else f.delete('core'); onChange({ ...universo, fontes: Array.from(f) as ('core' | 'fpt')[] }) }} />Núcleo</label>
-        <label className="flex items-center gap-2"><Switch checked={(universo.fontes ?? ['core', 'fpt']).includes('fpt')} onCheckedChange={(v) => { const f = new Set(universo.fontes ?? ['core', 'fpt']); if (v) f.add('fpt'); else f.delete('fpt'); onChange({ ...universo, fontes: Array.from(f) as ('core' | 'fpt')[] }) }} />Só-FPT</label>
-        <label className="flex items-center gap-2"><Switch checked={!universo.tipos || universo.tipos.includes('LEAGUE')} onCheckedChange={(v) => onChange({ ...universo, tipos: v ? undefined : ['CUP', 'INTERNATIONAL_CLUBS'] })} />Ligas</label>
-        <label className="flex items-center gap-2"><Switch checked={!universo.tipos || universo.tipos.includes('CUP')} onCheckedChange={(v) => onChange({ ...universo, tipos: v ? undefined : ['LEAGUE'] })} />Copas</label>
+      <div className="space-y-2 text-sm">
+        <Rotulo className="text-xs">Fonte dos jogos</Rotulo>
+        <label className="flex items-center gap-2"><Switch checked={fontes.includes('core')} onCheckedChange={(v) => setFonte('core', v)} />Ligas do BDB <span className="text-muted-foreground text-xs">(bet365 + Pinnacle)</span><Dica texto={DICAS.fonteBdb} /></label>
+        <label className="flex items-center gap-2"><Switch checked={fontes.includes('fpt')} onCheckedChange={(v) => setFonte('fpt', v)} />Ligas extras <span className="text-muted-foreground text-xs">(Football-Data)</span><Dica texto={DICAS.fonteExtra} /></label>
+        <Rotulo className="text-xs">Tipo de competição</Rotulo>
+        <label className="flex items-center gap-2"><Switch checked={!universo.tipos || universo.tipos.includes('LEAGUE')} onCheckedChange={(v) => onChange({ ...universo, tipos: v ? undefined : ['CUP', 'INTERNATIONAL_CLUBS'] })} />Campeonatos <span className="text-muted-foreground text-xs">(pontos corridos)</span><Dica texto={DICAS.tipoLiga} /></label>
+        <label className="flex items-center gap-2"><Switch checked={!universo.tipos || universo.tipos.includes('CUP')} onCheckedChange={(v) => onChange({ ...universo, tipos: v ? undefined : ['LEAGUE'] })} />Copas e torneios internacionais<Dica texto={DICAS.tipoCopa} /></label>
       </div>
 
       <div className="grid grid-cols-2 gap-2 items-end">
-        <div><Label className="text-xs">Excluir rodadas iniciais</Label><Input type="number" min={0} max={38} value={universo.excluirRodadasIniciais ?? 0} onChange={(e) => onChange({ ...universo, excluirRodadasIniciais: Number(e.target.value) || undefined })} /></div>
+        <div><Rotulo className="text-xs" dica={DICAS.rodadasIniciais}>Ignorar as primeiras rodadas</Rotulo><Input type="number" min={0} max={38} value={universo.excluirRodadasIniciais ?? 0} onChange={(e) => onChange({ ...universo, excluirRodadasIniciais: Number(e.target.value) || undefined })} /></div>
       </div>
 
       <div>
-        <Label className="text-xs">Cobertura mínima (jogo entra só se tiver)</Label>
+        <Rotulo className="text-xs" dica={DICAS.cobertura}>Só jogos que tenham</Rotulo>
         <div className="space-y-1 mt-1">
           {COBERTURAS.map((c) => (
             <label key={c.key} className="flex items-center gap-2 text-sm"><Checkbox checked={(universo.coberturaMinima ?? []).includes(c.key)} onCheckedChange={() => toggleCobertura(c.key)} />{c.rotulo}</label>

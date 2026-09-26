@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/hooks/use-toast'
 import { Beaker, Play } from 'lucide-react'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import { criarLaboratorio, ErroLaboratorio, type ClienteLaboratorio, type ProgressoUI } from '@/lib/laboratorio/worker/cliente'
 import type { Estrategia } from '@/lib/laboratorio/engine/tipos'
 import type { CampoUI, EstrategiaSalvaUI, FuncaoUI, IndicadorSalvoUI, ResumoUI, RunComparado, RunSalvoUI, RunUI } from '@/lib/laboratorio/ui/tipos'
@@ -18,6 +19,7 @@ import { PainelEntradas } from './PainelEntradas'
 import { PainelStaking } from './PainelStaking'
 import { Tearsheet } from './Tearsheet'
 import { EstrategiasSalvas } from './EstrategiasSalvas'
+import { GuiaLaboratorio } from './GuiaLaboratorio'
 
 const INICIAL: Estrategia = {
   versao: 1,
@@ -96,7 +98,7 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
     try {
       const r = await lab.current.executar(estrategia, { aoProgresso: setProgresso, extras: true })
       setRun(r.resultado as RunUI)
-      if (r.carga) toast({ title: 'Run concluído', description: `${r.carga.chunks} blocos · ${(r.carga.bytes / 1048576).toFixed(1)} MB${r.carga.doCache ? ` (${r.carga.doCache} do cache)` : ''} · ${r.carga.ms} ms` })
+      if (r.carga) toast({ title: 'Resultado pronto', description: `${r.carga.chunks} blocos · ${(r.carga.bytes / 1048576).toFixed(1)} MB${r.carga.doCache ? ` (${r.carga.doCache} do cache)` : ''} · ${r.carga.ms} ms` })
     } catch (e) {
       const err = e as ErroLaboratorio
       toast({ title: err.message || 'Falha ao executar', description: err.erros?.slice(0, 3).join(' · '), variant: 'destructive' })
@@ -149,6 +151,8 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
     catch (e) { const err = e as ErroLaboratorio; toast({ title: err.message === 'NOME_DUPLICADO' ? 'Já existe um indicador com esse nome' : 'Não foi possível salvar', description: err.erros?.[0], variant: 'destructive' }) }
   }
 
+  const carregarExemplo = (e: Estrategia) => { setEstrategia({ ...INICIAL, ...e }); setAtualId(null); setAtualNome(''); setRunsSalvos([]); toast({ title: 'Exemplo carregado', description: e.nome }) }
+
   const referencias = useMemo(() => [...(estrategia.indicadores ?? []).map((i) => i.nome), ...catalogo.map((c) => c.key)], [catalogo, estrategia.indicadores])
   const tiposIndicadores = useMemo(() => Object.fromEntries((validacao?.indicadores ?? []).map((i) => [i.nome, i.tipo])), [validacao])
   const errosIndicadores = useMemo(() => (validacao?.erros ?? []).filter((e) => e.startsWith('Indicador')), [validacao])
@@ -162,11 +166,15 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
   )
 
   return (
+    <TooltipProvider>
     <div className="space-y-6 pb-12 animate-in fade-in duration-500">
-      <div>
-        <h1 className="text-3xl font-display font-bold flex items-center gap-2"><Beaker className="w-8 h-8 text-primary" />Laboratório de Estratégias</h1>
-        <p className="text-muted-foreground text-sm">Combine odds e estatísticas por fórmula, defina entradas e valide com CLV, drawdown e inferência. {resumo && <span className="text-xs">Dataset {resumo.versao} · {resumo.totalLinhas.toLocaleString('pt-BR')} jogos · {resumo.competicoes.length} competições.</span>}</p>
-        {erroPreparo && <p className="text-sm text-data-red mt-2">Não foi possível preparar o Laboratório: {erroPreparo}</p>}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-display font-bold flex items-center gap-2"><Beaker className="w-8 h-8 text-primary" />Laboratório de Estratégias</h1>
+          <p className="text-muted-foreground text-sm">Monte uma estratégia com odds e estatísticas, escolha o que apostar e veja se ela teria dado lucro de verdade. {resumo && <span className="text-xs">Dados {resumo.versao} · {resumo.totalLinhas.toLocaleString('pt-BR')} jogos · {resumo.competicoes.length} competições.</span>}</p>
+          {erroPreparo && <p className="text-sm text-data-red mt-2">Não foi possível preparar o Laboratório: {erroPreparo}</p>}
+        </div>
+        <GuiaLaboratorio funcoes={funcoes} onCarregarExemplo={carregarExemplo} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -179,11 +187,11 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
           </div>
 
           <Accordion type="multiple" defaultValue={['universo', 'regras', 'entradas']} className="bg-card border border-border rounded-2xl px-4">
-            <AccordionItem value="universo"><AccordionTrigger>1. Universo</AccordionTrigger><AccordionContent><PainelUniverso universo={estrategia.universo ?? {}} onChange={(u) => atualizar({ universo: u })} resumo={resumo} /></AccordionContent></AccordionItem>
-            <AccordionItem value="indicadores"><AccordionTrigger>2. Indicadores e catálogo</AccordionTrigger><AccordionContent><PainelIndicadores indicadores={estrategia.indicadores ?? []} onChange={(i) => atualizar({ indicadores: i })} catalogo={catalogo} funcoes={funcoes} salvos={indicadoresSalvos} onSalvarServidor={salvarIndicador} tiposIndicadores={tiposIndicadores} errosIndicadores={errosIndicadores} /></AccordionContent></AccordionItem>
-            <AccordionItem value="regras"><AccordionTrigger>3. Regra de seleção</AccordionTrigger><AccordionContent><PainelRegras regra={estrategia.regra} onChange={(r) => atualizar({ regra: r })} referencias={referencias} validacao={errosRegra} nSelecionados={run?.nSelecionados ?? null} nUniverso={run?.nUniverso ?? null} /></AccordionContent></AccordionItem>
-            <AccordionItem value="entradas"><AccordionTrigger>4. Entradas</AccordionTrigger><AccordionContent><PainelEntradas entradas={estrategia.entradas} onChange={(e) => atualizar({ entradas: e })} /></AccordionContent></AccordionItem>
-            <AccordionItem value="staking"><AccordionTrigger>5. Staking e opções</AccordionTrigger><AccordionContent><PainelStaking estrategia={estrategia} onChange={atualizar} /></AccordionContent></AccordionItem>
+            <AccordionItem value="universo"><AccordionTrigger>1. Jogos considerados (universo)</AccordionTrigger><AccordionContent><PainelUniverso universo={estrategia.universo ?? {}} onChange={(u) => atualizar({ universo: u })} resumo={resumo} /></AccordionContent></AccordionItem>
+            <AccordionItem value="indicadores"><AccordionTrigger>2. Dados e indicadores</AccordionTrigger><AccordionContent><PainelIndicadores indicadores={estrategia.indicadores ?? []} onChange={(i) => atualizar({ indicadores: i })} catalogo={catalogo} funcoes={funcoes} salvos={indicadoresSalvos} onSalvarServidor={salvarIndicador} tiposIndicadores={tiposIndicadores} errosIndicadores={errosIndicadores} /></AccordionContent></AccordionItem>
+            <AccordionItem value="regras"><AccordionTrigger>3. Regra: quais jogos entram</AccordionTrigger><AccordionContent><PainelRegras regra={estrategia.regra} onChange={(r) => atualizar({ regra: r })} referencias={referencias} validacao={errosRegra} nSelecionados={run?.nSelecionados ?? null} nUniverso={run?.nUniverso ?? null} /></AccordionContent></AccordionItem>
+            <AccordionItem value="entradas"><AccordionTrigger>4. Apostas</AccordionTrigger><AccordionContent><PainelEntradas entradas={estrategia.entradas} onChange={(e) => atualizar({ entradas: e })} /></AccordionContent></AccordionItem>
+            <AccordionItem value="staking"><AccordionTrigger>5. Stake, banco e opções</AccordionTrigger><AccordionContent><PainelStaking estrategia={estrategia} onChange={atualizar} /></AccordionContent></AccordionItem>
             <AccordionItem value="salvas"><AccordionTrigger>6. Salvar e carregar</AccordionTrigger><AccordionContent><EstrategiasSalvas salvas={salvas} atualId={atualId} atualNome={atualNome || estrategia.nome || ''} runs={runsSalvos} onSalvar={salvarEstrategia} onCarregar={carregarEstrategia} onDuplicar={duplicarEstrategia} onApagar={apagarEstrategia} onSalvarRun={salvarRun} temRun={!!run} /></AccordionContent></AccordionItem>
           </Accordion>
         </div>
@@ -195,5 +203,6 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
         </div>
       </div>
     </div>
+    </TooltipProvider>
   )
 }

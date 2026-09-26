@@ -36,7 +36,7 @@ export function EstrategiasSalvas({ salvas, atualId, atualNome, runs, onSalvar, 
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="secondary" onClick={abrir}><Save className="w-3 h-3 mr-1" />{atualId ? 'Salvar alterações' : 'Salvar estratégia'}</Button>
-        <Button size="sm" variant="outline" disabled={!temRun} onClick={() => void onSalvarRun()} title={atualId ? 'Guarda o resultado deste run ligado à estratégia' : 'Guarda o resultado deste run'}>Salvar run</Button>
+        <Button size="sm" variant="outline" disabled={!temRun} onClick={() => void onSalvarRun()} title={atualId ? 'Guarda o resultado desta execução ligado à estratégia e conta uma tentativa' : 'Guarda o resultado desta execução'}>Salvar resultado</Button>
       </div>
       {atualId && <p className="text-xs text-muted-foreground">Editando: <b>{atualNome}</b> · {salvas.find((s) => s.id === atualId)?.tentativas ?? 0} tentativa(s) registrada(s)</p>}
 
@@ -47,7 +47,7 @@ export function EstrategiasSalvas({ salvas, atualId, atualNome, runs, onSalvar, 
             <div key={s.id} className={`flex items-center gap-2 text-xs border rounded-md px-2 py-1 ${s.id === atualId ? 'border-primary/60 bg-primary/5' : 'border-border'}`}>
               <button type="button" className="text-left flex-1 truncate hover:underline" onClick={() => void onCarregar(s.id)} title={s.descricao ?? ''}>
                 {s.nome}
-                <span className="text-muted-foreground ml-1">· {s.runs} run(s) · {s.tentativas} tent.</span>
+                <span className="text-muted-foreground ml-1">· {s.runs} resultado(s) · {s.tentativas} tentativa(s)</span>
               </button>
               {!s.minha && <Badge variant="secondary" className="text-[10px]">pública</Badge>}
               <Button variant="ghost" size="icon" className="h-6 w-6" title="Carregar" onClick={() => void onCarregar(s.id)}><FolderOpen className="w-3 h-3" /></Button>
@@ -61,12 +61,12 @@ export function EstrategiasSalvas({ salvas, atualId, atualNome, runs, onSalvar, 
 
       {runs.length > 0 && (
         <div>
-          <Label className="text-xs">Runs salvos desta estratégia</Label>
+          <Label className="text-xs">Resultados salvos desta estratégia</Label>
           <div className="max-h-40 overflow-y-auto space-y-1 mt-1 pr-1">
             {runs.map((r) => (
               <div key={r.id} className="text-xs border border-border rounded-md px-2 py-1 flex items-center gap-2">
                 <span className="text-muted-foreground">{dataHora(r.createdAt)}</span>
-                <span>n {r.nApostas}</span>
+                <span>{r.nApostas} apostas</span>
                 <span className={r.resumo.kpis.yield !== null && r.resumo.kpis.yield > 0 ? 'text-primary' : 'text-data-red'}>{pct(r.resumo.kpis.yield)}</span>
                 <span className="text-muted-foreground ml-auto font-mono">{r.datasetVersao} · {r.hash.slice(0, 8)}</span>
               </div>

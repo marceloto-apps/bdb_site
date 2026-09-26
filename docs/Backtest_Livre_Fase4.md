@@ -50,4 +50,26 @@ ler a fórmula de volta; o que não cabe no builder continua disponível no modo
 2. Fase 5 (validação avançada) entra como novas abas do tearsheet: Validação (folds, walk-forward, holdout selado), Monte Carlo, Varredura (`$p`), Calibração.
 3. Contagem de jogos selecionados "ao vivo" hoje é a do último run; um `contar` no Worker (sem métricas) pode atualizar ao digitar quando os chunks já estão em cache.
 4. Autocomplete da fórmula usa `datalist` nativo (funciona no input do builder; no `textarea` do modo fórmula é só via catálogo/cópia).
-5. **Nomenclatura e glossário (feedback do usuário em 26/09/2026):** rótulos como "Núcleo", "Só-FPT", "Perna" e as chaves das fórmulas não são intuitivos. Depois dos testes: (a) renomear na UI ("Núcleo" → "Ligas do BDB (bet365 + Pinnacle)", "Só-FPT" → "Ligas extras (Football-Data)", "Perna" → "Aposta"), com tooltip em cada campo; (b) página/aba "Como usar" com glossário, sintaxe das fórmulas e 5 exemplos prontos (os de `scripts/laboratorio/exemplos`); (c) rótulos em português no catálogo aparecendo antes da chave técnica.
+5. ~~Nomenclatura e glossário~~ — feito em 26/09/2026, ver §5.
+
+## 5. Nomenclatura e guia (26/09/2026)
+
+Feedback dos testes: "Núcleo", "Só-FPT", "Perna" e as chaves das fórmulas não eram intuitivos. Mudanças, só na UI
+(o JSON da estratégia, o engine e a API não mudam):
+
+| Antes | Agora |
+| --- | --- |
+| 1. Universo · Ligas | 1. Jogos considerados (universo) · Competições; modos "Ligas padrão (recomendado)", "Escolher uma a uma" |
+| Núcleo / Só-FPT | Fonte dos jogos: "Ligas do BDB (bet365 + Pinnacle)" / "Ligas extras (Football-Data)"; na lista liga a liga, "· FPT" virou "· extra" |
+| Ligas / Copas | Tipo de competição: "Campeonatos (pontos corridos)" / "Copas e torneios internacionais" |
+| Excluir rodadas iniciais · Cobertura mínima | Ignorar as primeiras rodadas · Só jogos que tenham (rótulos das odds por extenso) |
+| 2. Indicadores e catálogo | 2. Dados e indicadores; catálogo mostra o rótulo em português em cima e a chave técnica embaixo; grupos em português (Partida, Odds, Movimento do mercado, Estatísticas dos times, Médias da liga); unidades traduzidas |
+| 3. Regra de seleção · Builder | 3. Regra: quais jogos entram · modo "Visual"; "O jogo entra se todas/qualquer condição vale"; operandos "dado / número / lado / texto"; lados em português (Mandante, Empate, Visitante…) |
+| 4. Entradas · Perna · Seleção · Preço de decisão · Liquidação · Slippage | 4. Apostas · "Outra aposta no mesmo jogo" · Lado · Odd para decidir · Odd para pagar · Perda de odd % |
+| 5. Staking e opções · Método | 5. Stake, banco e opções · "Como definir o stake" (Fixo / Percentual do banco / Kelly fracionário / Lucro alvo); Exposição → "Máx. em jogo por dia"; Stop drawdown → "Parar se cair %"; Referência → "Odd de referência" |
+| Tearsheet | Hit rate → Acerto; Max drawdown → Maior queda (MDD); CLV no-vig → CLV (vs. fechamento), "bateu o fechamento em X%"; IC95 → Faixa do yield (95%); aba Risco → Risco e estatística; avisos com nome (Vazamento de futuro, Amostra pequena…); resultados das apostas em português; mercado/lado por extenso na tabela |
+| Salvar run / runs | Salvar resultado / resultados |
+
+- **Tooltips** (`components/laboratorio/Dica.tsx` + `TooltipProvider` no cliente): todo campo dos passos 1–5 e todo card do tearsheet tem um ícone "?" com a explicação em linguagem de apostador. Textos em `lib/laboratorio/ui/rotulos.ts` (`DICAS`), junto com os dicionários `ROTULO_MERCADO`, `ROTULO_SELECAO`, `ROTULO_BLOCO`, `ROTULO_AVISO`, `ROTULO_RESULTADO`, `ROTULO_TIPO`.
+- **Guia "Como usar"** (`GuiaLaboratorio.tsx`, botão no cabeçalho, painel lateral): Passo a passo (6 passos + ordem de leitura do resultado), Glossário (27 termos), Fórmulas (como ler `grupo.casa.momento.mercado.lado`, operadores, dado ausente, `$p`, `model()`, funções vindas da API) e Exemplos: 6 estratégias carregáveis (`lib/laboratorio/ui/exemplos.ts`, espelho de `scripts/laboratorio/exemplos`) com "o que testa" e "o que observar". O exemplo 1 do plano (abertura × fechamento) ficou fora por ser o caso de leakage; o primeiro exemplo usa o fechamento.
+- Testes: +2 em `ui.test.ts` (todo mercado/seleção/aviso/resultado tem rótulo; os 6 exemplos compilam contra o catálogo sem aviso de leakage) → **192**.

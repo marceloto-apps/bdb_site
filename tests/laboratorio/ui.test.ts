@@ -62,3 +62,28 @@ describe('csv e formatação', () => {
     expect(continenteDe('Brasil')).toBe('América do Sul'); expect(continenteDe('England')).toBe('Europa'); expect(continenteDe('Japan')).toBe('Ásia & Oceania'); expect(continenteDe('Marte')).toBe('Internacional / Outros')
   })
 })
+
+describe('rótulos e exemplos', () => {
+  it('todo mercado, seleção, aviso e resultado tem rótulo em português', async () => {
+    const { ROTULO_MERCADO, ROTULO_SELECAO, ROTULO_AVISO, ROTULO_RESULTADO, rotuloSelecao } = await import('@/lib/laboratorio/ui/rotulos')
+    const { SELECOES_POR_MERCADO } = await import('@/lib/laboratorio/engine/entradas')
+    const { SELECOES } = await import('@/lib/laboratorio/engine/ast')
+    for (const m of Object.keys(SELECOES_POR_MERCADO)) expect(ROTULO_MERCADO[m as keyof typeof ROTULO_MERCADO]).toBeTruthy()
+    for (const s of SELECOES) expect(ROTULO_SELECAO[s]).toBeTruthy()
+    for (const s of SELECOES_POR_MERCADO.dc) expect(ROTULO_SELECAO[s]).toBeTruthy()
+    expect(rotuloSelecao('2_1')).toBe('2×1')
+    for (const t of ['cobertura', 'amostra', 'referencia', 'universo', 'staking', 'formula', 'leakage']) expect(ROTULO_AVISO[t]).toBeTruthy()
+    for (const r of ['WIN', 'HALF_WIN', 'REFUND', 'HALF_LOSS', 'LOSS', 'VOID']) expect(ROTULO_RESULTADO[r]).toBeTruthy()
+  })
+  it('todos os exemplos do guia compilam contra o catálogo, sem erros', async () => {
+    const { EXEMPLOS } = await import('@/lib/laboratorio/ui/exemplos')
+    const { prepararEstrategia } = await import('@/lib/laboratorio/engine/estrategia')
+    const { catalogoPadrao } = await import('@/lib/laboratorio/engine/catalogo')
+    const cat = catalogoPadrao()
+    expect(EXEMPLOS.length).toBeGreaterThanOrEqual(5)
+    for (const ex of EXEMPLOS) {
+      const ec = prepararEstrategia(ex.estrategia, cat)
+      expect(ec.avisos.filter((a) => a.tipo === 'leakage'), ex.id).toHaveLength(0)
+    }
+  })
+})

@@ -3,6 +3,7 @@
  * a estratégia referencia). Independente de onde os bytes vêm: recebe um `Buscador` (URL assinada
  * no navegador, disco ou R2 em Node).
  */
+import { temporadaPermitida } from '../engine/temporadas'
 import type { Dataset, Universo } from '../engine/tipos'
 import { decodificarGrupo, gruposDosCampos, type ColunaDecodificada } from './chunk'
 
@@ -87,7 +88,10 @@ export function resolverAliases(u: Universo | undefined, manifest: Pick<Manifest
   return { ...u, competicoes: Array.from(new Set(u.competicoes.map(normalizar))) }
 }
 
-/** Chunks que o universo pode tocar (competição, temporada e sobreposição de datas). */
+/**
+ * Chunks que o universo pode tocar (competição, temporada e sobreposição de datas). Temporadas
+ * anteriores ao corte (`engine/temporadas.ts`: 2022 e 22/23) nunca passam, qualquer que seja o universo.
+ */
 export function filtroDoUniverso(u: Universo | undefined, manifest: Manifest): (c: ManifestChunk) => boolean {
   const ua = resolverAliases(u, manifest)
   const comps = ua?.competicoes?.length ? new Set(ua.competicoes) : null
@@ -100,6 +104,7 @@ export function filtroDoUniverso(u: Universo | undefined, manifest: Manifest): (
   const tipos = ua?.tipos?.length ? new Map(manifest.competicoes.map((c) => [c.key, c.tipo])) : null
   const tiposOk = ua?.tipos?.length ? new Set(ua.tipos as string[]) : null
   return (c) => {
+    if (!temporadaPermitida(c.seasonLabel, c.de)) return false
     if (comps && !comps.has(c.competitionKey)) return false
     if (seasons && !seasons.has(c.seasonKey)) return false
     if (labels && !labels.has(c.seasonLabel)) return false
@@ -171,6 +176,32 @@ export async function carregarDataset(op: OpcoesCarga): Promise<DatasetCarregado
   }
   const camposAusentes = Array.from(pedidos).filter((p) => !vistos.has(p))
   return { dataset: { n, numericas, textos, versao: manifest.versao, catalogoVersao: manifest.catalogoVersao }, gruposAusentes, camposAusentes, bytes, chunks: chunks.length }
+}
+
+/**
+ * Resumo do manifesto para a UI (competições e temporadas disponíveis). Só lista temporadas que
+ * passam no corte temporal; `linhas` de cada competição é recontado a partir delas, e competições
+ * que ficam sem temporada saem da lista.
+ */
+export function resumoManifest(m: Manifest) {
+  const temporadas = new Map<string, { key: string; label: string; de: string; ate: string; linhas: number }[]>()
+  for (const c of m.chunks) {
+    if (!temporadaPermitida(c.seasonLabel, c.de)) continue
+    let a = temporadas.get(c.competitionKey); if (!a) { a = []; temporadas.set(c.competitionKey, a) }
+    a.push({ key: c.seasonKey, label: c.seasonLabel, de: c.de, ate: c.ate, linhas: c.linhas })
+  }
+  const competicoes = m.competicoes
+    .filter((c) => (temporadas.get(c.key)?.length ?? 0) > 0)
+    .map((c) => {
+      const ts = (temporadas.get(c.key) ?? []).sort((a, b) => a.de.localeCompare(b.de))
+      return { key: c.key, nome: c.nome, pais: c.pais, nivel: c.nivel, tipo: c.tipo, soFpt: c.soFpt, feminino: c.feminino, incluidaPorPadrao: c.incluidaPorPadrao, linhas: ts.reduce((s, t) => s + t.linhas, 0), temporadas: ts }
+    })
+  return {
+    versao: m.versao, geradoEm: m.geradoEm, catalogoVersao: m.catalogoVersao, builderVersao: m.builderVersao,
+    totalLinhas: competicoes.reduce((s, c) => s + c.linhas, 0),
+    aliases: m.aliases ?? {},
+    competicoes,
+  }
 }
 
 /** Mapa competição → info (tipo, feminino) e nomes, para o run. */

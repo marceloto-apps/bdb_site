@@ -13,6 +13,7 @@ import { prepararEstrategia, type Catalogo, type EstrategiaCompilada } from './e
 import { liquidar, type Placar } from './liquidacao'
 import * as M from './matematica'
 import type { Entrada, Estrategia, Universo } from './tipos'
+import { ordemTemporada } from './temporadas'
 import { aplicarUniverso } from './universo'
 
 export interface ApostaBasica extends Entrada { /** rótulo curto mostrado na matriz (ex.: "Mandante · bet365") */ rotulo: string }
@@ -184,8 +185,4 @@ export function explorar(prep: ExploracaoPreparada, dataset: Awaited<ContextoCom
 
 function fmt(x: number): string { return Number.isInteger(x) ? String(x) : x.toFixed(Math.abs(x) < 1 ? 3 : 2).replace(/\.?0+$/, '') }
 
-/** "2024" < "24/25" < "2025" < "25/26" pela data de início. */
-export function ordemTemporada(a: string, b: string): number {
-  const ini = (s: string) => { const m = s.match(/^(\d{2})\/(\d{2})$/); if (m) return 2000 + Number(m[1]) + 0.5; const y = Number(s); return Number.isFinite(y) ? y : 0 }
-  return ini(a) - ini(b) || a.localeCompare(b)
-}
+export { ordemTemporada } from './temporadas'

@@ -1,7 +1,9 @@
 /**
  * Universo (§5.1 item 1): máscara dos jogos elegíveis por competição, temporada, datas, fontes,
- * tipo de competição, rodadas iniciais e cobertura mínima de campos.
+ * tipo de competição, rodadas iniciais e cobertura mínima de campos. Aplica também o corte temporal
+ * (`temporadas.ts`): jogos de temporadas anteriores a 2022 / 22/23 nunca entram.
  */
+import { ROTULO_CORTE_TEMPORADA, temporadaPermitida } from './temporadas'
 import type { Aviso, Dataset, Universo } from './tipos'
 
 export interface ResultadoUniverso {
@@ -10,16 +12,24 @@ export interface ResultadoUniverso {
   avisos: Aviso[]
 }
 
-export function aplicarUniverso(ds: Dataset, u: Universo | undefined, competicoesInfo?: Map<string, { tipo?: string; feminino?: boolean }>): ResultadoUniverso {
+export function aplicarUniverso(ds: Dataset, universo: Universo | undefined, competicoesInfo?: Map<string, { tipo?: string; feminino?: boolean }>): ResultadoUniverso {
   const n = ds.n
   const mascara = new Uint8Array(n).fill(1)
   const avisos: Aviso[] = []
-  if (!u) return { mascara, n, avisos }
+  const seasonLabel = ds.textos.get('match.season_label')
+  const data = ds.numericas.get('match.utc_date')
+  // corte temporal: memoriza a decisão por rótulo (poucos rótulos distintos, muitas linhas)
+  const corte = new Map<string, boolean>()
+  const passaCorte = (i: number): boolean => {
+    const l = seasonLabel?.[i] ?? null
+    if (l === null) { const d = data?.[i]; return d === undefined || Number.isNaN(d) ? true : temporadaPermitida(null, new Date(d).toISOString()) }
+    let ok = corte.get(l); if (ok === undefined) { ok = temporadaPermitida(l); corte.set(l, ok) }
+    return ok
+  }
+  const u: Universo = universo ?? {}
 
   const comp = ds.textos.get('match.competition')
   const season = ds.textos.get('match.season')
-  const seasonLabel = ds.textos.get('match.season_label')
-  const data = ds.numericas.get('match.utc_date')
   const srcCore = ds.numericas.get('match.src_core')
   const srcFpt = ds.numericas.get('match.src_fpt')
   const tipo = ds.textos.get('match.competition_type')
@@ -29,6 +39,8 @@ export function aplicarUniverso(ds: Dataset, u: Universo | undefined, competicoe
   const seasons = u.temporadas?.length ? new Set(u.temporadas) : null
   const excluidas = u.temporadasExcluidas?.length ? new Set(u.temporadasExcluidas) : null
   const labels = u.temporadasLabel?.length ? new Set(u.temporadasLabel) : null
+  const foraDoCorte = (u.temporadasLabel ?? []).filter((l) => !temporadaPermitida(l))
+  if (foraDoCorte.length) avisos.push({ tipo: 'universo', mensagem: `Temporadas anteriores a ${ROTULO_CORTE_TEMPORADA} não estão disponíveis no Laboratório e foram ignoradas: ${foraDoCorte.join(', ')}` })
   const de = u.de ? Date.parse(u.de) : NaN
   const ate = u.ate ? Date.parse(u.ate.length <= 10 ? `${u.ate}T23:59:59.999Z` : u.ate) : NaN
   const fontes = u.fontes?.length ? new Set(u.fontes) : null
@@ -42,8 +54,8 @@ export function aplicarUniverso(ds: Dataset, u: Universo | undefined, competicoe
 
   let total = 0
   for (let i = 0; i < n; i++) {
-    let ok = true
-    if (comps && comp) ok = comps.has(comp[i] ?? '')
+    let ok = passaCorte(i)
+    if (ok && comps && comp) ok = comps.has(comp[i] ?? '')
     if (ok && seasons && season) ok = seasons.has(season[i] ?? '')
     if (ok && excluidas && season) ok = !excluidas.has(season[i] ?? '')
     if (ok && labels && seasonLabel) ok = labels.has(seasonLabel[i] ?? '')

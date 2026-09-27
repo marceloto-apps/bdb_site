@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { continenteDe, CONTINENTES } from '@/lib/laboratorio/ui/continentes'
 import { DICAS } from '@/lib/laboratorio/ui/rotulos'
+import { ROTULO_CORTE_TEMPORADA } from '@/lib/laboratorio/engine/temporadas'
 import type { Universo } from '@/lib/laboratorio/engine/tipos'
 import type { CompeticaoUI, ResumoUI } from '@/lib/laboratorio/ui/tipos'
 import { Dica, Rotulo } from './Dica'
@@ -98,7 +99,7 @@ export function PainelUniverso({ universo, onChange, resumo }: { universo: Unive
       )}
 
       <div>
-        <Rotulo className="text-xs" dica={DICAS.temporadas}>Temporadas <span className="text-muted-foreground font-normal">(vazio = todas)</span></Rotulo>
+        <Rotulo className="text-xs" dica={DICAS.temporadas}>Temporadas <span className="text-muted-foreground font-normal">(vazio = todas, a partir de {ROTULO_CORTE_TEMPORADA})</span></Rotulo>
         <div className="flex flex-wrap gap-1 mt-1">
           {labels.map(([l, n]) => {
             const on = (universo.temporadasLabel ?? []).includes(l)

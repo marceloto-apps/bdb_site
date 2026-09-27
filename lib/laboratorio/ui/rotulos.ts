@@ -48,7 +48,7 @@ export const DICAS = {
   fonteExtra: 'Ligas que só existem na base histórica FutPythonTrader (FPT). Aumentam a amostra, mas têm menos colunas de odds e estatísticas.',
   tipoLiga: 'Campeonatos por pontos corridos (Brasileirão, Premier League…).',
   tipoCopa: 'Mata-mata e torneios internacionais de clubes (Copa do Brasil, Libertadores…).',
-  temporadas: 'Deixe vazio para usar todas. "24/25" é uma temporada europeia; "2025" é anual, como o Brasileirão.',
+  temporadas: 'Deixe vazio para usar todas. "24/25" é uma temporada europeia; "2025" é anual, como o Brasileirão. O Laboratório só usa temporadas a partir de 2022 e 22/23: antes disso a cobertura de odds e estatísticas é irregular.',
   rodadasIniciais: 'Ignora as primeiras N rodadas de cada temporada, quando as estatísticas de forma ainda têm poucos jogos.',
   cobertura: 'O jogo só entra no universo se tiver o dado marcado. Use para não misturar jogos com e sem a odd que a estratégia precisa.',
   // 2. Indicadores

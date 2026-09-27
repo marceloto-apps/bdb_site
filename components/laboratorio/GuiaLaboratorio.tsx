@@ -84,7 +84,7 @@ export function GuiaLaboratorio({ funcoes, onCarregarExemplo }: { funcoes: Funca
               </div>
               <p className="font-semibold">Modo Estratégia, em 6 passos</p>
               <ol className="list-decimal pl-5 space-y-2">
-                <li><b>Universo.</b> Escolha as ligas e temporadas. Para começar, deixe “Ligas padrão” com as Ligas do BDB e só campeonatos: é a base mais completa e a mesma do Backtest tradicional.</li>
+                <li><b>Universo.</b> Escolha as ligas e temporadas. Para começar, deixe “Ligas padrão” com as Ligas do BDB e só campeonatos: é a base mais completa e a mesma do Backtest tradicional. O Laboratório só usa temporadas a partir de 2022 (anuais) e 22/23 (europeias); antes disso a cobertura de odds e estatísticas é irregular.</li>
                 <li><b>Indicadores.</b> Opcional. Crie cálculos com nome para reutilizar (ex.: <span className="font-mono">edge_h</span>). O catálogo lista todos os dados disponíveis por jogo; clique num item para copiar o nome técnico.</li>
                 <li><b>Regra de seleção.</b> Diga quais jogos entram. No modo Visual você combina condições com menus; no modo Fórmula você escreve o texto. Os dois geram a mesma coisa.</li>
                 <li><b>Apostas.</b> O que apostar em cada jogo selecionado: mercado, lado, linha, casa e se a odd é a de abertura ou fechamento. Quase sempre uma aposta basta.</li>

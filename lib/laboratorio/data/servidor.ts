@@ -44,16 +44,4 @@ export async function executarNoServidor(estrategia: Estrategia, op: { versao?: 
   return { resultado, compilada, manifest, carga: { chunks: carga.chunks, bytes: carga.bytes, ms: Date.now() - t0 } }
 }
 
-/** Resumo do manifesto para a UI (competições e temporadas disponíveis). */
-export function resumoManifest(m: Manifest) {
-  const temporadas = new Map<string, { key: string; label: string; de: string; ate: string; linhas: number }[]>()
-  for (const c of m.chunks) {
-    let a = temporadas.get(c.competitionKey); if (!a) { a = []; temporadas.set(c.competitionKey, a) }
-    a.push({ key: c.seasonKey, label: c.seasonLabel, de: c.de, ate: c.ate, linhas: c.linhas })
-  }
-  return {
-    versao: m.versao, geradoEm: m.geradoEm, catalogoVersao: m.catalogoVersao, builderVersao: m.builderVersao, totalLinhas: m.totalLinhas,
-    aliases: m.aliases ?? {},
-    competicoes: m.competicoes.map((c) => ({ key: c.key, nome: c.nome, pais: c.pais, nivel: c.nivel, tipo: c.tipo, soFpt: c.soFpt, feminino: c.feminino, incluidaPorPadrao: c.incluidaPorPadrao, linhas: c.linhas, temporadas: (temporadas.get(c.key) ?? []).sort((a, b) => a.de.localeCompare(b.de)) })),
-  }
-}
+export { resumoManifest } from './dataset'

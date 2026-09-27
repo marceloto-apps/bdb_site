@@ -58,6 +58,12 @@ export class Sessao {
     }
   }
 
+  /** Avisa o buscador das chaves que vão faltar na memória (ele pode assinar as URLs em lote). */
+  private async prepararChaves(chaves: string[]): Promise<void> {
+    const faltam = chaves.filter((k) => !this.memoria.has(k))
+    if (faltam.length) await this.op.buscar.preparar?.(faltam)
+  }
+
   private async buscarComCache(chave: string, stats: { doCache: number }): Promise<Uint8Array> {
     const mem = this.memoria.get(chave)
     if (mem) { stats.doCache++; return mem }
@@ -80,7 +86,7 @@ export class Sessao {
     const t0 = Date.now()
     const carga = await carregarDataset({
       manifest: this.manifest, campos: ec.camposUsados, filtro: filtroDoUniverso(universo, this.manifest),
-      buscar: (k) => this.buscarComCache(k, stats), paralelo: 6,
+      buscar: (k) => this.buscarComCache(k, stats), preparar: (chaves) => this.prepararChaves(chaves), paralelo: 6,
       aoProgresso: (feitos, total) => this.op.aoProgresso?.({ fase: 'baixando', feitos, total }),
     })
     this.op.aoProgresso?.({ fase: 'executando', feitos: 0, total: 1 })
@@ -102,7 +108,7 @@ export class Sessao {
     const t0 = Date.now()
     const carga = await carregarDataset({
       manifest: this.manifest, campos: prep.camposUsados, filtro: filtroDoUniverso(universo, this.manifest),
-      buscar: (k) => this.buscarComCache(k, stats), paralelo: 6,
+      buscar: (k) => this.buscarComCache(k, stats), preparar: (chaves) => this.prepararChaves(chaves), paralelo: 6,
       aoProgresso: (feitos, total) => this.op.aoProgresso?.({ fase: 'baixando', feitos, total }),
     })
     this.op.aoProgresso?.({ fase: 'executando', feitos: 0, total: 1 })
@@ -114,43 +120,111 @@ export class Sessao {
   limpar(): void { this.memoria.clear(); this.memoriaBytes = 0 }
 }
 
+/** Erros sem resposta HTTP (`TypeError: Failed to fetch`) e 5xx/429 são transitórios: vale repetir. */
+const ehTransitorio = (e: unknown) => e instanceof TypeError || (e instanceof Error && /HTTP (5\d\d|429)/.test(e.message))
+
+async function comRetentativas<T>(fn: () => Promise<T>, tentativas = 3, esperaMs = 400): Promise<T> {
+  let ultimo: unknown
+  for (let k = 0; k < tentativas; k++) {
+    try { return await fn() } catch (e) {
+      ultimo = e
+      if (!ehTransitorio(e) || k === tentativas - 1) break
+      await new Promise((r) => setTimeout(r, esperaMs * 2 ** k))
+    }
+  }
+  throw ultimo
+}
+
+const TAMANHO_LOTE_POST = 500
+const TAMANHO_LOTE_GET = 100
+/** margem antes da expiração da URL assinada (o servidor dá 15 min) */
+const MARGEM_EXPIRACAO_MS = 60_000
+
 /**
- * Buscador do navegador: pede URLs assinadas ao site (em lotes) e baixa do R2. Agrupa os pedidos
- * feitos no mesmo tick para uma única chamada a `/api/laboratorio/dataset?chaves=`.
+ * Buscador do navegador: pede URLs assinadas ao site e baixa do R2.
+ *
+ * - `preparar(chaves)` (chamado pelo `carregarDataset` antes do primeiro download) assina todas as
+ *   chaves da carga em poucas chamadas `POST /api/laboratorio/dataset` (lotes de 500), em vez de uma
+ *   chamada por chunk. Se o servidor não aceitar POST (deploy antigo), cai para GET em lotes de 100.
+ * - Chaves que não foram preparadas ainda são agrupadas por tick, como antes.
+ * - Falhas de rede (`Failed to fetch`) e 5xx são repetidas 3 vezes com espera; o erro final diz o que
+ *   aconteceu em vez do texto cru do navegador.
  */
 export function buscadorAssinado(endpoint: string, fetchFn: typeof fetch = fetch): Buscador {
+  const assinadas = new Map<string, { url: string; expira: number }>()
+  const guardar = (urls: Record<string, string>, expiraEm?: string) => {
+    const expira = (expiraEm ? Date.parse(expiraEm) : Date.now() + 15 * 60_000) - MARGEM_EXPIRACAO_MS
+    for (const [k, u] of Object.entries(urls)) assinadas.set(k, { url: u, expira })
+  }
+  const valida = (chave: string) => { const a = assinadas.get(chave); return a && a.expira > Date.now() ? a.url : null }
+  const erroDeRede = (e: unknown, oQue: string) => new Error(`Falha de rede ao ${oQue} (${e instanceof Error ? e.message : String(e)}). Verifique a conexão e tente de novo; se persistir, saia e entre na conta outra vez.`)
+  const erroHttp = (status: number, oQue: string) => new Error(status === 401 || status === 403 ? `Sessão expirada ou sem acesso ao Laboratório ao ${oQue} (HTTP ${status}): entre na conta de novo.` : `${oQue}: HTTP ${status}`)
+
+  let usarPost = true
+  const pedirLote = async (parte: string[]): Promise<void> => {
+    const oQue = 'pedir URLs assinadas'
+    const r = await comRetentativas(async () => {
+      const resp = usarPost
+        ? await fetchFn(endpoint, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chaves: parte }) })
+        : await fetchFn(`${endpoint}?chaves=${encodeURIComponent(parte.join(','))}`, { credentials: 'same-origin' })
+      if (!resp.ok) { if (resp.status >= 500 || resp.status === 429) throw new Error(`${oQue}: HTTP ${resp.status}`); throw erroHttp(resp.status, oQue) }
+      return resp
+    }).catch((e) => { throw e instanceof TypeError ? erroDeRede(e, oQue) : e })
+    const j = (await r.json()) as { urls: Record<string, string>; expiraEm?: string }
+    guardar(j.urls, j.expiraEm)
+  }
+  const pedir = async (chaves: string[]): Promise<void> => {
+    const faltam = chaves.filter((k) => !valida(k))
+    if (!faltam.length) return
+    if (usarPost) {
+      // sonda o POST com o primeiro lote; 404/405 = servidor antigo → GET
+      try { await pedirLote(faltam.slice(0, TAMANHO_LOTE_POST)) } catch (e) {
+        if (e instanceof Error && /HTTP (404|405)/.test(e.message)) usarPost = false; else throw e
+      }
+    }
+    const tam = usarPost ? TAMANHO_LOTE_POST : TAMANHO_LOTE_GET
+    const restantes = faltam.filter((k) => !valida(k))
+    for (let i = 0; i < restantes.length; i += tam) await pedirLote(restantes.slice(i, i + tam))
+  }
+
+  // chaves pedidas sem preparo: agrupa as do mesmo tick numa chamada só
   let pendentes: { chave: string; resolve: (u: string) => void; reject: (e: Error) => void }[] = []
   let agendado = false
   const despachar = async () => {
     agendado = false
     const lote = pendentes; pendentes = []
     try {
-      const chaves = Array.from(new Set(lote.map((p) => p.chave)))
-      const urls: Record<string, string> = {}
-      for (let i = 0; i < chaves.length; i += 200) {
-        const parte = chaves.slice(i, i + 200)
-        const r = await fetchFn(`${endpoint}?chaves=${encodeURIComponent(parte.join(','))}`, { credentials: 'same-origin' })
-        if (!r.ok) throw new Error(`URLs assinadas: HTTP ${r.status}`)
-        Object.assign(urls, ((await r.json()) as { urls: Record<string, string> }).urls)
-      }
-      for (const p of lote) { const u = urls[p.chave]; if (u) p.resolve(u); else p.reject(new Error(`Sem URL para ${p.chave}`)) }
+      await pedir(Array.from(new Set(lote.map((p) => p.chave))))
+      for (const p of lote) { const u = valida(p.chave); if (u) p.resolve(u); else p.reject(new Error(`Sem URL para ${p.chave}`)) }
     } catch (e) { for (const p of lote) p.reject(e as Error) }
   }
-  const urlDe = (chave: string) => new Promise<string>((resolve, reject) => {
-    pendentes.push({ chave, resolve, reject })
-    if (!agendado) { agendado = true; void Promise.resolve().then(despachar) }
-  })
-  return async (chave) => {
-    const url = await urlDe(chave)
-    let r: Response
-    try { r = await fetchFn(url) } catch (e) {
-      // sem status HTTP = o navegador bloqueou (quase sempre CORS do bucket para esta origem)
-      const origem = typeof location !== 'undefined' ? location.origin : 'esta origem'
-      throw new Error(`Download do dataset bloqueado pelo navegador para ${origem}: confira a política CORS do bucket R2 (AllowedOrigins precisa incluir ${origem}). Detalhe: ${(e as Error).message}`)
-    }
-    if (!r.ok) throw new Error(`${chave}: HTTP ${r.status}`)
-    return new Uint8Array(await r.arrayBuffer())
+  const urlDe = (chave: string) => {
+    const pronta = valida(chave)
+    if (pronta) return Promise.resolve(pronta)
+    return new Promise<string>((resolve, reject) => {
+      pendentes.push({ chave, resolve, reject })
+      if (!agendado) { agendado = true; void Promise.resolve().then(despachar) }
+    })
   }
+
+  const buscar: Buscador = async (chave) => {
+    const oQue = `baixar ${chave}`
+    return comRetentativas(async () => {
+      const url = await urlDe(chave)
+      const r = await fetchFn(url)
+      if (!r.ok) throw new Error(`${oQue}: HTTP ${r.status}`)
+      return new Uint8Array(await r.arrayBuffer())
+    }).catch((e) => {
+      if (e instanceof TypeError) {
+        // sem status HTTP após as tentativas = o navegador bloqueou (quase sempre CORS do bucket para esta origem)
+        const origem = typeof location !== 'undefined' ? location.origin : 'esta origem'
+        throw new Error(`Download do dataset bloqueado pelo navegador para ${origem}: confira a política CORS do bucket R2 (AllowedOrigins precisa incluir ${origem}). Detalhe: ${e.message}`)
+      }
+      throw e
+    })
+  }
+  buscar.preparar = pedir
+  return buscar
 }
 
 /** Cache persistente sobre a Cache API do navegador (chaves versionadas → imutáveis). */

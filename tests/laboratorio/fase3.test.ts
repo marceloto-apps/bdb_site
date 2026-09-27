@@ -100,10 +100,10 @@ describe('Sessao (núcleo do Worker)', () => {
 describe('buscadorAssinado', () => {
   it('agrupa pedidos simultâneos numa chamada de URLs e baixa cada chunk', async () => {
     const chamadas: string[] = []
-    const fetchFn = vi.fn(async (url: string) => {
+    const fetchFn = vi.fn(async (url: string, init?: RequestInit) => {
       chamadas.push(url)
-      if (url.startsWith('/api/dataset?chaves=')) {
-        const chaves = decodeURIComponent(url.split('chaves=')[1]).split(',')
+      if (url.startsWith('/api/dataset')) {
+        const chaves = init?.method === 'POST' ? (JSON.parse(init.body as string) as { chaves: string[] }).chaves : decodeURIComponent(url.split('chaves=')[1]).split(',')
         return new Response(JSON.stringify({ urls: Object.fromEntries(chaves.map((c) => [c, `https://r2/${c}`])) }))
       }
       return new Response(new Uint8Array([1, 2, 3]))
@@ -114,9 +114,82 @@ describe('buscadorAssinado', () => {
     expect(chamadas.filter((u) => u.startsWith('/api/dataset')).length).toBe(1)
     expect(chamadas.filter((u) => u.startsWith('https://r2/')).length).toBe(2)
   })
-  it('propaga erro HTTP', async () => {
+  it('propaga erro HTTP; 401/403 viram "sessão expirada"', async () => {
     const fetchFn = (async () => new Response('x', { status: 403 })) as unknown as typeof fetch
-    await expect(buscadorAssinado('/api/dataset', fetchFn)('v/x/s/match.bin')).rejects.toThrow(/403/)
+    await expect(buscadorAssinado('/api/dataset', fetchFn)('v/x/s/match.bin')).rejects.toThrow(/Sessão expirada.*403/)
+    const f400 = (async () => new Response('x', { status: 400 })) as unknown as typeof fetch
+    await expect(buscadorAssinado('/api/dataset', f400)('v/x/s/match.bin')).rejects.toThrow(/HTTP 400/)
+  })
+
+  /** servidor de mentira: POST e GET assinam; downloads devolvem 3 bytes */
+  const servidor = (op: { post?: number; falhasDeRede?: number } = {}) => {
+    const chamadas: { metodo: string; url: string; n: number }[] = []
+    let falhas = op.falhasDeRede ?? 0
+    const fetchFn = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.startsWith('/api/dataset')) {
+        if (init?.method === 'POST') {
+          const chaves = (JSON.parse(init.body as string) as { chaves: string[] }).chaves
+          chamadas.push({ metodo: 'POST', url, n: chaves.length })
+          if (op.post) return new Response('x', { status: op.post })
+          return new Response(JSON.stringify({ urls: Object.fromEntries(chaves.map((c) => [c, `https://r2/${c}`])), expiraEm: new Date(Date.now() + 900_000).toISOString() }))
+        }
+        const chaves = decodeURIComponent(url.split('chaves=')[1]).split(',')
+        chamadas.push({ metodo: 'GET', url, n: chaves.length })
+        return new Response(JSON.stringify({ urls: Object.fromEntries(chaves.map((c) => [c, `https://r2/${c}`])) }))
+      }
+      chamadas.push({ metodo: 'R2', url, n: 1 })
+      if (falhas > 0) { falhas--; throw new TypeError('Failed to fetch') }
+      return new Response(new Uint8Array([1, 2, 3]))
+    }) as unknown as typeof fetch
+    return { fetchFn, chamadas }
+  }
+  const chaves = Array.from({ length: 1200 }, (_, i) => `v/c${i}/s/match.bin`)
+
+  it('preparar assina todas as chaves em lotes POST de 500; os downloads não pedem mais URLs', async () => {
+    const { fetchFn, chamadas } = servidor()
+    const buscar = buscadorAssinado('/api/dataset', fetchFn)
+    await buscar.preparar!(chaves)
+    expect(chamadas.map((c) => `${c.metodo}:${c.n}`)).toEqual(['POST:500', 'POST:500', 'POST:200'])
+    await Promise.all(chaves.slice(0, 50).map((k) => buscar(k)))
+    expect(chamadas.filter((c) => c.metodo !== 'R2').length).toBe(3)
+    expect(chamadas.filter((c) => c.metodo === 'R2').length).toBe(50)
+    // preparar de novo com as mesmas chaves não chama o servidor
+    await buscar.preparar!(chaves.slice(0, 10))
+    expect(chamadas.filter((c) => c.metodo === 'POST').length).toBe(3)
+  })
+  it('servidor sem POST (405) → cai para GET em lotes de 100', async () => {
+    const { fetchFn, chamadas } = servidor({ post: 405 })
+    const buscar = buscadorAssinado('/api/dataset', fetchFn)
+    await buscar.preparar!(chaves.slice(0, 250))
+    expect(chamadas.map((c) => `${c.metodo}:${c.n}`)).toEqual(['POST:500', 'GET:100', 'GET:100', 'GET:50'].map((x) => (x === 'POST:500' ? 'POST:250' : x)))
+    await buscar(chaves[0])
+    expect(chamadas.filter((c) => c.metodo === 'POST').length).toBe(1)
+  })
+  it('falha de rede transitória no download é repetida; persistente vira mensagem de CORS', async () => {
+    vi.useFakeTimers()
+    try {
+      const ok = servidor({ falhasDeRede: 2 })
+      const p = buscadorAssinado('/api/dataset', ok.fetchFn)('v/x/s/match.bin')
+      await vi.runAllTimersAsync()
+      expect(Array.from(await p)).toEqual([1, 2, 3])
+      expect(ok.chamadas.filter((c) => c.metodo === 'R2').length).toBe(3)
+      const ruim = servidor({ falhasDeRede: 99 })
+      const q = buscadorAssinado('/api/dataset', ruim.fetchFn)('v/x/s/match.bin')
+      q.catch(() => undefined)
+      await vi.runAllTimersAsync()
+      await expect(q).rejects.toThrow(/CORS.*Failed to fetch/)
+      expect(ruim.chamadas.filter((c) => c.metodo === 'R2').length).toBe(3)
+    } finally { vi.useRealTimers() }
+  })
+  it('falha de rede ao pedir URLs vira mensagem clara', async () => {
+    vi.useFakeTimers()
+    try {
+      const fetchFn = (async () => { throw new TypeError('Failed to fetch') }) as unknown as typeof fetch
+      const q = buscadorAssinado('/api/dataset', fetchFn).preparar!(['v/x/s/match.bin'])
+      q.catch(() => undefined)
+      await vi.runAllTimersAsync()
+      await expect(q).rejects.toThrow(/Falha de rede ao pedir URLs assinadas \(Failed to fetch\)/)
+    } finally { vi.useRealTimers() }
   })
 })
 

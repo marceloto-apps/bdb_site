@@ -45,8 +45,11 @@ export interface Manifest {
   totalLinhas: number
 }
 
-/** Busca os bytes de uma chave do dataset (`<versao>/<dir>/<grupo>.bin`). */
-export type Buscador = (chave: string) => Promise<Uint8Array>
+/**
+ * Busca os bytes de uma chave do dataset (`<versao>/<dir>/<grupo>.bin`). `preparar` (opcional) recebe
+ * todas as chaves de uma carga antes do primeiro download, para o buscador resolver URLs em lote.
+ */
+export type Buscador = ((chave: string) => Promise<Uint8Array>) & { preparar?: (chaves: string[]) => Promise<void> }
 
 export interface OpcoesCarga {
   manifest: Manifest
@@ -54,6 +57,8 @@ export interface OpcoesCarga {
   /** filtro de chunks (padrão: todos) */
   filtro?: (c: ManifestChunk) => boolean
   buscar: Buscador
+  /** chamado com todas as chaves da carga antes dos downloads (padrão: `buscar.preparar`) */
+  preparar?: (chaves: string[]) => Promise<void>
   paralelo?: number
   aoProgresso?: (feitos: number, total: number) => void
 }
@@ -128,6 +133,9 @@ export async function carregarDataset(op: OpcoesCarga): Promise<DatasetCarregado
     if (c.grupos[g]) tarefas.push({ chunk: c, grupo: g, colunas: cols }); else gruposAusentes++
   }
   const total = tarefas.length
+  const chaveDe = (t: { chunk: ManifestChunk; grupo: string }) => `${manifest.versao}/${t.chunk.dir}/${t.chunk.grupos[t.grupo].arquivo}`
+  const preparar = op.preparar ?? op.buscar.preparar
+  if (preparar && total) await preparar(Array.from(new Set(tarefas.map(chaveDe))))
   let feitos = 0, bytes = 0
   const resultados = new Map<string, Map<string, ColunaDecodificada>>() // `${dir}|${grupo}`
   const paralelo = Math.max(1, op.paralelo ?? 6)
@@ -136,7 +144,7 @@ export async function carregarDataset(op: OpcoesCarga): Promise<DatasetCarregado
     for (;;) {
       const t = tarefas[k++]
       if (!t) return
-      const chave = `${manifest.versao}/${t.chunk.dir}/${t.chunk.grupos[t.grupo].arquivo}`
+      const chave = chaveDe(t)
       const buf = await op.buscar(chave)
       bytes += buf.length
       const { header, colunas } = await decodificarGrupo(buf, t.colunas)

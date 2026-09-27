@@ -31,6 +31,35 @@ A página `/dashboard/laboratorio` ganhou uma alternância no topo: **Explorar**
 - Produção (R2 `20260926-1640`, universo ligas do BDB + campeonatos = 80 ligas, 122.980 jogos), 12 apostas (6 × 2 casas) cruzadas com a forma do mandante: carga 531 chunks / 37 MB em 25 s no servidor (no navegador fica em cache), **explorar 1,3 s**, 12.998 células, resultado 2,8 MB.
 - Leitura de amostra: as melhores células por liga (n ≥ 300) têm yield de 7–12% com p entre 0,006 e 0,17, e CLV negativo em todas: exatamente o tipo de "vantagem" que a deflação e a persistência existem para questionar antes de virar estratégia.
 
+## 2.1 Corte temporal (27/09/2026, D14 do plano)
+
+Explorar e Estratégia só usam temporadas a partir de **2022** (anuais) e **22/23** (europeias). A regra vive em
+`lib/laboratorio/engine/temporadas.ts` (`ANO_MINIMO_TEMPORADA = 2022`, `temporadaPermitida`, `ordemTemporada`) e é
+aplicada em três pontos com a mesma função: `filtroDoUniverso` (os chunks antigos nem são baixados, no Worker, no
+servidor e na CLI), `resumoManifest` (a lista de temporadas e a contagem de jogos por liga na UI já vêm cortadas) e
+`aplicarUniverso` (máscara do engine; estratégia salva que pede "2021" recebe o aviso "Temporadas anteriores a 2022 e
+22/23 não estão disponíveis… ignoradas"). Medido no manifesto `20260927-1230`: 250.638 → 200.913 linhas; os rótulos
+2000–2021 e 18/19–21/22 (49,7 mil jogos, a maioria 2021 e 21/22) saem; nenhuma competição fica sem temporada. Testes em
+`tests/laboratorio/temporadas.test.ts` (7). A feature store no `bdb_ingest` não muda: 2021 e 21/22 continuam construídos
+para alimentar as janelas móveis dos primeiros jogos de 2022.
+
+## 2.2 "Failed to fetch" no Explorar (27/09/2026)
+
+Causa: o buscador do Worker pedia a URL assinada **chunk a chunk** (só agrupava o que caía no mesmo tick, isto é, os
+6 downloads paralelos), então um Explorar com 80 ligas fazia 500+ chamadas a `GET /api/laboratorio/dataset` (cada uma
+com sessão e consulta ao banco) e qualquer falha de rede subia crua como `Failed to fetch`. Correção em
+`worker/sessao.ts` (`buscadorAssinado`) e `data/dataset.ts`:
+
+- `carregarDataset` calcula todas as chaves da carga e chama `buscar.preparar(chaves)` antes do primeiro download; a
+  `Sessao` só repassa o que não está na memória. O buscador assina tudo em **lotes de 500 via `POST /api/laboratorio/dataset`**
+  (rota nova, até 1.000 chaves; o GET continua, até 400) — 3 chamadas em vez de 500+. Se o servidor não aceitar POST
+  (deploy antigo), cai para GET em lotes de 100. URLs assinadas ficam em cache até 1 min antes de expirar.
+- Falhas sem resposta HTTP (`TypeError`) e 5xx/429 são repetidas 3 vezes com espera (0,4 s, 0,8 s), tanto no pedido de
+  URLs quanto no download do R2.
+- Mensagens: "Falha de rede ao pedir URLs assinadas (…)", "Sessão expirada ou sem acesso ao Laboratório (HTTP 401/403)",
+  e a de CORS só depois das tentativas.
+- Testes: +4 em `fase3.test.ts` (lotes POST, fallback GET, retentativa e mensagens).
+
 ## 3. Pendências
 
 1. Teste no navegador (roteiro em §4).

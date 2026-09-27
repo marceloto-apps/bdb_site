@@ -122,6 +122,7 @@ export function Explorador({ resultado, executando, progresso, nMin, onLevar, mo
         </div>
       </div>
 
+      <p className="text-[11px] text-muted-foreground flex items-center gap-1"><Bookmark className="w-3 h-3 text-amber-400" />Clique numa célula para ver o detalhe e “Levar ao Laboratório”. Clique duas vezes (ou use “Marcar”) para pôr a célula na seleção; a seleção vira um texto para copiar ou levar inteira ao Laboratório.{marcadas.length ? ` Seleção: ${marcadas.length}.` : ''}</p>
       <div className="overflow-auto max-h-[560px] bg-card border border-border rounded-2xl">
         <table className="text-xs w-full border-separate border-spacing-0">
           <thead className="sticky top-0 bg-card z-10">
@@ -146,7 +147,7 @@ export function Explorador({ resultado, executando, progresso, nMin, onLevar, mo
                     const ativa = sel && cel && sel === cel
                     const marc = marcada(cel)
                     return (
-                      <td key={c.chave} className={`p-1 border-b border-border/40 text-center cursor-pointer relative ${apagada ? 'text-muted-foreground/50' : ''} ${ativa ? 'outline outline-2 outline-primary' : ''} ${marc ? 'ring-2 ring-inset ring-amber-400' : ''}`} style={{ background: cor(v, apagada) }} onClick={() => cel && setSel(cel)}
+                      <td key={c.chave} className={`p-1 border-b border-border/40 text-center cursor-pointer relative ${apagada ? 'text-muted-foreground/50' : ''} ${ativa ? 'outline outline-2 outline-primary' : ''} ${marc ? 'ring-2 ring-inset ring-amber-400' : ''}`} style={{ background: cor(v, apagada) }} onClick={() => cel && setSel(cel)} onDoubleClick={() => { if (cel) { setSel(cel); alternarMarca(cel) } }}
                         title={cel ? `${marc ? 'MARCADA · ' : ''}${inteiro(n)} apostas · yield ${pct(cel.yield)} · CLV ${pct(cel.clvNovigMedio)} · acerto ${pct(cel.hitRate)} · odd ${num(cel.oddMedia)} · p ${num(cel.pValor, 3)}` : 'sem apostas'}>
                         {cel ? <><span className={apagada ? '' : 'font-semibold'}>{pct(v, 1)}{sig ? ' ★' : ''}</span><br /><span className="text-[10px] text-muted-foreground">{inteiro(n)}</span>{marc && <Bookmark className="w-3 h-3 text-amber-400 absolute top-0.5 right-0.5" />}</> : <span className="text-muted-foreground/40">—</span>}
                       </td>

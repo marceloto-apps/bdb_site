@@ -11,6 +11,7 @@ import { catalogoDe, ErroEstrategia, prepararEstrategia, type Catalogo } from '.
 import { executarCompilada } from '../engine/run'
 import { explorar, prepararExploracao, type OpcoesExploracao, type ResultadoExploracao } from '../engine/explorar'
 import type { Estrategia, RunResult } from '../engine/tipos'
+import { casasDasEntradas } from '../engine/universo'
 
 export interface CacheBytes {
   ler: (chave: string) => Promise<Uint8Array | null>
@@ -85,7 +86,7 @@ export class Sessao {
     const stats = { doCache: 0 }
     const t0 = Date.now()
     const carga = await carregarDataset({
-      manifest: this.manifest, campos: ec.camposUsados, filtro: filtroDoUniverso(universo, this.manifest),
+      manifest: this.manifest, campos: ec.camposUsados, filtro: filtroDoUniverso(universo, this.manifest, casasDasEntradas(estrategia.entradas)),
       buscar: (k) => this.buscarComCache(k, stats), preparar: (chaves) => this.prepararChaves(chaves), paralelo: 6,
       aoProgresso: (feitos, total) => this.op.aoProgresso?.({ fase: 'baixando', feitos, total }),
     })
@@ -107,7 +108,7 @@ export class Sessao {
     const stats = { doCache: 0 }
     const t0 = Date.now()
     const carga = await carregarDataset({
-      manifest: this.manifest, campos: prep.camposUsados, filtro: filtroDoUniverso(universo, this.manifest),
+      manifest: this.manifest, campos: prep.camposUsados, filtro: filtroDoUniverso(universo, this.manifest, casasDasEntradas(opcoes.apostas)),
       buscar: (k) => this.buscarComCache(k, stats), preparar: (chaves) => this.prepararChaves(chaves), paralelo: 6,
       aoProgresso: (feitos, total) => this.op.aoProgresso?.({ fase: 'baixando', feitos, total }),
     })

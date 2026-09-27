@@ -2,9 +2,6 @@
   "versao": 1,
   "nome": "Linha encurtou ≥ 7% na Pinnacle e mandante em forma",
   "universo": {
-    "fontes": [
-      "core"
-    ],
     "tipos": [
       "LEAGUE"
     ]

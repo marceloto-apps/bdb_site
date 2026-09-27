@@ -44,8 +44,8 @@ export const rotuloTipo = (t: string): string => ROTULO_TIPO[t] ?? t
 /** Dicas (tooltips) por campo da UI. Texto curto, em linguagem de apostador. */
 export const DICAS = {
   // 1. Universo
-  fonteBdb: 'Ligas que o BDB acompanha diariamente, com odds da bet365 e da Pinnacle. É a mesma base do Backtest tradicional e a mais completa.',
-  fonteExtra: 'Ligas que só existem na base histórica FutPythonTrader (FPT). Aumentam a amostra, mas têm menos colunas de odds e estatísticas.',
+  fonteBdb: 'Fonte principal: ligas que o BDB acompanha diariamente, com odds da bet365 e da Pinnacle. É a mesma base do Backtest tradicional e a mais completa.',
+  fonteExtra: 'Complemento, nunca substituição: acrescenta as temporadas que o BDB não cobre nas ligas dele (ex.: 22/23) e as ligas que só existem na FutPythonTrader (FPT). Um jogo do BDB nunca é trocado pela versão FPT. Esses jogos só têm odds de fechamento da bet365: apostas só na Pinnacle não os usam (e o complemento é ignorado, com aviso).',
   tipoLiga: 'Campeonatos por pontos corridos (Brasileirão, Premier League…).',
   tipoCopa: 'Mata-mata e torneios internacionais de clubes (Copa do Brasil, Libertadores…).',
   temporadas: 'Deixe vazio para usar todas. "24/25" é uma temporada europeia; "2025" é anual, como o Brasileirão. O Laboratório só usa temporadas a partir de 2022 e 22/23: antes disso a cobertura de odds e estatísticas é irregular.',

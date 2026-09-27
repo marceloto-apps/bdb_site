@@ -6,7 +6,7 @@ import type { Estrategia } from '../engine/tipos'
 
 export interface Exemplo { id: string; titulo: string; oQueTesta: string; observar: string; estrategia: Estrategia }
 
-const UNIVERSO_PADRAO = { fontes: ['core'] as ('core' | 'fpt')[], tipos: ['LEAGUE'] as ('LEAGUE' | 'CUP' | 'INTERNATIONAL_CLUBS')[] }
+const UNIVERSO_PADRAO = { tipos: ['LEAGUE'] as ('LEAGUE' | 'CUP' | 'INTERNATIONAL_CLUBS')[] }
 const FLAT = { metodo: 'flat' as const, unidade: 1 }
 const VALIDACAO = { holdout: 'selado' as const, folds: 'temporada' as const, walkForward: { janelas: 4, expandindo: true }, monteCarlo: { caminhos: 2000, ruinaPct: 0.5 } }
 

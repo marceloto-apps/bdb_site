@@ -60,6 +60,27 @@ com sessão e consulta ao banco) e qualquer falha de rede subia crua como `Faile
   e a de CORS só depois das tentativas.
 - Testes: +4 em `fase3.test.ts` (lotes POST, fallback GET, retentativa e mensagens).
 
+## 2.3 Fontes: o BDB é principal, a FPT complementa (27/09/2026)
+
+Medido no dataset `20260927-1230`, por liga × temporada (linhas do BDB / linhas só-FPT): a feature store já constrói o
+complemento **por rodada**: linhas só-FPT existem apenas onde o BDB não tem o jogo (22/23 em todas as ligas do BDB;
+Eredivisie também 23/24; Egito 24/25 pela metade; 1–2 jogos avulsos aqui e ali). Nas ligas só-FPT, todas as temporadas
+vêm da FPT. A Pinnacle só existe no BDB e, em várias ligas (Áustria, Egito, Ucrânia, Série B italiana), só a partir de
+26/27; a Rússia não tem bet365 nenhuma. O problema era a UI: "Ligas extras" desligada por padrão no Explorar e na
+Estratégia apagava essas temporadas (por isso "Premier League · 2 temporadas").
+
+Mudanças:
+
+- **Padrão = complemento ligado** (`fontes` ausente) no Explorar, na estratégia inicial e nos 6 exemplos. A chave foi
+  renomeada para "Complemento FutPythonTrader (temporadas e ligas que o BDB não tem · só bet365)"; "Ligas do BDB" é a
+  fonte principal.
+- **Complemento condicionado à bet365** (`engine/universo.ts`: `casasDasEntradas`, `ehComplemento`, `universoEfetivo`):
+  em modo complemento, se nenhuma aposta usa a bet365 (Explorar só com Pinnacle, ou estratégia só Pinnacle), as linhas
+  só-FPT saem do universo com o aviso "Complemento FutPythonTrader ignorado…". `fontes: ['fpt']` explícito não muda.
+  `run.ts` e `explorar.ts` passam as casas das entradas; o Explorar agora devolve `avisos` e mostra na faixa do topo.
+- **Chunks**: `filtroDoUniverso(u, manifest, casas)` aplica o mesmo universo efetivo e nem baixa competições só-FPT
+  quando a fonte FPT não entra (Sessao, servidor e CLI passam as casas).
+
 ## 3. Pendências
 
 1. Teste no navegador (roteiro em §4).

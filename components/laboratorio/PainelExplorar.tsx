@@ -41,7 +41,7 @@ export function PainelExplorar({ cfg, onChange, referencias }: { cfg: ConfigExpl
         <div className="flex gap-4 mt-2 text-sm">
           <label className="flex items-center gap-2"><Switch checked={cfg.casas.includes('bet365')} onCheckedChange={() => toggleCasa('bet365')} />bet365</label>
           <label className="flex items-center gap-2"><Switch checked={cfg.casas.includes('pinnacle')} onCheckedChange={() => toggleCasa('pinnacle')} />Pinnacle</label>
-          <Dica texto="Odds de fechamento. A Pinnacle não tem handicap/gols em todas as ligas; onde falta, a célula fica vazia." />
+          <Dica texto="Odds de fechamento. A Pinnacle só existe nas ligas do BDB (e em várias ligas só a partir de 26/27) e não tem handicap/gols em todas; onde falta, a célula fica vazia. O complemento FutPythonTrader só tem bet365." />
         </div>
         <p className="text-[10px] text-muted-foreground mt-1">{cfg.apostas.length * cfg.casas.length} apostas na cesta</p>
       </div>

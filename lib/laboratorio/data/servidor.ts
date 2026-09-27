@@ -6,6 +6,7 @@ import { catalogoPadrao } from '../engine/catalogo'
 import { prepararEstrategia, type EstrategiaCompilada } from '../engine/estrategia'
 import { executarCompilada } from '../engine/run'
 import type { Estrategia, RunResult } from '../engine/tipos'
+import { casasDasEntradas } from '../engine/universo'
 import { aplicarHoldout, carregarDataset, filtroDoUniverso, infoCompeticoes, resolverAliases, type Manifest } from './dataset'
 import { buscadorR2, lerJson, lerLatest } from './r2'
 
@@ -34,7 +35,7 @@ export async function executarNoServidor(estrategia: Estrategia, op: { versao?: 
   const manifest = await lerManifest(op.versao)
   const { universo, holdout } = aplicarHoldout(resolverAliases(estrategia.universo, manifest), estrategia.validacao?.holdout, manifest)
   const t0 = Date.now()
-  const carga = await carregarDataset({ manifest, campos: compilada.camposUsados, filtro: filtroDoUniverso(universo, manifest), buscar: buscadorR2, paralelo: 16 })
+  const carga = await carregarDataset({ manifest, campos: compilada.camposUsados, filtro: filtroDoUniverso(universo, manifest, casasDasEntradas(estrategia.entradas)), buscar: buscadorR2, paralelo: 16 })
   const { info, nomes } = infoCompeticoes(manifest)
   const resultado = executarCompilada({ ...compilada, estrategia: { ...estrategia, universo } }, carga.dataset, {
     catalogo: cat, competicoesInfo: info, nomesCompeticoes: nomes, nomesTimes: new Map(Object.entries(manifest.times ?? {})),

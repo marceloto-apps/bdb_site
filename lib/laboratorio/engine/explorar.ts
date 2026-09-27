@@ -14,7 +14,7 @@ import { liquidar, type Placar } from './liquidacao'
 import * as M from './matematica'
 import type { Entrada, Estrategia, Universo } from './tipos'
 import { ordemTemporada } from './temporadas'
-import { aplicarUniverso } from './universo'
+import { aplicarUniverso, casasDasEntradas } from './universo'
 
 export interface ApostaBasica extends Entrada { /** rótulo curto mostrado na matriz (ex.: "Mandante · bet365") */ rotulo: string }
 
@@ -63,6 +63,8 @@ export interface ResultadoExploracao {
   cruzamento: { rotulo: string; formula: string; tipo: string; semDado: number } | null
   celulas: CelulaExploracao[]
   camposAusentes: string[]
+  /** avisos do universo (ex.: complemento FPT ignorado, temporadas fora do corte) */
+  avisos: string[]
   tempoMs: number
 }
 
@@ -90,7 +92,7 @@ export function explorar(prep: ExploracaoPreparada, dataset: Awaited<ContextoCom
   const t0 = Date.now()
   const { compilada: ec, opcoes } = prep
   const ctx: ContextoCompilacao = { dataset, parametros: {}, indicadores: new Map(), camposAusentes: new Set() }
-  const uni = aplicarUniverso(dataset, opcoes.universo, op.competicoesInfo)
+  const uni = aplicarUniverso(dataset, opcoes.universo, op.competicoesInfo, casasDasEntradas(opcoes.apostas))
 
   // estatística → faixas
   let faixaDe: ((i: number) => number) | null = null
@@ -180,7 +182,7 @@ export function explorar(prep: ExploracaoPreparada, dataset: Awaited<ContextoCom
   })
 
   const competicoes = Array.from(temporadasPorComp.entries()).map(([key, ts]) => ({ key, nome: op.nomesCompeticoes?.get(key) ?? key, temporadas: Array.from(ts).sort(ordemTemporada) })).sort((a, b) => a.nome.localeCompare(b.nome))
-  return { nUniverso: uni.n, apostas: rotulos, competicoes, faixas, cruzamento, celulas: saida, camposAusentes: Array.from(ctx.camposAusentes), tempoMs: Date.now() - t0 }
+  return { nUniverso: uni.n, apostas: rotulos, competicoes, faixas, cruzamento, celulas: saida, camposAusentes: Array.from(ctx.camposAusentes), avisos: uni.avisos.map((a) => a.mensagem), tempoMs: Date.now() - t0 }
 }
 
 function fmt(x: number): string { return Number.isInteger(x) ? String(x) : x.toFixed(Math.abs(x) < 1 ? 3 : 2).replace(/\.?0+$/, '') }

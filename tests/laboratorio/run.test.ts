@@ -73,7 +73,10 @@ describe('run ponta a ponta (dataset sintético)', () => {
   it('apostar no fechamento Pinnacle dá CLV bruto 0 e CLV no-vig ≈ −margem', () => {
     const r = rodar(base({ entradas: [{ mercado: '1x2', selecao: 'home', preco: { casa: 'pinnacle', snapshot: 'close' } }] }))
     const com = r.apostas.filter((a) => a.refSrc === 'pinnacle')
-    expect(com.length).toBeGreaterThan(300)
+    // só Pinnacle em modo complemento: as linhas só-FPT (1 em 5 no sintético) saem do universo, com aviso
+    expect(com.length).toBeGreaterThan(250)
+    expect(r.nUniverso).toBe(ds.n * 4 / 5)
+    expect(r.avisos.some((a) => /Complemento FutPythonTrader ignorado/.test(a.mensagem))).toBe(true)
     for (const a of com.slice(0, 50)) { expect(a.clvBruto).toBeCloseTo(0, 9); expect(a.clvNovig).toBeLessThan(0) }
     expect(r.clv.beatRate).toBe(0)
   })

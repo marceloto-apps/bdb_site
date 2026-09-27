@@ -2,9 +2,37 @@
  * Universo (§5.1 item 1): máscara dos jogos elegíveis por competição, temporada, datas, fontes,
  * tipo de competição, rodadas iniciais e cobertura mínima de campos. Aplica também o corte temporal
  * (`temporadas.ts`): jogos de temporadas anteriores a 2022 / 22/23 nunca entram.
+ *
+ * Fontes: o BDB (núcleo) é a fonte principal; a FutPythonTrader **complementa** (temporadas que o BDB
+ * não cobre e ligas que só existem lá; a feature store garante que uma linha só-FPT nunca duplica um
+ * jogo do BDB). Como essas linhas só têm odds de fechamento da bet365, o complemento só vale quando
+ * alguma aposta usa a bet365; com apostas só na Pinnacle ele é ignorado, com aviso.
  */
 import { ROTULO_CORTE_TEMPORADA, temporadaPermitida } from './temporadas'
-import type { Aviso, Dataset, Universo } from './tipos'
+import type { Aviso, Casa, Dataset, Entrada, Universo } from './tipos'
+
+/** Casas usadas pelas entradas (preço de decisão e de liquidação). */
+export function casasDasEntradas(entradas: Pick<Entrada, 'preco' | 'liquidacao'>[] | undefined): Set<Casa> {
+  const s = new Set<Casa>()
+  for (const e of entradas ?? []) { s.add(e.preco.casa); if (e.liquidacao) s.add(e.liquidacao.casa) }
+  return s
+}
+
+/** `fontes` ausente ou com as duas = modo complemento (BDB principal + FPT onde o BDB não tem). */
+export const ehComplemento = (u: Universo | undefined) => !u?.fontes?.length || (u.fontes.includes('core') && u.fontes.includes('fpt'))
+
+/**
+ * Universo efetivo dadas as casas das apostas: em modo complemento sem nenhuma aposta na bet365, as
+ * linhas só-FPT (que só têm odds bet365) saem do universo, com aviso. Escolhas explícitas
+ * (`fontes: ['fpt']`) não são alteradas.
+ */
+export function universoEfetivo(u: Universo | undefined, casas?: Set<Casa>): { universo: Universo | undefined; aviso: Aviso | null } {
+  if (!casas || casas.size === 0 || casas.has('bet365') || !ehComplemento(u)) return { universo: u, aviso: null }
+  return {
+    universo: { ...(u ?? {}), fontes: ['core'] },
+    aviso: { tipo: 'universo', mensagem: 'Complemento FutPythonTrader ignorado: esses jogos só têm odds da bet365 e nenhuma aposta usa a bet365. Só jogos das ligas do BDB entram.' },
+  }
+}
 
 export interface ResultadoUniverso {
   mascara: Uint8Array
@@ -12,10 +40,13 @@ export interface ResultadoUniverso {
   avisos: Aviso[]
 }
 
-export function aplicarUniverso(ds: Dataset, universo: Universo | undefined, competicoesInfo?: Map<string, { tipo?: string; feminino?: boolean }>): ResultadoUniverso {
+export function aplicarUniverso(ds: Dataset, universoPedido: Universo | undefined, competicoesInfo?: Map<string, { tipo?: string; feminino?: boolean }>, casas?: Set<Casa>): ResultadoUniverso {
   const n = ds.n
   const mascara = new Uint8Array(n).fill(1)
   const avisos: Aviso[] = []
+  const efetivo = universoEfetivo(universoPedido, casas)
+  if (efetivo.aviso) avisos.push(efetivo.aviso)
+  const universo = efetivo.universo
   const seasonLabel = ds.textos.get('match.season_label')
   const data = ds.numericas.get('match.utc_date')
   // corte temporal: memoriza a decisão por rótulo (poucos rótulos distintos, muitas linhas)

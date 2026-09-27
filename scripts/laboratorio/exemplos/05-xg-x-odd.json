@@ -2,9 +2,6 @@
   "versao": 1,
   "nome": "xG combinado alto e over 2.5 barato",
   "universo": {
-    "fontes": [
-      "core"
-    ],
     "tipos": [
       "LEAGUE"
     ]

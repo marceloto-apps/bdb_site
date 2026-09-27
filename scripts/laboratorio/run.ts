@@ -12,6 +12,7 @@ import { config } from 'dotenv'
 import { readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { aplicarHoldout, carregarDataset, filtroDoUniverso, infoCompeticoes, resolverAliases, type Buscador, type Manifest } from '../../lib/laboratorio/data/dataset'
+import { casasDasEntradas } from '../../lib/laboratorio/engine/universo'
 import { catalogoPadrao } from '../../lib/laboratorio/engine/catalogo'
 import { ErroEstrategia, prepararEstrategia } from '../../lib/laboratorio/engine/estrategia'
 import { executarCompilada, serializarRun } from '../../lib/laboratorio/engine/run'
@@ -94,7 +95,7 @@ async function main() {
   const { universo, holdout } = aplicarHoldout(resolverAliases(estrategia.universo, manifest), estrategia.validacao?.holdout, manifest)
   if (estrategia.validacao?.holdout === 'selado') console.log(`Holdout selado: ${holdout.jogosOcultos} jogos da última temporada de ${holdout.temporadas.size} competições fora do run`)
   const t0 = Date.now()
-  const carga = await carregarDataset({ manifest, campos: ec.camposUsados, filtro: filtroDoUniverso(universo, manifest), buscar: fonte.buscar, paralelo: 8 })
+  const carga = await carregarDataset({ manifest, campos: ec.camposUsados, filtro: filtroDoUniverso(universo, manifest, casasDasEntradas(estrategia.entradas)), buscar: fonte.buscar, paralelo: 8 })
   console.log(`Dataset ${versao}: ${carga.chunks} chunks, ${carga.dataset.n} linhas, ${(carga.bytes / 1048576).toFixed(1)} MB em ${Date.now() - t0} ms${carga.camposAusentes.length ? ` · sem dados: ${carga.camposAusentes.join(', ')}` : ''}`)
 
   const { info, nomes } = infoCompeticoes(manifest)
@@ -103,7 +104,8 @@ async function main() {
     catalogo: cat, competicoesInfo: info, nomesCompeticoes: nomes, nomesTimes, extras: !flag('sem-extras'),
     bootstrap: arg('bootstrap') ? Number(arg('bootstrap')) : undefined,
     validacao: flag('validacao'), tentativasPrevias: arg('tentativas') ? Number(arg('tentativas')) : 0, holdout,
-    aoProgresso: (fase, feitos, total) => { if (fase === 'varrendo') process.stdout.write(`  varredura ${feitos}/${total}   `) },
+    aoProgresso: (fase, feitos, total) => { if (fase === 'varrendo') process.stdout.write(`
+  varredura ${feitos}/${total}   `) },
   })
   imprimir(r, Number(arg('apostas') ?? 10))
   if (r.validacao) imprimirValidacao(r.validacao)

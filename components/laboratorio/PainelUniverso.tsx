@@ -115,8 +115,8 @@ export function PainelUniverso({ universo, onChange, resumo }: { universo: Unive
 
       <div className="space-y-2 text-sm">
         <Rotulo className="text-xs">Fonte dos jogos</Rotulo>
-        <label className="flex items-center gap-2"><Switch checked={fontes.includes('core')} onCheckedChange={(v) => setFonte('core', v)} />Ligas do BDB <span className="text-muted-foreground text-xs">(bet365 + Pinnacle)</span><Dica texto={DICAS.fonteBdb} /></label>
-        <label className="flex items-center gap-2"><Switch checked={fontes.includes('fpt')} onCheckedChange={(v) => setFonte('fpt', v)} />Ligas extras <span className="text-muted-foreground text-xs">(FutPythonTrader)</span><Dica texto={DICAS.fonteExtra} /></label>
+        <label className="flex items-center gap-2"><Switch checked={fontes.includes('core')} onCheckedChange={(v) => setFonte('core', v)} />Ligas do BDB <span className="text-muted-foreground text-xs">(fonte principal · bet365 + Pinnacle)</span><Dica texto={DICAS.fonteBdb} /></label>
+        <label className="flex items-center gap-2"><Switch checked={fontes.includes('fpt')} onCheckedChange={(v) => setFonte('fpt', v)} />Complemento FutPythonTrader <span className="text-muted-foreground text-xs">(temporadas e ligas que o BDB não tem · só bet365)</span><Dica texto={DICAS.fonteExtra} /></label>
         <Rotulo className="text-xs">Tipo de competição</Rotulo>
         <label className="flex items-center gap-2"><Switch checked={!universo.tipos || universo.tipos.includes('LEAGUE')} onCheckedChange={(v) => onChange({ ...universo, tipos: v ? undefined : ['CUP', 'INTERNATIONAL_CLUBS'] })} />Campeonatos <span className="text-muted-foreground text-xs">(pontos corridos)</span><Dica texto={DICAS.tipoLiga} /></label>
         <label className="flex items-center gap-2"><Switch checked={!universo.tipos || universo.tipos.includes('CUP')} onCheckedChange={(v) => onChange({ ...universo, tipos: v ? undefined : ['LEAGUE'] })} />Copas e torneios internacionais<Dica texto={DICAS.tipoCopa} /></label>

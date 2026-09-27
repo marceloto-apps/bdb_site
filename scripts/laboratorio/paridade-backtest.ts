@@ -56,7 +56,8 @@ async function main() {
   const src = carga.dataset.textos.get('match.odds_close_src')
 
   // comparação
-  let iguais = 0, oddDiferente = 0, soNovo = 0, soLegado = 0, pnlLegado = 0, pnlNovo = 0, pnlComum = { legado: 0, novo: 0 }, resultadoDiferente = 0
+  let iguais = 0, oddDiferente = 0, soNovo = 0, soLegado = 0, pnlLegado = 0, pnlNovo = 0, resultadoDiferente = 0
+  const pnlComum = { legado: 0, novo: 0 }
   const divPorSource = new Map<string, number>()
   const difs: string[] = []
   const vistos = new Set<string>()

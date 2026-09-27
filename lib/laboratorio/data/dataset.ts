@@ -4,7 +4,8 @@
  * no navegador, disco ou R2 em Node).
  */
 import { temporadaPermitida } from '../engine/temporadas'
-import type { Dataset, Universo } from '../engine/tipos'
+import type { Casa, Dataset, Universo } from '../engine/tipos'
+import { universoEfetivo } from '../engine/universo'
 import { decodificarGrupo, gruposDosCampos, type ColunaDecodificada } from './chunk'
 
 export interface ManifestChunk {
@@ -96,9 +97,13 @@ export function resolverAliases(u: Universo | undefined, manifest: Pick<Manifest
 /**
  * Chunks que o universo pode tocar (competição, temporada e sobreposição de datas). Temporadas
  * anteriores ao corte (`engine/temporadas.ts`: 2022 e 22/23) nunca passam, qualquer que seja o universo.
+ * Com `casas`, aplica o mesmo `universoEfetivo` do engine; competições só-FPT nem são baixadas quando
+ * a fonte FPT não entra.
  */
-export function filtroDoUniverso(u: Universo | undefined, manifest: Manifest): (c: ManifestChunk) => boolean {
-  const ua = resolverAliases(u, manifest)
+export function filtroDoUniverso(u: Universo | undefined, manifest: Manifest, casas?: Set<Casa>): (c: ManifestChunk) => boolean {
+  const ua = resolverAliases(universoEfetivo(u, casas).universo, manifest)
+  const semFpt = !!ua?.fontes?.length && !ua.fontes.includes('fpt')
+  const soFpt = new Set(manifest.competicoes.filter((c) => c.soFpt).map((c) => c.key))
   const comps = ua?.competicoes?.length ? new Set(ua.competicoes) : null
   const seasons = ua?.temporadas?.length ? new Set(ua.temporadas) : null
   const labels = ua?.temporadasLabel?.length ? new Set(ua.temporadasLabel) : null
@@ -110,6 +115,7 @@ export function filtroDoUniverso(u: Universo | undefined, manifest: Manifest): (
   const tiposOk = ua?.tipos?.length ? new Set(ua.tipos as string[]) : null
   return (c) => {
     if (!temporadaPermitida(c.seasonLabel, c.de)) return false
+    if (semFpt && soFpt.has(c.competitionKey)) return false
     if (comps && !comps.has(c.competitionKey)) return false
     if (seasons && !seasons.has(c.seasonKey)) return false
     if (labels && !labels.has(c.seasonLabel)) return false

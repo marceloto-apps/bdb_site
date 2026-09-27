@@ -11,7 +11,7 @@ import * as M from './matematica'
 import { calcularCaminho, calcularClv, calcularInferencia, calcularKpis, segmentar } from './metricas'
 import { dependeDoBanco, estadoInicial, stakeBase, unidadeFlat } from './staking'
 import { ENGINE_VERSAO, type Aposta, type Aviso, type Dataset, type Estrategia, type RunResult } from './tipos'
-import { aplicarUniverso } from './universo'
+import { aplicarUniverso, casasDasEntradas } from './universo'
 import { validarAvancado, type HoldoutInfo } from './validacao'
 
 export interface OpcoesRun {
@@ -48,7 +48,7 @@ export function executarCompilada(ec: EstrategiaCompilada, dataset: Dataset, op:
   const ctx: ContextoCompilacao = { dataset, parametros: e.parametros ?? {}, indicadores: new Map(), camposAusentes: new Set() }
 
   // 1. universo
-  const uni = aplicarUniverso(dataset, e.universo, op.competicoesInfo)
+  const uni = aplicarUniverso(dataset, e.universo, op.competicoesInfo, casasDasEntradas(e.entradas))
   avisos.push(...uni.avisos)
 
   // 2. indicadores

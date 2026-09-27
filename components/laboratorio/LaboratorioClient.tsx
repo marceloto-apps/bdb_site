@@ -29,7 +29,7 @@ import { GuiaLaboratorio } from './GuiaLaboratorio'
 
 const INICIAL: Estrategia = {
   versao: 1,
-  universo: { fontes: ['core'], tipos: ['LEAGUE'] },
+  universo: { tipos: ['LEAGUE'] },
   indicadores: [{ nome: 'edge_h', expressao: { formula: 'odds.bet365.close.1x2.h * odds.pinnacle.close.1x2.novig_h - 1' } }],
   regra: { formula: 'edge_h > 0.02 and home.l5.pts_pg >= 1.5' },
   entradas: [{ id: 'e1', mercado: '1x2', selecao: 'home', preco: { casa: 'bet365', snapshot: 'close' } }],
@@ -71,7 +71,7 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
   // modo Explorar
   const [modo, setModo] = useState<'explorar' | 'estrategia'>('explorar')
   const [cfgExp, setCfgExp] = useState<ConfigExplorar>(EXPLORAR_INICIAL)
-  const [universoExp, setUniversoExp] = useState<Universo>({ fontes: ['core'], tipos: ['LEAGUE'] })
+  const [universoExp, setUniversoExp] = useState<Universo>({ tipos: ['LEAGUE'] })
   const [exploracao, setExploracao] = useState<{ resultado: ResultadoExploracaoUI; universo: Universo; apostas: ReturnType<typeof apostasDaCesta>; cruz: Cruzamento | null } | null>(null)
   const [explorando, setExplorando] = useState(false)
 

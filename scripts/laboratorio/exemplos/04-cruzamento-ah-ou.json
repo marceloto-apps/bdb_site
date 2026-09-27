@@ -2,9 +2,6 @@
   "versao": 1,
   "nome": "Favorito forte (AH ≤ −0.75) em jogo de gols (O/U ≥ 3.0): over",
   "universo": {
-    "fontes": [
-      "core"
-    ],
     "tipos": [
       "LEAGUE"
     ]

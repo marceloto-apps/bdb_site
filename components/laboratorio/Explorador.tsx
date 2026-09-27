@@ -88,6 +88,7 @@ export function Explorador({ resultado, executando, progresso, nMin, onLevar }: 
         <Badge variant="secondary" className="flex items-center gap-1">{inteiro(nCelulas)} células com amostra<Dica texto={DICAS.celulas} /></Badge>
         <span className="text-muted-foreground">★ = significativo mesmo descontando as {inteiro(nCelulas)} células (p &lt; {num(limiar, 4)})</span>
         {resultado.cruzamento && <Badge variant="outline">{resultado.cruzamento.rotulo}{(resultado.cruzamento.semDado ?? 0) > 0 ? ` · ${inteiro(resultado.cruzamento.semDado)} jogos sem o dado` : ''}</Badge>}
+        {(resultado.avisos ?? []).map((a) => <span key={a} className="text-amber-500" title={a}>⚠ {a.length > 90 ? `${a.slice(0, 90)}…` : a}</span>)}
         <div className="ml-auto flex items-center gap-2">
           {temCruz && <select className="bg-background border border-input rounded-md text-xs px-1 h-7 max-w-[220px]" value={aposta} onChange={(e) => { setApostaSel(e.target.value); setOrdem(null) }}>{resultado.apostas.map((a) => <option key={a} value={a}>{a}</option>)}</select>}
           <select className="bg-background border border-input rounded-md text-xs px-1 h-7" value={visao} onChange={(e) => setVisao(e.target.value as 'liga' | 'temporada')}><option value="liga">por liga</option><option value="temporada">por liga e temporada</option></select>

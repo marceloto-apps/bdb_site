@@ -54,6 +54,21 @@ export const validacaoSchema = z.object({
   calibracao: z.object({ prob: expressao }).optional(),
 })
 
+export const instrucaoExploracaoSchema = z.object({
+  v: z.literal(1),
+  dataset: z.string().max(40).optional(),
+  geradoEm: z.string().max(40).optional(),
+  universo: universoSchema.optional(),
+  apostas: z.array(entradaSchema.omit({ id: true }).extend({ rotulo: z.string().max(80) })).min(1).max(30),
+  cruzamento: z.object({ rotulo: z.string().max(120), formula: z.string().max(4000), tipo: z.string().max(20).optional() }).nullable().optional(),
+  faixas: z.array(z.object({ rotulo: z.string().max(60), de: z.number().nullable(), ate: z.number().nullable() })).max(20).optional(),
+  celulas: z.array(z.object({
+    competicao: z.string().max(120), nome: z.string().max(120), pais: z.string().max(60).optional(), temporada: z.string().max(20), aposta: z.string().max(80), faixa: z.number().int().min(-1),
+    n: z.number().optional(), yield: z.number().optional(), clv: z.number().optional(), p: z.number().optional(),
+  })).min(1).max(500),
+  nota: z.string().max(2000).optional(),
+})
+
 export const estrategiaSchema = z.object({
   versao: z.literal(1),
   nome: z.string().max(120).optional(),
@@ -70,6 +85,7 @@ export const estrategiaSchema = z.object({
   seed: z.number().int().optional(),
   bootstrap: z.number().int().min(0).max(5000).optional(),
   validacao: validacaoSchema.optional(),
+  exploracao: instrucaoExploracaoSchema.optional(),
 })
 
 export type EstrategiaJson = z.infer<typeof estrategiaSchema>

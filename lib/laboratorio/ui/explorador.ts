@@ -3,7 +3,8 @@
  * linguagem de apostador para cruzar, tipos do resultado e a conversão de uma célula em estratégia.
  */
 import type { ApostaBasica, CelulaExploracao, Cruzamento, ResultadoExploracao } from '../engine/explorar'
-import type { Casa, Estrategia, Universo } from '../engine/tipos'
+import type { Casa, Entrada, Estrategia, InstrucaoExploracao, Universo } from '../engine/tipos'
+import { instrucaoExploracaoSchema } from '../api/schemas'
 
 export interface ApostaCesta { id: string; nome: string; grupo: string; mercado: ApostaBasica['mercado']; selecao: ApostaBasica['selecao']; linha?: ApostaBasica['linha'] }
 
@@ -92,6 +93,121 @@ export function regraDaFaixa(cruz: Cruzamento, tipo: string | null, faixa: { de:
   return partes.join(' and ')
 }
 
+/** "Serie B (Itália)" — o nome sozinho é ambíguo (há duas Superligas, três Premier Leagues…). */
+export const nomeCompeticao = (c: { nome: string; pais?: string | null } | undefined, chave = ''): string => (c ? (c.pais ? `${c.nome} (${c.pais})` : c.nome) : chave)
+
+const VALIDACAO_PADRAO: Estrategia['validacao'] = { holdout: 'selado', folds: 'temporada', walkForward: { janelas: 4, expandindo: true }, monteCarlo: { caminhos: 2000, ruinaPct: 0.5 } }
+
+/** Instrução (marcação) a partir das células marcadas na matriz. */
+export function instrucaoDaSelecao(r: ResultadoExploracaoUI, celulas: CelulaUI[], universo: Universo | undefined, apostas: ApostaBasica[], cruz: Cruzamento | null, dataset?: string): InstrucaoExploracao {
+  const usadas = new Set(celulas.map((c) => c.aposta))
+  const semNulo = (x: number | null | undefined) => (x === null || x === undefined ? undefined : x)
+  return {
+    v: 1, dataset, geradoEm: new Date().toISOString(),
+    universo: universo ? { ...universo } : undefined,
+    apostas: apostas.filter((a) => usadas.has(a.rotulo)).map((a) => ({ rotulo: a.rotulo, mercado: a.mercado, selecao: a.selecao, linha: a.linha, preco: a.preco, liquidacao: a.liquidacao })),
+    cruzamento: cruz && r.cruzamento ? { rotulo: cruz.rotulo, formula: cruz.formula, tipo: r.cruzamento.tipo } : null,
+    faixas: r.faixas.map((f) => ({ rotulo: f.rotulo, de: f.de, ate: f.ate })),
+    celulas: celulas.map((c) => {
+      const comp = r.competicoes.find((x) => x.key === c.competicao)
+      return { competicao: c.competicao, nome: c.competicao === '*' ? 'Todas as ligas' : comp?.nome ?? c.competicao, pais: comp?.pais ?? undefined, temporada: c.temporada, aposta: c.aposta, faixa: c.faixa ?? -1, n: semNulo(c.n), yield: semNulo(c.yield), clv: semNulo(c.clvNovigMedio), p: semNulo(c.pValor) }
+    }),
+  }
+}
+
+const fmtPct = (x: number | undefined) => (x === undefined ? '' : `${(x * 100).toFixed(1).replace('.', ',')}%`)
+
+/** Linhas legíveis da instrução (cabeçalho do texto e resumo na UI). */
+export function resumoDaInstrucao(i: InstrucaoExploracao): string[] {
+  const linhas = [`Exploração do Laboratório${i.dataset ? ` · dados ${i.dataset}` : ''}${i.geradoEm ? ` · ${new Date(i.geradoEm).toLocaleDateString('pt-BR')}` : ''}`]
+  linhas.push(`Apostas: ${i.apostas.map((a) => a.rotulo).join(', ')}`)
+  if (i.cruzamento) linhas.push(`Estatística: ${i.cruzamento.rotulo} (${i.cruzamento.formula})`)
+  linhas.push(`Marcações (${i.celulas.length}):`)
+  for (const c of i.celulas) {
+    const faixa = c.faixa >= 0 ? i.faixas?.[c.faixa]?.rotulo ?? `faixa ${c.faixa}` : i.cruzamento ? 'todas as faixas' : ''
+    linhas.push(`- ${nomeCompeticao(c, c.competicao)}${c.temporada !== '*' ? ` · ${c.temporada}` : ''} · ${c.aposta}${faixa ? ` · ${faixa}` : ''}${c.n !== undefined ? ` · ${c.n} apostas` : ''}${c.yield !== undefined ? ` · yield ${fmtPct(c.yield)}` : ''}`)
+  }
+  if (i.nota) linhas.push(`Nota: ${i.nota}`)
+  return linhas
+}
+
+/** Texto copiável: cabeçalho legível (linhas com #) + JSON. `lerInstrucao` ignora as linhas com #. */
+export function textoDaInstrucao(i: InstrucaoExploracao): string {
+  return `${resumoDaInstrucao(i).map((l) => `# ${l}`).join('\n')}\n${JSON.stringify(i, null, 2)}`
+}
+
+/** Lê o texto colado (aceita só o JSON, ou o texto completo com o cabeçalho). Lança erro legível. */
+export function lerInstrucao(texto: string): InstrucaoExploracao {
+  const semComentarios = texto.split(/\r?\n/).filter((l) => !l.trim().startsWith('#')).join('\n')
+  const a = semComentarios.indexOf('{'), b = semComentarios.lastIndexOf('}')
+  if (a < 0 || b <= a) throw new Error('Não encontrei a instrução: cole o texto copiado do modo Explorar (ele termina com um bloco entre chaves).')
+  let obj: unknown
+  try { obj = JSON.parse(semComentarios.slice(a, b + 1)) } catch { throw new Error('O texto colado não é uma instrução válida (JSON malformado).') }
+  const v = instrucaoExploracaoSchema.safeParse(obj)
+  if (!v.success) throw new Error(`Instrução inválida: ${v.error.issues[0]?.path.join('.') ?? ''} ${v.error.issues[0]?.message ?? ''}`.trim())
+  return v.data as InstrucaoExploracao
+}
+
+const semUndefined = <T extends object>(o: T): T => { for (const k of Object.keys(o) as (keyof T)[]) if (o[k] === undefined) delete o[k]; return o }
+const aspas = (s: string) => `"${s.replace(/"/g, '')}"`
+
+/**
+ * Monta a estratégia (selo fechado, stake flat) a partir de uma instrução: universo = ligas marcadas
+ * (ou todas, se houver marcação em "Todas as ligas"); apostas = as usadas nas marcações; regra = faixas
+ * marcadas, por liga quando as faixas diferem entre ligas (`match.competition == "…" and …`).
+ */
+export function estrategiaDaInstrucao(i: InstrucaoExploracao): Estrategia {
+  const u: Universo = { ...(i.universo ?? {}) }
+  delete u.temporadasExcluidas
+  const comps = Array.from(new Set(i.celulas.filter((c) => c.competicao !== '*').map((c) => c.competicao)))
+  const todasLigas = i.celulas.some((c) => c.competicao === '*')
+  if (!todasLigas && comps.length) u.competicoes = comps; else delete u.competicoes
+  const temporadas = new Set(i.celulas.map((c) => c.temporada))
+  if (temporadas.size === 1 && !temporadas.has('*')) u.temporadasLabel = [Array.from(temporadas)[0]]; else delete u.temporadasLabel
+
+  const usadas = new Set(i.celulas.map((c) => c.aposta))
+  const entradas: Entrada[] = i.apostas.filter((a) => usadas.has(a.rotulo)).map((a, k) => semUndefined({ id: `e${k + 1}`, mercado: a.mercado, selecao: a.selecao, linha: a.linha, preco: a.preco, liquidacao: a.liquidacao }))
+  if (!entradas.length) throw new Error('A instrução não tem apostas para as marcações')
+
+  // faixas por competição: null = sem restrição (célula "todas as faixas")
+  const cruz = i.cruzamento ?? null
+  const faixasDe = (set: Set<number>) => Array.from(set).sort((a, b) => a - b).map((f) => regraDaFaixa(cruz!, cruz!.tipo ?? null, i.faixas![f], f))
+  const juntar = (regras: string[]) => (regras.length === 1 ? regras[0] : regras.map((r) => `(${r})`).join(' or '))
+  let regra: string | undefined
+  if (cruz && i.faixas?.length) {
+    const porComp = new Map<string, Set<number> | null>()
+    let geral: Set<number> | null | undefined
+    for (const c of i.celulas) {
+      if (c.competicao === '*') { if (c.faixa < 0 || geral === null) geral = null; else { geral = geral ?? new Set(); geral.add(c.faixa) } continue }
+      const atual = porComp.get(c.competicao)
+      if (atual === null) continue
+      if (c.faixa < 0) porComp.set(c.competicao, null); else { const s = atual ?? new Set<number>(); s.add(c.faixa); porComp.set(c.competicao, s) }
+    }
+    const sets = Array.from(porComp.values())
+    const chaveSet = (s: Set<number> | null) => (s ? Array.from(s).sort().join(',') : '')
+    const iguais = sets.length > 0 && sets.every((s) => s && chaveSet(s) === chaveSet(sets[0]))
+    const restritas = sets.filter((s) => s)
+    if (geral === undefined && iguais) regra = juntar(faixasDe(sets[0] as Set<number>))
+    else if (geral !== undefined && sets.length === 0) regra = geral ? juntar(faixasDe(geral)) : undefined
+    else if (!restritas.length && !geral) regra = undefined // só "todas as faixas": o universo já restringe as ligas
+    else {
+      const clausulas: string[] = []
+      for (const [k, s] of Array.from(porComp)) clausulas.push(s ? `match.competition == ${aspas(k)} and (${juntar(faixasDe(s))})` : `match.competition == ${aspas(k)}`)
+      if (geral) clausulas.push(juntar(faixasDe(geral)))
+      if (geral === null) regra = undefined; else regra = clausulas.length === 1 ? clausulas[0] : clausulas.map((c) => `(${c})`).join(' or ')
+    }
+  }
+
+  const ligas = todasLigas || !comps.length ? 'todas as ligas' : comps.length === 1 ? nomeCompeticao(i.celulas.find((c) => c.competicao === comps[0]), comps[0]) : `${comps.length} ligas`
+  const nome = `Exploração: ${entradas.length === 1 ? i.apostas.find((a) => usadas.has(a.rotulo))?.rotulo : `${entradas.length} apostas`} · ${ligas}${cruz && regra ? ` · ${cruz.rotulo}` : ''}`
+  return {
+    versao: 1, nome: nome.slice(0, 120), universo: u,
+    regra: regra ? { formula: regra } : undefined,
+    entradas, staking: { metodo: 'flat', unidade: 1 }, bancoInicial: 100, bootstrap: 1000, seed: 42,
+    validacao: { ...VALIDACAO_PADRAO }, exploracao: i,
+  }
+}
+
 /** Monta a estratégia (selo fechado, stake flat) a partir de uma célula: "Levar ao Laboratório". */
 export function estrategiaDaCelula(r: ResultadoExploracaoUI, celula: CelulaUI, universo: Universo | undefined, apostas: ApostaBasica[], cruz: Cruzamento | null): Estrategia {
   const aposta = apostas.find((a) => a.rotulo === celula.aposta)
@@ -102,12 +218,13 @@ export function estrategiaDaCelula(r: ResultadoExploracaoUI, celula: CelulaUI, u
   if (celula.temporada !== '*') u.temporadasLabel = [celula.temporada]
   const faixa = (celula.faixa ?? -1) >= 0 ? r.faixas[celula.faixa as number] : null
   const regra = cruz && faixa ? regraDaFaixa(cruz, r.cruzamento?.tipo ?? null, faixa, celula.faixa as number) : ''
-  const nome = `${celula.aposta} · ${celula.competicao === '*' ? 'todas as ligas' : comp?.nome ?? celula.competicao}${celula.temporada !== '*' ? ` ${celula.temporada}` : ''}${faixa ? ` · ${cruz?.rotulo} ${faixa.rotulo}` : ''}`
+  const nome = `${celula.aposta} · ${celula.competicao === '*' ? 'todas as ligas' : nomeCompeticao(comp, celula.competicao)}${celula.temporada !== '*' ? ` ${celula.temporada}` : ''}${faixa ? ` · ${cruz?.rotulo} ${faixa.rotulo}` : ''}`
   return {
     versao: 1, nome: nome.slice(0, 120), universo: u,
     regra: regra ? { formula: regra } : undefined,
     entradas: [{ id: 'e1', mercado: aposta.mercado, selecao: aposta.selecao, linha: aposta.linha, preco: aposta.preco }],
     staking: { metodo: 'flat', unidade: 1 }, bancoInicial: 100, bootstrap: 1000, seed: 42,
-    validacao: { holdout: 'selado', folds: 'temporada', walkForward: { janelas: 4, expandindo: true }, monteCarlo: { caminhos: 2000, ruinaPct: 0.5 } },
+    validacao: { ...VALIDACAO_PADRAO },
+    exploracao: instrucaoDaSelecao(r, [celula], universo, apostas, cruz, r.datasetVersao ?? undefined),
   }
 }

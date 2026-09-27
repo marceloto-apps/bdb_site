@@ -40,6 +40,7 @@ const GLOSSARIO: { termo: string; def: string }[] = [
   { termo: 'Explorar (aposta cega)', def: 'Fazer a mesma aposta em todos os jogos do universo, sem regra, e olhar o resultado liga por liga. Serve para achar onde há vantagem antes de escrever qualquer regra.' },
   { termo: 'Faixa (cruzamento)', def: 'Divisão dos jogos em grupos de mesmo tamanho por uma estatística: baixo, médio e alto (tercis) ou quartos. Mostra se a estatística muda o resultado da aposta.' },
   { termo: 'Persistência', def: 'Em quantas temporadas com amostra a aposta deu lucro naquela liga. 3 de 3 é um sinal; 1 de 3 é ruído.' },
+  { termo: 'Instrução da exploração', def: 'Texto copiável com as células marcadas no modo Explorar (ligas, aposta, estatística e faixas). No modo Estratégia, o passo "Da exploração" lê esse texto e monta universo, regra e apostas; a instrução fica salva com a estratégia.' },
   { termo: 'Holdout selado', def: 'A temporada mais recente de cada liga fica escondida enquanto você ajusta a estratégia. Ao abrir o selo (só para estratégias salvas, e fica registrado), ela vira o teste final.' },
   { termo: 'Walk-forward', def: 'Divide o tempo em janelas; em cada uma, a estratégia (e seus parâmetros, quando há varredura) é definida com os jogos anteriores e avaliada nos seguintes. Só o resultado fora da amostra conta.' },
   { termo: 'WFE (eficiência do walk-forward)', def: 'Yield fora da amostra dividido pelo yield no treino. Perto de 1 é ótimo; abaixo de 0,5 o ajuste não se transfere para o futuro.' },

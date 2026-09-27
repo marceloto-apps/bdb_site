@@ -218,11 +218,11 @@ export function resumoManifest(m: Manifest) {
   }
 }
 
-/** Mapa competição → info (tipo, feminino) e nomes, para o run. */
-export function infoCompeticoes(manifest: Manifest): { info: Map<string, { tipo?: string; feminino?: boolean }>; nomes: Map<string, string> } {
-  const info = new Map<string, { tipo?: string; feminino?: boolean }>()
+/** Mapa competição → info (tipo, feminino, país) e nomes, para o run. */
+export function infoCompeticoes(manifest: Manifest): { info: Map<string, { tipo?: string; feminino?: boolean; pais?: string }>; nomes: Map<string, string> } {
+  const info = new Map<string, { tipo?: string; feminino?: boolean; pais?: string }>()
   const nomes = new Map<string, string>()
-  for (const c of manifest.competicoes) { info.set(c.key, { tipo: c.tipo, feminino: c.feminino }); nomes.set(c.key, c.nome) }
+  for (const c of manifest.competicoes) { info.set(c.key, { tipo: c.tipo, feminino: c.feminino, pais: c.pais }); nomes.set(c.key, c.nome) }
   return { info, nomes }
 }
 

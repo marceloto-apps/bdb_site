@@ -1,11 +1,16 @@
 'use client'
-/** Modo Explorar — painel direito: matriz liga (× temporada) × aposta (ou × faixa da estatística), com detalhe e "Levar ao Laboratório". */
-import { useMemo, useState } from 'react'
+/**
+ * Modo Explorar — painel direito: matriz liga (× temporada) × aposta (ou × faixa da estatística), detalhe da célula,
+ * "Levar ao Laboratório", marcação de células e painel de seleção (copiar instrução / levar seleção).
+ */
+import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Compass } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { ArrowRight, Bookmark, BookmarkCheck, Check, Compass, Copy, X } from 'lucide-react'
 import { corSinal, inteiro, num, pct, sinal } from '@/lib/laboratorio/ui/formato'
-import { chaveCelula, indexarCelulas, limiarSidak, pDeflacionado, persistencia, type CelulaUI, type ResultadoExploracaoUI } from '@/lib/laboratorio/ui/explorador'
+import { chaveCelula, indexarCelulas, limiarSidak, nomeCompeticao, pDeflacionado, persistencia, resumoDaInstrucao, textoDaInstrucao, type CelulaUI, type ResultadoExploracaoUI } from '@/lib/laboratorio/ui/explorador'
+import type { InstrucaoExploracao } from '@/lib/laboratorio/engine/tipos'
 import { DICAS } from '@/lib/laboratorio/ui/rotulos'
 import { Dica } from './Dica'
 
@@ -13,18 +18,28 @@ type Metrica = 'yield' | 'clv'
 interface Coluna { chave: string; rotulo: string; aposta: string; faixa: number }
 interface Linha { chave: string; rotulo: string; sub?: string; competicao: string; temporada: string }
 
-export function Explorador({ resultado, executando, progresso, nMin, onLevar }: {
+export function Explorador({ resultado, executando, progresso, nMin, onLevar, montarInstrucao, onLevarSelecao }: {
   resultado: ResultadoExploracaoUI | null
   executando: boolean
   progresso: { fase: string; feitos: number; total: number } | null
   nMin: number
   onLevar: (c: CelulaUI) => void
+  /** monta a instrução (texto copiável) a partir das células marcadas */
+  montarInstrucao: (celulas: CelulaUI[]) => InstrucaoExploracao | null
+  onLevarSelecao: (i: InstrucaoExploracao) => void
 }) {
   const [visao, setVisao] = useState<'liga' | 'temporada'>('liga')
   const [metrica, setMetrica] = useState<Metrica>('yield')
   const [apostaSel, setApostaSel] = useState<string>('')
   const [ordem, setOrdem] = useState<string | null>(null)
   const [sel, setSel] = useState<CelulaUI | null>(null)
+  const [marcadas, setMarcadas] = useState<CelulaUI[]>([])
+  const [verTexto, setVerTexto] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+  const [erroCopia, setErroCopia] = useState<string | null>(null)
+
+  // nova exploração = nova matriz: a seleção e o detalhe zeram
+  useEffect(() => { setSel(null); setMarcadas([]); setVerTexto(false) }, [resultado])
 
   const idx = useMemo(() => (resultado ? indexarCelulas(resultado) : new Map<string, CelulaUI>()), [resultado])
   const temCruz = !!resultado?.cruzamento && (resultado?.faixas.length ?? 0) > 0
@@ -41,8 +56,8 @@ export function Explorador({ resultado, executando, progresso, nMin, onLevar }: 
     if (!resultado) return []
     const base: Linha[] = [{ chave: '*', rotulo: 'Todas as ligas', competicao: '*', temporada: '*' }]
     const comps = visao === 'liga'
-      ? resultado.competicoes.map((c) => ({ chave: c.key, rotulo: c.nome, sub: `${c.temporadas.length} temporada(s)`, competicao: c.key, temporada: '*' }))
-      : resultado.competicoes.flatMap((c) => c.temporadas.map((t) => ({ chave: `${c.key}|${t}`, rotulo: c.nome, sub: t, competicao: c.key, temporada: t })))
+      ? resultado.competicoes.map((c) => ({ chave: c.key, rotulo: nomeCompeticao(c), sub: `${c.temporadas.length} temporada(s)`, competicao: c.key, temporada: '*' }))
+      : resultado.competicoes.flatMap((c) => c.temporadas.map((t) => ({ chave: `${c.key}|${t}`, rotulo: nomeCompeticao(c), sub: t, competicao: c.key, temporada: t })))
     const col = colunas.find((x) => x.chave === ordem) ?? colunas[0]
     if (col) comps.sort((a, b) => {
       const ca = idx.get(chaveCelula(a.competicao, a.temporada, col.aposta, col.faixa)), cb = idx.get(chaveCelula(b.competicao, b.temporada, col.aposta, col.faixa))
@@ -59,6 +74,15 @@ export function Explorador({ resultado, executando, progresso, nMin, onLevar }: 
     return n
   }, [linhas, colunas, idx, nMin])
   const limiar = limiarSidak(nCelulas)
+
+  const instrucao = useMemo(() => (marcadas.length ? montarInstrucao(marcadas) : null), [marcadas, montarInstrucao])
+  const texto = useMemo(() => (instrucao ? textoDaInstrucao(instrucao) : ''), [instrucao])
+  const marcada = (c: CelulaUI | undefined) => !!c && marcadas.includes(c)
+  const alternarMarca = (c: CelulaUI) => setMarcadas((m) => (m.includes(c) ? m.filter((x) => x !== c) : [...m, c]))
+  const copiar = async () => {
+    try { await navigator.clipboard.writeText(texto); setCopiado(true); setErroCopia(null); setTimeout(() => setCopiado(false), 2000) }
+    catch { setErroCopia('Não foi possível copiar automaticamente; use "Ver texto" e copie manualmente.'); setVerTexto(true) }
+  }
 
   if (!resultado && !executando) {
     return (
@@ -80,6 +104,8 @@ export function Explorador({ resultado, executando, progresso, nMin, onLevar }: 
 
   const cor = (v: number | null, apagada: boolean) => (apagada || v === null ? '' : v > 0 ? `rgba(34,197,94,${Math.min(0.12 + Math.abs(v) * 3, 0.75)})` : `rgba(239,68,68,${Math.min(0.12 + Math.abs(v) * 3, 0.75)})`)
   const colOrdem = colunas.find((x) => x.chave === ordem) ?? colunas[0]
+  const nomeDa = (c: CelulaUI) => (c.competicao === '*' ? 'todas as ligas' : nomeCompeticao(resultado.competicoes.find((x) => x.key === c.competicao), c.competicao))
+  const rotuloCelula = (c: CelulaUI) => `${c.aposta} · ${nomeDa(c)}${c.temporada !== '*' ? ` · ${c.temporada}` : ''}${(c.faixa ?? -1) >= 0 ? ` · ${resultado.cruzamento?.rotulo}: ${resultado.faixas[c.faixa as number]?.rotulo}` : ''}`
 
   return (
     <div className="space-y-3">
@@ -118,10 +144,11 @@ export function Explorador({ resultado, executando, progresso, nMin, onLevar }: 
                     const v = valor(cel)
                     const sig = !apagada && cel?.pValor !== null && cel?.pValor !== undefined && cel.pValor < limiar && (cel.lucro ?? 0) > 0
                     const ativa = sel && cel && sel === cel
+                    const marc = marcada(cel)
                     return (
-                      <td key={c.chave} className={`p-1 border-b border-border/40 text-center cursor-pointer ${apagada ? 'text-muted-foreground/50' : ''} ${ativa ? 'outline outline-2 outline-primary' : ''}`} style={{ background: cor(v, apagada) }} onClick={() => cel && setSel(cel)}
-                        title={cel ? `${inteiro(n)} apostas · yield ${pct(cel.yield)} · CLV ${pct(cel.clvNovigMedio)} · acerto ${pct(cel.hitRate)} · odd ${num(cel.oddMedia)} · p ${num(cel.pValor, 3)}` : 'sem apostas'}>
-                        {cel ? <><span className={apagada ? '' : 'font-semibold'}>{pct(v, 1)}{sig ? ' ★' : ''}</span><br /><span className="text-[10px] text-muted-foreground">{inteiro(n)}</span></> : <span className="text-muted-foreground/40">—</span>}
+                      <td key={c.chave} className={`p-1 border-b border-border/40 text-center cursor-pointer relative ${apagada ? 'text-muted-foreground/50' : ''} ${ativa ? 'outline outline-2 outline-primary' : ''} ${marc ? 'ring-2 ring-inset ring-amber-400' : ''}`} style={{ background: cor(v, apagada) }} onClick={() => cel && setSel(cel)}
+                        title={cel ? `${marc ? 'MARCADA · ' : ''}${inteiro(n)} apostas · yield ${pct(cel.yield)} · CLV ${pct(cel.clvNovigMedio)} · acerto ${pct(cel.hitRate)} · odd ${num(cel.oddMedia)} · p ${num(cel.pValor, 3)}` : 'sem apostas'}>
+                        {cel ? <><span className={apagada ? '' : 'font-semibold'}>{pct(v, 1)}{sig ? ' ★' : ''}</span><br /><span className="text-[10px] text-muted-foreground">{inteiro(n)}</span>{marc && <Bookmark className="w-3 h-3 text-amber-400 absolute top-0.5 right-0.5" />}</> : <span className="text-muted-foreground/40">—</span>}
                       </td>
                     )
                   })}
@@ -136,10 +163,43 @@ export function Explorador({ resultado, executando, progresso, nMin, onLevar }: 
       {sel && (
         <div className="bg-card border border-primary/40 rounded-2xl p-3 text-sm flex flex-wrap items-center gap-x-4 gap-y-1">
           <div className="min-w-0">
-            <p className="font-semibold">{sel.aposta} · {sel.competicao === '*' ? 'todas as ligas' : resultado.competicoes.find((c) => c.key === sel.competicao)?.nome ?? sel.competicao}{sel.temporada !== '*' ? ` · ${sel.temporada}` : ''}{(sel.faixa ?? -1) >= 0 ? ` · ${resultado.cruzamento?.rotulo}: ${resultado.faixas[sel.faixa as number]?.rotulo}` : ''}</p>
+            <p className="font-semibold">{rotuloCelula(sel)}</p>
             <p className="text-xs text-muted-foreground">{inteiro(sel.n)} apostas · yield <b className={corSinal(sel.yield)}>{pct(sel.yield)}</b> · lucro {sinal(sel.lucro)} u · acerto {pct(sel.hitRate)} · odd média {num(sel.oddMedia)} · CLV <b className={corSinal(sel.clvNovigMedio)}>{pct(sel.clvNovigMedio)}</b> ({inteiro(sel.nRef)} com referência) · p {num(sel.pValor, 4)} · p deflacionado {num(pDeflacionado(sel.pValor, nCelulas), 4)}</p>
           </div>
-          <Button size="sm" className="ml-auto" onClick={() => onLevar(sel)}>Levar ao Laboratório<ArrowRight className="w-3 h-3 ml-1" /></Button>
+          <div className="ml-auto flex items-center gap-2">
+            <Button size="sm" variant={marcada(sel) ? 'secondary' : 'outline'} onClick={() => alternarMarca(sel)} title={DICAS.marcar}>{marcada(sel) ? <BookmarkCheck className="w-3 h-3 mr-1" /> : <Bookmark className="w-3 h-3 mr-1" />}{marcada(sel) ? 'Marcada' : 'Marcar'}</Button>
+            <Button size="sm" onClick={() => onLevar(sel)}>Levar ao Laboratório<ArrowRight className="w-3 h-3 ml-1" /></Button>
+          </div>
+        </div>
+      )}
+
+      {instrucao && (
+        <div className="bg-card border border-amber-400/40 rounded-2xl p-3 text-sm space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="font-semibold flex items-center gap-1"><BookmarkCheck className="w-4 h-4 text-amber-400" />Seleção ({marcadas.length})<Dica texto={DICAS.marcar} /></p>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => void copiar()}>{copiado ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}{copiado ? 'Copiado' : 'Copiar instrução'}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setVerTexto((v) => !v)}>{verTexto ? 'Esconder texto' : 'Ver texto'}</Button>
+              <Button size="sm" onClick={() => onLevarSelecao(instrucao)}>Levar seleção ao Laboratório<ArrowRight className="w-3 h-3 ml-1" /></Button>
+              <Button size="sm" variant="ghost" onClick={() => setMarcadas([])}>Limpar</Button>
+            </div>
+          </div>
+          <ul className="text-xs space-y-0.5">
+            {marcadas.map((c, k) => (
+              <li key={k} className="flex items-center gap-2">
+                <button type="button" className="text-muted-foreground hover:text-data-red" title="Remover da seleção" onClick={() => alternarMarca(c)}><X className="w-3 h-3" /></button>
+                <span>{rotuloCelula(c)}</span>
+                <span className="text-muted-foreground">· {inteiro(c.n)} apostas · yield <b className={corSinal(c.yield)}>{pct(c.yield)}</b> · CLV {pct(c.clvNovigMedio)}</span>
+              </li>
+            ))}
+          </ul>
+          {erroCopia && <p className="text-xs text-data-red">{erroCopia}</p>}
+          {verTexto && (
+            <div className="space-y-1">
+              <p className="text-[10px] text-muted-foreground">{resumoDaInstrucao(instrucao)[0]} · cole este texto no passo “Da exploração” do modo Estratégia.</p>
+              <Textarea readOnly value={texto} rows={8} className="font-mono text-[11px]" onFocus={(e) => e.currentTarget.select()} />
+            </div>
+          )}
         </div>
       )}
       <p className="text-[10px] text-muted-foreground">{resultado.tempoMs} ms{resultado.camposAusentes.length ? ` · sem dados no universo: ${resultado.camposAusentes.join(', ')}` : ''}</p>

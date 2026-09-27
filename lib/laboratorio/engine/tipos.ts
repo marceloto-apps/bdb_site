@@ -142,6 +142,24 @@ export type Staking =
   | { metodo: 'kelly'; fracao: number; prob: Expressao; cap?: number; minimo?: number }
   | { metodo: 'to_win'; alvo: number; maximo?: number }
 
+/**
+ * Marcação feita no modo Explorar (ligas, aposta, estatística e faixas): vira um texto copiável que a
+ * Estratégia lê (monta universo, regra e apostas) e guarda como registro de onde a ideia veio.
+ */
+export interface InstrucaoExploracao {
+  v: 1
+  dataset?: string
+  geradoEm?: string
+  /** universo da exploração (fontes, tipos, datas…) */
+  universo?: Universo
+  apostas: (Omit<Entrada, 'id'> & { rotulo: string })[]
+  cruzamento?: { rotulo: string; formula: string; tipo?: string } | null
+  faixas?: { rotulo: string; de: number | null; ate: number | null }[]
+  /** células marcadas; competicao/temporada '*' = todas; faixa -1 = todas as faixas */
+  celulas: { competicao: string; nome: string; pais?: string; temporada: string; aposta: string; faixa: number; n?: number; yield?: number; clv?: number; p?: number }[]
+  nota?: string
+}
+
 export interface Estrategia {
   versao: 1
   nome?: string
@@ -166,6 +184,8 @@ export interface Estrategia {
   bootstrap?: number
   /** validação avançada (Fase 5) */
   validacao?: Validacao
+  /** marcação do modo Explorar que originou ou orienta a estratégia (não afeta o run nem o hash) */
+  exploracao?: InstrucaoExploracao
 }
 
 // ────────────────────────────────────────────────────────────────────────────

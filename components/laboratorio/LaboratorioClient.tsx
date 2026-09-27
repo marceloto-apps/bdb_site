@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast'
 import { Beaker, Compass, FlaskConical, Play } from 'lucide-react'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { criarLaboratorio, ErroLaboratorio, type ClienteLaboratorio, type ProgressoUI } from '@/lib/laboratorio/worker/cliente'
-import type { Estrategia } from '@/lib/laboratorio/engine/tipos'
+import type { Estrategia, InstrucaoExploracao } from '@/lib/laboratorio/engine/tipos'
 import type { CampoUI, EstrategiaSalvaUI, FuncaoUI, IndicadorSalvoUI, ResumoUI, RunComparado, RunSalvoUI, RunUI } from '@/lib/laboratorio/ui/tipos'
 import { PainelUniverso } from './PainelUniverso'
 import { PainelIndicadores } from './PainelIndicadores'
@@ -19,8 +19,9 @@ import { PainelEntradas } from './PainelEntradas'
 import { PainelStaking } from './PainelStaking'
 import { PainelValidacao } from './PainelValidacao'
 import { PainelExplorar, type ConfigExplorar } from './PainelExplorar'
+import { PainelExploracao } from './PainelExploracao'
 import { Explorador } from './Explorador'
-import { apostasDaCesta, CESTA_PADRAO, ESTATISTICAS, estrategiaDaCelula, type CelulaUI, type ResultadoExploracaoUI } from '@/lib/laboratorio/ui/explorador'
+import { apostasDaCesta, CESTA_PADRAO, ESTATISTICAS, estrategiaDaCelula, estrategiaDaInstrucao, instrucaoDaSelecao, type CelulaUI, type ResultadoExploracaoUI } from '@/lib/laboratorio/ui/explorador'
 import type { Cruzamento } from '@/lib/laboratorio/engine/explorar'
 import type { Universo } from '@/lib/laboratorio/engine/tipos'
 import { Tearsheet } from './Tearsheet'
@@ -192,6 +193,22 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
       toast({ title: 'Estratégia montada', description: `${e.nome}. Ajuste a regra e execute.` })
     } catch (err) { toast({ title: 'Não foi possível montar a estratégia', description: (err as Error).message, variant: 'destructive' }) }
   }
+  const montarInstrucao = (celulas: CelulaUI[]): InstrucaoExploracao | null => (exploracao ? instrucaoDaSelecao(exploracao.resultado, celulas, exploracao.universo, exploracao.apostas, exploracao.cruz, exploracao.resultado.datasetVersao ?? resumo?.versao) : null)
+  const montarDaInstrucao = (i: InstrucaoExploracao, substituirTudo: boolean) => {
+    const e = estrategiaDaInstrucao(i)
+    if (substituirTudo) { setEstrategia({ ...INICIAL, ...e }); setAtualId(null); setAtualNome(''); setRunsSalvos([]) }
+    else setEstrategia((atual) => ({ ...atual, universo: e.universo, regra: e.regra, entradas: e.entradas, nome: atual.nome || e.nome, exploracao: i }))
+    setRun(null)
+    return e
+  }
+  const levarSelecao = (i: InstrucaoExploracao) => {
+    try { const e = montarDaInstrucao(i, true); setModo('estrategia'); toast({ title: 'Estratégia montada da seleção', description: `${e.nome}. Ajuste a regra e execute.` }) }
+    catch (err) { toast({ title: 'Não foi possível montar a estratégia', description: (err as Error).message, variant: 'destructive' }) }
+  }
+  const aplicarInstrucao = (i: InstrucaoExploracao) => {
+    try { const e = montarDaInstrucao(i, false); toast({ title: 'Instrução aplicada', description: `Universo, regra e apostas vieram da exploração. ${e.regra ? `Regra: ${e.regra.formula}` : 'Sem regra (todas as faixas).'}` }) }
+    catch (err) { toast({ title: 'Não foi possível aplicar a instrução', description: (err as Error).message, variant: 'destructive' }) }
+  }
   const abrirSelo = async () => {
     if (!atualId) return
     if (!confirm('Abrir o selo inclui a última temporada de cada liga no run e fica registrado nesta estratégia. Faça isso só quando a regra estiver pronta. Continuar?')) return
@@ -254,7 +271,7 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
           <p className="text-xs text-muted-foreground px-1">Achou uma célula interessante? Clique nela e em “Levar ao Laboratório”: a aposta, a liga e a faixa viram uma estratégia pronta no modo Estratégia, com a última temporada selada.</p>
         </div>
         <div className="lg:col-span-8">
-          <Explorador resultado={exploracao?.resultado ?? null} executando={explorando} progresso={progresso} nMin={cfgExp.nMin} onLevar={levarAoLaboratorio} />
+          <Explorador resultado={exploracao?.resultado ?? null} executando={explorando} progresso={progresso} nMin={cfgExp.nMin} onLevar={levarAoLaboratorio} montarInstrucao={montarInstrucao} onLevarSelecao={levarSelecao} />
         </div>
       </div>
       )}
@@ -270,6 +287,7 @@ export function LaboratorioClient({ datasetDisponivel, variaveisFaltando = [] }:
           </div>
 
           <Accordion type="multiple" defaultValue={['universo', 'regras', 'entradas']} className="bg-card border border-border rounded-2xl px-4">
+            <AccordionItem value="exploracao"><AccordionTrigger>Da exploração <span className="text-muted-foreground font-normal text-xs ml-1">(opcional{estrategia.exploracao ? ` · ${estrategia.exploracao.celulas.length} marcação(ões)` : ''})</span></AccordionTrigger><AccordionContent><PainelExploracao instrucao={estrategia.exploracao} onAplicar={aplicarInstrucao} onAnexar={(i) => { atualizar({ exploracao: i }); toast({ title: 'Instrução anexada', description: 'Fica salva com a estratégia; universo, regra e apostas não mudaram.' }) }} onRemover={() => atualizar({ exploracao: undefined })} /></AccordionContent></AccordionItem>
             <AccordionItem value="universo"><AccordionTrigger>1. Jogos considerados (universo)</AccordionTrigger><AccordionContent><PainelUniverso universo={estrategia.universo ?? {}} onChange={(u) => atualizar({ universo: u })} resumo={resumo} /></AccordionContent></AccordionItem>
             <AccordionItem value="indicadores"><AccordionTrigger>2. Dados e indicadores</AccordionTrigger><AccordionContent><PainelIndicadores indicadores={estrategia.indicadores ?? []} onChange={(i) => atualizar({ indicadores: i })} catalogo={catalogo} funcoes={funcoes} salvos={indicadoresSalvos} onSalvarServidor={salvarIndicador} tiposIndicadores={tiposIndicadores} errosIndicadores={errosIndicadores} /></AccordionContent></AccordionItem>
             <AccordionItem value="regras"><AccordionTrigger>3. Regra: quais jogos entram</AccordionTrigger><AccordionContent><PainelRegras regra={estrategia.regra} onChange={(r) => atualizar({ regra: r })} referencias={referencias} validacao={errosRegra} nSelecionados={run?.nSelecionados ?? null} nUniverso={run?.nUniverso ?? null} /></AccordionContent></AccordionItem>

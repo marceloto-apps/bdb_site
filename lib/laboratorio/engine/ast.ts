@@ -229,12 +229,15 @@ export function validar(no: No, ctx: ContextoValidacao): Validacao {
           case 'and': case 'or':
             if (a === 'sel' || a === 'text' || b === 'sel' || b === 'text') erros.push(`\`${n.op}\` exige booleanos`)
             return 'bool'
-          case '==': case '!=':
-            if ((a === 'text') !== (b === 'text') && a !== 'num' && b !== 'num' && a !== 'any' && b !== 'any') {
-              if (!((a === 'sel' && b === 'text') || (a === 'text' && b === 'sel'))) erros.push(`Comparação entre ${a} e ${b}`)
+          case '==': case '!=': {
+            // `id` (competição, time) é texto para fins de igualdade: `match.competition == "…"`
+            const textual = (t: Unidade) => t === 'text' || t === 'id'
+            if (textual(a) !== textual(b) && a !== 'num' && b !== 'num' && a !== 'any' && b !== 'any') {
+              if (!((a === 'sel' && textual(b)) || (textual(a) && b === 'sel'))) erros.push(`Comparação entre ${a} e ${b}`)
             }
             if (incompativeis(a, b)) erros.push(`Comparação entre ${a} e ${b} sem conversão (use implied()/fair_odd())`)
             return 'bool'
+          }
           case '<': case '<=': case '>': case '>=':
             if (!ehNumerica(a) || !ehNumerica(b)) erros.push(`Comparação de ordem exige numéricos (${a} × ${b})`)
             if (incompativeis(a, b)) erros.push(`Comparação entre ${a} e ${b} sem conversão (use implied()/fair_odd())`)

@@ -57,7 +57,7 @@ export interface CelulaExploracao {
 export interface ResultadoExploracao {
   nUniverso: number
   apostas: string[]
-  competicoes: { key: string; nome: string; temporadas: string[] }[]
+  competicoes: { key: string; nome: string; pais?: string; temporadas: string[] }[]
   /** faixas da estatística (vazio sem cruzamento) */
   faixas: { rotulo: string; de: number | null; ate: number | null; n: number }[]
   cruzamento: { rotulo: string; formula: string; tipo: string; semDado: number } | null
@@ -65,6 +65,7 @@ export interface ResultadoExploracao {
   camposAusentes: string[]
   /** avisos do universo (ex.: complemento FPT ignorado, temporadas fora do corte) */
   avisos: string[]
+  datasetVersao: string | null
   tempoMs: number
 }
 
@@ -88,7 +89,7 @@ const r4 = (x: number) => (Number.isFinite(x) ? Math.round(x * 1e4) / 1e4 : x)
 interface Acum { n: number; lucro: number; soma2: number; hits: number; decididas: number; somaOdd: number; clv: number; nRef: number; margem: number }
 const novo = (): Acum => ({ n: 0, lucro: 0, soma2: 0, hits: 0, decididas: 0, somaOdd: 0, clv: 0, nRef: 0, margem: 0 })
 
-export function explorar(prep: ExploracaoPreparada, dataset: Awaited<ContextoCompilacao['dataset']>, op: { competicoesInfo?: Map<string, { tipo?: string; feminino?: boolean }>; nomesCompeticoes?: Map<string, string> } = {}): ResultadoExploracao {
+export function explorar(prep: ExploracaoPreparada, dataset: Awaited<ContextoCompilacao['dataset']>, op: { competicoesInfo?: Map<string, { tipo?: string; feminino?: boolean; pais?: string }>; nomesCompeticoes?: Map<string, string> } = {}): ResultadoExploracao {
   const t0 = Date.now()
   const { compilada: ec, opcoes } = prep
   const ctx: ContextoCompilacao = { dataset, parametros: {}, indicadores: new Map(), camposAusentes: new Set() }
@@ -181,8 +182,8 @@ export function explorar(prep: ExploracaoPreparada, dataset: Awaited<ContextoCom
     })
   })
 
-  const competicoes = Array.from(temporadasPorComp.entries()).map(([key, ts]) => ({ key, nome: op.nomesCompeticoes?.get(key) ?? key, temporadas: Array.from(ts).sort(ordemTemporada) })).sort((a, b) => a.nome.localeCompare(b.nome))
-  return { nUniverso: uni.n, apostas: rotulos, competicoes, faixas, cruzamento, celulas: saida, camposAusentes: Array.from(ctx.camposAusentes), avisos: uni.avisos.map((a) => a.mensagem), tempoMs: Date.now() - t0 }
+  const competicoes = Array.from(temporadasPorComp.entries()).map(([key, ts]) => ({ key, nome: op.nomesCompeticoes?.get(key) ?? key, pais: op.competicoesInfo?.get(key)?.pais, temporadas: Array.from(ts).sort(ordemTemporada) })).sort((a, b) => a.nome.localeCompare(b.nome))
+  return { nUniverso: uni.n, apostas: rotulos, competicoes, faixas, cruzamento, celulas: saida, camposAusentes: Array.from(ctx.camposAusentes), avisos: uni.avisos.map((a) => a.mensagem), datasetVersao: dataset.versao ?? null, tempoMs: Date.now() - t0 }
 }
 
 function fmt(x: number): string { return Number.isInteger(x) ? String(x) : x.toFixed(Math.abs(x) < 1 ? 3 : 2).replace(/\.?0+$/, '') }

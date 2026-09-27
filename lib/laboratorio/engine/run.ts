@@ -155,7 +155,7 @@ export function executarCompilada(ec: EstrategiaCompilada, dataset: Dataset, op:
 
   const camposUsados = ec.camposUsados.slice().sort()
   // o hash ignora as opções de validação (só o holdout muda o universo e, portanto, o resultado)
-  const eHash = { ...e, validacao: e.validacao?.holdout ? { holdout: e.validacao.holdout } : undefined }
+  const eHash = { ...e, exploracao: undefined, validacao: e.validacao?.holdout ? { holdout: e.validacao.holdout } : undefined }
   const hash = M.hash64(JSON.stringify({ e: eHash, v: dataset.versao ?? null, engine: ENGINE_VERSAO, n: apostas.length, lucro: kpis.lucro, turnover: kpis.turnover }))
   const resultado: RunResult = {
     hash, datasetVersao: dataset.versao ?? null, catalogoVersao: dataset.catalogoVersao ?? null, engineVersao: ENGINE_VERSAO,

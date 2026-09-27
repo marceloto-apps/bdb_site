@@ -25,6 +25,31 @@ A página `/dashboard/laboratorio` ganhou uma alternância no topo: **Explorar**
 - Persistência entre temporadas ao lado da coluna ordenada.
 - "Levar ao Laboratório" já nasce com a última temporada selada.
 
+### 1.3 Seleção e instrução da exploração (27/09/2026)
+
+Pedido: marcar campeonatos, mercado, cruzamento e faixas na matriz, salvar num texto copiável e levar esse texto à
+Estratégia como instrução.
+
+- **Marcar**: na barra de detalhe de uma célula, "Marcar" guarda a célula na seleção (a célula ganha um contorno
+  âmbar). Vale para qualquer célula: liga × aposta, liga × faixa, liga × temporada e a linha "Todas as ligas".
+- **Painel "Seleção"** (abaixo da matriz): lista as marcações, "Copiar instrução", "Ver texto", "Levar seleção ao
+  Laboratório" e "Limpar". A seleção zera quando uma nova exploração roda.
+- **Instrução** (`InstrucaoExploracao` em `engine/tipos.ts`, validada por `instrucaoExploracaoSchema`): texto com um
+  cabeçalho legível (linhas `#`: dados, apostas, estatística, uma linha por marcação com n e yield) seguido do JSON
+  (apostas usadas, cruzamento, faixas, universo da exploração e as células). `lerInstrucao` aceita o texto completo ou
+  só o JSON.
+- **Na Estratégia**, o passo "Da exploração" (`PainelExploracao.tsx`) mostra a instrução anexada (resumo + copiar +
+  remover) e tem um campo para colar outra: "Aplicar" monta universo, regra e apostas (`estrategiaDaInstrucao`); "Só
+  anexar" guarda a instrução sem mexer na estratégia. A instrução é persistida no JSON da estratégia (`exploracao`) e
+  **não entra no hash do run**.
+- `estrategiaDaInstrucao`: universo = ligas marcadas (ou todas, se "Todas as ligas" foi marcada); temporada só quando
+  todas as marcações são da mesma; apostas = as usadas nas marcações (uma entrada por aposta); regra = faixas marcadas.
+  Quando as faixas diferem entre ligas, a regra fica por liga: `(match.competition == "id" and (faixa…)) or (…)`; liga
+  marcada em "todas as faixas" entra sem restrição.
+- Nome da liga na matriz e nos nomes gerados passa a trazer o país: "Superliga (Dinamarca)" × "Superliga (Sérvia)".
+- Validador de fórmulas (`engine/ast.ts`): campos de unidade `id` (competição, times) passam a poder ser comparados com
+  texto em `==`/`!=` (`match.competition == "…"`); o compilador já os tratava como texto. Testes: `instrucao.test.ts` (7).
+
 ## 2. Testes e medições
 
 - `tests/laboratorio/explorar.test.ts` — **7 testes**: células por liga × temporada somam o total e batem com um run do Laboratório (n, lucro, yield, acerto, CLV); tercis com contagens iguais e faixas somando "todas"; booleano/quartis/cortes explícitos; filtro de temporada e erros de aposta/fórmula; ordem de temporadas; toda a cesta e todas as estatísticas compilam; célula → estratégia reproduz a célula (mesmo n e lucro), regra da faixa nos três formatos, Šidák, deflação e persistência. Total do laboratório: **214**.

@@ -112,5 +112,7 @@ export const DICAS = {
   nMin: 'Células com menos apostas que isso ficam apagadas: resultados com poucas apostas são quase sempre sorte.',
   celulas: 'Quantas células (liga × aposta × faixa) têm amostra suficiente. Quanto mais células você olha, mais fácil achar uma boa por acaso; por isso o p-valor de cada célula é deflacionado por esse número.',
   persistencia: 'Em quantas temporadas (com amostra) a aposta deu lucro naquela liga. 3 de 3 vale muito mais que 1 de 3.',
+  marcar: 'Guarda esta célula na seleção. Marque várias (ligas, faixas, apostas) e depois copie a instrução ou leve a seleção inteira ao Laboratório.',
+  instrucao: 'Texto gerado pelo modo Explorar com as marcações (ligas, aposta, estatística e faixas). Cole aqui e clique em Aplicar para montar universo, regra e apostas a partir dele, ou só anexe como registro de onde a ideia veio. Fica salvo com a estratégia e não muda o resultado do run.',
   ece: 'Expected Calibration Error: diferença média entre a probabilidade prevista e a frequência observada, por faixa. Abaixo de 3% é bem calibrada.',
 } as const

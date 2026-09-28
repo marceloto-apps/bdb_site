@@ -53,7 +53,7 @@ export const DICAS = {
   cobertura: 'O jogo só entra no universo se tiver o dado marcado. Use para não misturar jogos com e sem a odd que a estratégia precisa.',
   // 2. Indicadores
   indicadores: 'Um indicador é um cálculo com nome (ex.: edge_h). Depois de criado, você usa o nome na regra, na seleção da aposta ou no stake.',
-  catalogo: 'Todos os dados disponíveis por jogo. Clique para copiar o nome técnico e cole na fórmula.',
+  catalogo: 'Todos os dados disponíveis por jogo. Busque por palavras (em qualquer ordem, com ou sem acento) e, escolhendo um grupo, filtre por casa, momento, mercado, time ou janela. Clique num item para copiar o nome técnico e cole na fórmula.',
   // 3. Regra
   regra: 'Condição que o jogo precisa cumprir para gerar aposta. Vazia = todos os jogos do universo.',
   modoVisual: 'Monte a regra com menus, sem digitar fórmula.',

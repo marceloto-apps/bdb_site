@@ -52,6 +52,23 @@ ler a fórmula de volta; o que não cabe no builder continua disponível no modo
 4. Autocomplete da fórmula usa `datalist` nativo (funciona no input do builder; no `textarea` do modo fórmula é só via catálogo/cópia).
 5. ~~Nomenclatura e glossário~~ — feito em 26/09/2026, ver §5.
 
+## 4.1 Catálogo de dados: busca e filtros (28/09/2026)
+
+Relato: "na hora de filtrar grupos ou dados específicos não está funcionando". O filtro antigo funcionava, mas a tela
+enganava: a lista era cortada nos **60 primeiros** itens na ordem do catálogo (o grupo de times tem 712 e o de odds 188),
+o contador ficava sempre em 984, a busca exigia a **frase exata** e diferenciava acento. Correção em
+`lib/laboratorio/ui/catalogo.ts` (puro, testado) e `PainelIndicadores.tsx`:
+
+- Busca por **palavras**: todas precisam aparecer, em qualquer ordem, sem diferenciar acento/maiúscula, "2,5" = "2.5".
+  Procura no nome técnico (também com `.` e `_` trocados por espaço), rótulo, descrição, nome do grupo, unidade,
+  mercado por extenso e "abertura/fechamento".
+- Contador "N de 984"; o seletor de grupo mostra quantos itens cada grupo tem para a busca atual.
+- **Facetas por grupo** (chips, com contagem que respeita a busca e as outras facetas; opção sem resultado fica
+  desativada): Odds → casa, momento, mercado; Estatísticas dos times → time, janela, jogos (todos × só em casa/fora);
+  Movimento do mercado → casa.
+- Lista até 200 itens, com aviso "Mostrando 200 de N" quando corta; "Limpar filtros".
+- Testes: `tests/laboratorio/catalogoUi.test.ts`.
+
 ## 5. Nomenclatura e guia (26/09/2026)
 
 Feedback dos testes: "Núcleo", "Só-FPT", "Perna" e as chaves das fórmulas não eram intuitivos. Mudanças, só na UI

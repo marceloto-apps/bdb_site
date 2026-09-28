@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
 import { Copy, Plus, Save, Trash2 } from 'lucide-react'
 import { DICAS, ROTULO_BLOCO, rotuloTipo } from '@/lib/laboratorio/ui/rotulos'
+import { contagemPorBloco, facetasDoBloco, filtrarCatalogo } from '@/lib/laboratorio/ui/catalogo'
 import type { CampoUI, FuncaoUI, IndicadorSalvoUI } from '@/lib/laboratorio/ui/tipos'
 import { Rotulo } from './Dica'
 
@@ -26,13 +27,21 @@ export function PainelIndicadores({ indicadores, onChange, catalogo, funcoes, sa
   const { toast } = useToast()
   const [busca, setBusca] = useState('')
   const [bloco, setBloco] = useState<string>('')
+  const [facetas, setFacetas] = useState<Record<string, string>>({})
   const [novoNome, setNovoNome] = useState('')
   const [novaFormula, setNovaFormula] = useState('')
 
-  const campos = useMemo(() => {
-    const q = busca.toLowerCase().trim()
-    return catalogo.filter((c) => (!bloco || c.bloco === bloco) && (!q || c.key.toLowerCase().includes(q) || c.label.toLowerCase().includes(q) || c.descricao.toLowerCase().includes(q))).slice(0, 60)
-  }, [catalogo, busca, bloco])
+  const LIMITE = 200
+  const filtro = useMemo(() => ({ busca, bloco, facetas }), [busca, bloco, facetas])
+  const encontrados = useMemo(() => filtrarCatalogo(catalogo, filtro), [catalogo, filtro])
+  const campos = useMemo(() => encontrados.slice(0, LIMITE), [encontrados])
+  const porBloco = useMemo(() => contagemPorBloco(catalogo, busca), [catalogo, busca])
+  const facetasGrupo = useMemo(() => facetasDoBloco(catalogo, filtro), [catalogo, filtro])
+  const totalBusca = useMemo(() => Object.values(porBloco).reduce((s, n) => s + n, 0), [porBloco])
+  const temFiltro = !!busca.trim() || !!bloco || Object.values(facetas).some(Boolean)
+  const mudarBloco = (b: string) => { setBloco(b); setFacetas({}) }
+  const alternarFaceta = (id: string, valor: string) => setFacetas((f) => ({ ...f, [id]: f[id] === valor ? '' : valor }))
+  const limpar = () => { setBusca(''); setBloco(''); setFacetas({}) }
   const copiar = async (t: string) => { try { await navigator.clipboard.writeText(t); toast({ title: 'Nome copiado', description: t }) } catch { /* sem clipboard */ } }
   const adicionar = () => {
     const nome = novoNome.trim(), formula = novaFormula.trim()
@@ -47,15 +56,25 @@ export function PainelIndicadores({ indicadores, onChange, catalogo, funcoes, sa
   return (
     <div className="space-y-4">
       <div>
-        <Rotulo className="text-sm" dica={DICAS.catalogo}>Catálogo de dados <span className="text-muted-foreground text-xs font-normal">({catalogo.length.toLocaleString('pt-BR')})</span></Rotulo>
+        <Rotulo className="text-sm" dica={DICAS.catalogo}>Catálogo de dados <span className="text-muted-foreground text-xs font-normal">({temFiltro ? `${encontrados.length.toLocaleString('pt-BR')} de ${catalogo.length.toLocaleString('pt-BR')}` : catalogo.length.toLocaleString('pt-BR')})</span></Rotulo>
         <div className="flex gap-2 mt-1">
-          <Input placeholder="Buscar: xG, Pinnacle, over 2.5, escanteios…" value={busca} onChange={(e) => setBusca(e.target.value)} />
-          <select className="bg-background border border-input rounded-md text-sm px-2 max-w-[45%]" value={bloco} onChange={(e) => setBloco(e.target.value)}>
-            <option value="">todos os grupos</option>
-            {Object.entries(ROTULO_BLOCO).map(([k, r]) => <option key={k} value={k}>{r}</option>)}
+          <Input placeholder="Buscar: bet365 fechamento over 2.5, xg mandante…" value={busca} onChange={(e) => setBusca(e.target.value)} />
+          <select className="bg-background border border-input rounded-md text-sm px-2 max-w-[45%]" value={bloco} onChange={(e) => mudarBloco(e.target.value)}>
+            <option value="">todos os grupos ({totalBusca})</option>
+            {Object.entries(ROTULO_BLOCO).map(([k, r]) => <option key={k} value={k}>{r} ({porBloco[k] ?? 0})</option>)}
           </select>
         </div>
-        <div className="max-h-56 overflow-y-auto mt-2 space-y-1 pr-1">
+        {facetasGrupo.map((f) => (
+          <div key={f.id} className="flex flex-wrap items-center gap-1 mt-1.5">
+            <span className="text-[10px] text-muted-foreground w-14 shrink-0">{f.rotulo}</span>
+            {f.opcoes.map((o) => {
+              const on = facetas[f.id] === o.valor
+              return <button key={o.valor} type="button" disabled={!on && o.n === 0} onClick={() => alternarFaceta(f.id, o.valor)} className={`px-2 py-0.5 rounded-full text-[11px] border ${on ? 'bg-primary/20 border-primary text-primary' : o.n === 0 ? 'border-border/40 text-muted-foreground/40 cursor-not-allowed' : 'border-border text-muted-foreground hover:text-foreground'}`} title={`${o.n} dado(s)`}>{o.rotulo} <span className="opacity-60">{o.n}</span></button>
+            })}
+          </div>
+        ))}
+        <p className="text-[10px] text-muted-foreground mt-1.5">Digite palavras em qualquer ordem, com ou sem acento (ex.: “pinnacle fechamento empate”). Escolha um grupo para filtrar por casa, mercado, time ou janela.{temFiltro && <button type="button" className="ml-1 underline hover:text-foreground" onClick={limpar}>Limpar filtros</button>}</p>
+        <div className="max-h-72 overflow-y-auto mt-2 space-y-1 pr-1">
           {campos.map((c) => (
             <div key={c.key} className="flex items-center gap-2 text-xs border-b border-border/40 py-1">
               <button type="button" className="text-left flex-1 min-w-0" onClick={() => copiar(c.key)} title={`${c.descricao ? c.descricao + '\n' : ''}Clique para copiar ${c.key}`}>
@@ -66,7 +85,8 @@ export function PainelIndicadores({ indicadores, onChange, catalogo, funcoes, sa
               <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" title="Copiar nome" onClick={() => copiar(c.key)}><Copy className="w-3 h-3" /></Button>
             </div>
           ))}
-          {!campos.length && <p className="text-xs text-muted-foreground">Nenhum dado encontrado.</p>}
+          {!campos.length && <p className="text-xs text-muted-foreground">Nenhum dado encontrado. Tente menos palavras ou limpe os filtros.</p>}
+          {encontrados.length > campos.length && <p className="text-[10px] text-muted-foreground py-1">Mostrando {campos.length} de {encontrados.length.toLocaleString('pt-BR')}. Digite mais uma palavra ou escolha um filtro para ver o restante.</p>}
         </div>
       </div>
 

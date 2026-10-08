@@ -8,7 +8,7 @@ import { seo } from '@/lib/seo'
 export const metadata = seo({
   title: 'Sobre',
   description:
-    'Conheça o Big Data Bet — plataforma brasileira de análise esportiva baseada em dados para o mercado de apostas.',
+    'Conheça o Big Data Bet — plataforma brasileira de análise esportiva baseada em dados para o mercado esportivo.',
   path: '/sobre',
   keywords: ['sobre big data bet', 'quem somos'],
 })
@@ -24,10 +24,10 @@ export default function SobrePage() {
             O Big Data Bet nasceu da necessidade de elevar o nível das análises no mercado esportivo. Fundado por Luciano Zeidler, o projeto tem como pilar fundamental o uso rigoroso de estatísticas e ciência de dados para substituir o palpite por decisões embasadas matematicamente.
           </p>
           <p>
-            Nossa missão é educar e instrumentalizar o apostador e o trader esportivo. Acreditamos que a constância no mercado não vem da sorte, mas do domínio de métricas e indicadores-chave, modelagem de dados, conceitos estatísticos e do uso consciente do valor esperado positivo (+EV) — entendendo como a informação bem aplicada pode gerar pequenas vantagens que, no longo prazo, fazem toda a diferença.
+            Nossa missão é educar e instrumentalizar quem atua no mercado esportivo, do iniciante ao trader esportivo. Acreditamos que a constância no mercado não vem da sorte, mas do domínio de métricas e indicadores-chave, modelagem de dados, conceitos estatísticos e do uso consciente do valor esperado positivo (+EV) — entendendo como a informação bem aplicada pode gerar pequenas vantagens que, no longo prazo, fazem toda a diferença.
           </p>
           <p>
-            O grande diferencial da nossa plataforma é que não somos uma casa de apostas, não somos patrocinados e não temos nenhum acordo com casas de apostas, tampouco vendemos ilusões. Somos uma comunidade de estudos, focada na construção de métodos validados, oferecendo ferramentas, planilhas e metodologias atualizadas de ligas globais, além de conteúdos práticos em vídeo e artigos técnicos de alto nível.
+            O grande diferencial da nossa plataforma é que não somos uma operadora do mercado esportivo, não somos patrocinados e não temos nenhum acordo com operadoras, tampouco vendemos ilusões. Somos uma comunidade de estudos, focada na construção de métodos validados, oferecendo ferramentas, planilhas e metodologias atualizadas de ligas globais, além de conteúdos práticos em vídeo e artigos técnicos de alto nível.
           </p>
         </div>
       </section>

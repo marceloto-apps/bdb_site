@@ -18,7 +18,7 @@ export function AudienceSection() {
             </CardHeader>
             <CardContent className="flex-1">
               <p className="text-muted-foreground">
-                Aposto por hobby, já perdi dinheiro com tips e quero entender como usar dados de verdade.
+                Atuo no mercado esportivo por hobby, já perdi dinheiro com tips e quero entender como usar dados de verdade.
               </p>
             </CardContent>
             <CardFooter>

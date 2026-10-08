@@ -7,7 +7,7 @@ import { Metadata } from 'next'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://bigdatabet.com.br'
 const SITE_NAME = 'Big Data Bet'
 const DEFAULT_DESCRIPTION =
-  'Plataforma brasileira de análise esportiva baseada em dados. Estatísticas avançadas, planilhas, backtests e conteúdo exclusivo para o mercado de apostas esportivas.'
+  'Plataforma brasileira de análise esportiva baseada em dados. Estatísticas avançadas, planilhas, backtests e conteúdo exclusivo para o mercado esportivo.'
 const DEFAULT_OG_IMAGE = `${SITE_URL}/images/fallback.png`
 
 export const metadataBase = new URL(SITE_URL)
@@ -46,12 +46,12 @@ export function seo({
 
   // Keywords base + específicas da página
   const baseKeywords = [
-    'apostas esportivas',
+    'mercado esportivo',
     'análise esportiva',
     'estatísticas futebol',
     'big data bet',
-    'planilhas apostas',
-    'backtest apostas',
+    'planilhas mercado esportivo',
+    'backtest mercado esportivo',
   ]
   const allKeywords = Array.from(new Set([...baseKeywords, ...keywords]))
 

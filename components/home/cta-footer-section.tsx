@@ -8,7 +8,7 @@ export function CtaFooterSection() {
       <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
       <div className="container relative z-10 px-4 md:px-6 mx-auto text-center">
         <h2 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-6 text-text-primary">
-          Chega de apostar no escuro.
+          Chega de operar no escuro.
         </h2>
         <p className="mx-auto max-w-2xl text-xl md:text-2xl text-muted-foreground mb-10">
           Entre para a comunidade que usa dados de verdade para operar no mercado esportivo.

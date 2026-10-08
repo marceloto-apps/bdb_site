@@ -18,7 +18,7 @@ export function SolutionSection() {
             </CardHeader>
             <CardContent className="flex-1">
               <p className="text-muted-foreground leading-relaxed">
-                As casas de apostas erram. Apostadores menos informados inflam um lado da linha e abrem brechas do outro. Aplicamos técnicas estatísticas para identificar essas pequenas falhas — os momentos em que as odds não refletem a probabilidade real. É nesses desajustes que mora a vantagem.
+                As operadoras do mercado esportivo erram. Participantes menos informados inflam um lado da linha e abrem brechas do outro. Aplicamos técnicas estatísticas para identificar essas pequenas falhas — os momentos em que as odds não refletem a probabilidade real. É nesses desajustes que mora a vantagem.
               </p>
             </CardContent>
           </Card>

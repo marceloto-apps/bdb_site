@@ -43,7 +43,7 @@ export function VipPackSection() {
             {TOTAL_LIGAS} ligas. Uma vantagem que poucos têm.
           </h2>
           <p className="mx-auto mt-4 max-w-3xl text-lg text-text-secondary">
-            Enquanto a maioria aposta olhando tabela de classificação, você vai
+            Enquanto a maioria opera no mercado esportivo olhando tabela de classificação, você vai
             operar com as mesmas variáveis estatísticas que alimentam modelos
             profissionais — em{' '}
             <strong className="text-text-primary">{TOTAL_LIGAS} ligas</strong>{' '}
@@ -125,7 +125,7 @@ export function VipPackSection() {
               Pare de competir no escuro contra as casas
             </h3>
             <p className="mx-auto mt-3 max-w-lg text-text-secondary">
-              As casas de apostas operam com algoritmos, modelos e bilhões de
+              As operadoras do mercado esportivo trabalham com algoritmos, modelos e bilhões de
               dados históricos. Com o pacote completo de planilhas, você
               finalmente tem acesso ao mesmo nível de profundidade estatística —
               em {TOTAL_LIGAS} ligas.

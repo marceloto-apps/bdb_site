@@ -35,7 +35,7 @@ export function FeaturedContentSection({ articles }: { articles?: ArtigoDestaque
       date: "Em breve"
     },
     {
-      title: "O que é backtest em apostas esportivas e como fazer o seu",
+      title: "O que é backtest no mercado esportivo e como fazer o seu",
       category: "Ferramentas",
       readTime: "10 min",
       date: "Em breve"

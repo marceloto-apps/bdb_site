@@ -27,12 +27,12 @@ import { seo, metadataBase } from '@/lib/seo'
 const baseMetadata = seo({
   title: 'Análise Esportiva Baseada em Dados',
   description:
-    'Plataforma brasileira de análise esportiva baseada em dados. Estatísticas avançadas, planilhas profissionais, backtests interativos e conteúdo exclusivo para o mercado de apostas esportivas.',
+    'Plataforma brasileira de análise esportiva baseada em dados. Estatísticas avançadas, planilhas profissionais, backtests interativos e conteúdo exclusivo para o mercado esportivo.',
   path: '',
   keywords: [
-    'apostas esportivas brasil',
+    'mercado esportivo brasil',
     'análise de futebol',
-    'estatísticas de apostas',
+    'estatísticas do mercado esportivo',
     'odds futebol',
     'planilhas futebol',
   ],

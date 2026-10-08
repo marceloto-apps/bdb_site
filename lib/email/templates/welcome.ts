@@ -42,7 +42,7 @@ export function welcomeEmailTemplate({ name }: WelcomeEmailParams) {
                       Sua conta foi criada com sucesso. Agora você tem acesso ao conteúdo gratuito da plataforma.
                     </p>
                     <p style="color:#a3a3a3; font-size:15px; line-height:1.6; margin:0 0 24px;">
-                      Na Big Data Bet você encontra análises, estudos e ferramentas para tomar decisões mais inteligentes nas suas apostas esportivas.
+                      Na Big Data Bet você encontra análises, estudos e ferramentas para tomar decisões mais inteligentes no mercado esportivo.
                     </p>
 
                     <!-- CTA -->

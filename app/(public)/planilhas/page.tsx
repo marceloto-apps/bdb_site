@@ -12,7 +12,7 @@ export const metadata = seo({
   description:
     'Planilhas em Excel para análise avançada do mercado esportivo de futebol. Odds, dispersão, tendências de lucratividade e variáveis estatísticas profundas.',
   path: '/planilhas',
-  keywords: ['planilhas apostas', 'excel futebol', 'análise odds', 'planilhas futebol'],
+  keywords: ['planilhas mercado esportivo', 'excel futebol', 'análise odds', 'planilhas futebol'],
 })
 
 export default async function PlanilhasPage() {

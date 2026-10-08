@@ -9,7 +9,7 @@ export function HeroSection() {
       <div className="container relative z-10 mx-auto px-4 md:px-6 text-center">
         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl text-text-primary mb-6">
           Ciência de dados e estatística aplicadas ao <br className="hidden md:block" />
-          <span className="text-primary">mercado de apostas esportivas.</span>
+          <span className="text-primary">mercado esportivo.</span>
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-muted-foreground sm:text-xl mb-10">
           Ferramentas, análises e métodos para encontrar desajustes nas odds, explorar vantagens matemáticas e operar com edge real no mercado esportivo.

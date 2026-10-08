@@ -13,7 +13,7 @@ import { seo } from '@/lib/seo'
 export const metadata = seo({
   title: 'Análise Esportiva Baseada em Dados',
   description:
-    'Plataforma brasileira de análise esportiva baseada em dados. Estatísticas avançadas, planilhas profissionais e conteúdo exclusivo para apostas esportivas.',
+    'Plataforma brasileira de análise esportiva baseada em dados. Estatísticas avançadas, planilhas profissionais e conteúdo exclusivo para o mercado esportivo.',
   path: '',
 })
 

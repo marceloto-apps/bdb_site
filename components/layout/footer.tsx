@@ -80,7 +80,7 @@ export function Footer() {
             &copy; {currentYear} {SITE_CONFIG.name}. Todos os direitos reservados.
           </p>
           <p className="text-xs text-muted-foreground">
-            Apostas esportivas envolvem risco. Jogue com responsabilidade.
+            O mercado esportivo envolve risco. Jogue com responsabilidade.
           </p>
         </div>
       </div>

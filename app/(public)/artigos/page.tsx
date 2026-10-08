@@ -8,7 +8,7 @@ import { ArticleType } from '@prisma/client'
 // Metadata
 export const metadata = seo({
   title: 'Artigos',
-  description: 'Estudos, análises e artigos sobre futebol e apostas esportivas baseados em dados.',
+  description: 'Estudos, análises e artigos sobre futebol e mercado esportivo baseados em dados.',
   path: '/artigos',
 })
 
@@ -73,7 +73,7 @@ export default async function ArtigosPage({ searchParams }: PageProps) {
     <section className="container mx-auto px-4 py-12 max-w-7xl">
       <h1 className="text-3xl font-bold mb-2 tracking-tight">Artigos</h1>
       <p className="text-muted-foreground mb-8 text-lg">
-        Estudos, análises e artigos sobre futebol e apostas esportivas.
+        Estudos, análises e artigos sobre futebol e mercado esportivo.
       </p>
 
       <FiltroArtigos
